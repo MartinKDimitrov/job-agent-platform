@@ -44,8 +44,8 @@
 | # | Стъпка | AI |
 |---|--------|----|
 | 8 | Adapter framework (A2) + нормализирана схема за сурова обява | ⚙️ |
-| 9 | ATS адаптери (публичен JSON API): Greenhouse/Lever/Ashby/Workable | ⚙️ |
-| 10 | RSS адаптери: RemoteOK / WeWorkRemotely | ⚙️ |
+| 9 | ✅ ATS адаптери (публичен JSON API): **Greenhouse / Lever / Ashby** (канонични apply URL-и). **Workable — отложен** (widget API не върна обяви за нито един проверен slug, 2026-07) | ⚙️ |
+| 10 | ✅ RSS/агрегатори: **RemoteOK** (JSON) + **WeWorkRemotely** (RSS) — глобален remote, ~200 обяви | ⚙️ |
 | 10б | **БГ пазар** *(проучено на живо, 2026-07)*: ✅ **dev.bg** — реализиран RSS адаптер (официален `?feed=job_feed`, per-категория, hourly); ✅ **JobTiger** — реализиран sitemap адаптер (robots позволява обявите, изричен `ClaudeBot Crawl-Delay: 30` — спазваме го; JSON-LD `JobPosting` парсинг; **всички професии**; само в дневния фонов job). **jobs.bg — прескочен** (403 на всичко, вкл. robots.txt — враждебен; не скрейпваме против волята им). Кандидати за после: **zaplata.bg, rabota.bg, karieri.bg** (robots позволяват, sitemap-и има); noblehire (SPA, API не е намерен) | ⚙️ |
 | 11 | LinkedIn: **авто-search извън обхват** (ToS/няма API). Клиентски: **OAuth профил-импорт (приоритет)** + paste на обява. Разширение — отложено | ⚙️ |
 | 12 | ✅ Deduplicator (A3) — cross-source в `ingest` (`app/dedup.py`): норм. компания (кирилица↔латиница, правни суфикси) + title Jaccard/синоними; ATS дубликат ъпгрейдва apply_url (A5). In-memory; персистентен `dedup_key` при Alembic (ст. 35) | ⚙️ |

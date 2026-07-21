@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 
 import app.adapters.greenhouse as gh
-import app.adapters.dev_bg as dev_bg
+import app.crawl as crawl
 from app.adapters.base import RawPosting
 from app.jobs import run_daily_digest
 from app.db import SessionLocal
@@ -34,7 +34,8 @@ class Sender:
 
 def _setup(monkeypatch):
     monkeypatch.setattr(gh, "fetch", lambda token, company_name=None: list(SAMPLE))
-    monkeypatch.setattr(dev_bg, "fetch", lambda categories=None: [])   # keep tests offline
+    monkeypatch.setattr(crawl, "FAST_SOURCES", [])     # keep tests fully offline
+    monkeypatch.setattr(crawl, "EXTRA_SOURCES", [])
 
 
 def _user(db, email, seen_days_ago=0, found_job=False, with_profile=True):

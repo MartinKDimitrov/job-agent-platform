@@ -22,11 +22,13 @@ _BROWSER_HEADERS = {
 }
 
 
-def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT):
-    """GET `url` and return parsed JSON, or None on any network/HTTP/parse error."""
+def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT,
+               browser: bool = False):
+    """GET `url` and return parsed JSON, or None on any network/HTTP/parse error. Set
+    browser=True for hosts that reject plain bot UAs (RemoteOK, Lever, Ashby)."""
+    headers = _BROWSER_HEADERS if browser else {"User-Agent": _UA}
     try:
-        r = httpx.get(url, params=params, timeout=timeout,
-                      headers={"User-Agent": _UA}, follow_redirects=True)
+        r = httpx.get(url, params=params, timeout=timeout, headers=headers, follow_redirects=True)
         r.raise_for_status()
         return r.json()
     except (httpx.HTTPError, ValueError) as e:

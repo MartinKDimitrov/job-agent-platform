@@ -18,7 +18,7 @@ from .db import SessionLocal
 from .models import User, Profile, Match, Posting, DigestEntry
 from .adapters import jobtiger
 from .adapters.seed_boards import GREENHOUSE_BOARDS
-from .crawl import fetch_all, run_search
+from .crawl import fetch_all, fetch_extra, run_search
 from .activity import get_activity, is_active_for_search
 from .mailer import send_email
 
@@ -49,7 +49,7 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
     beyond the fast sources."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     now = now or datetime.utcnow()
-    raw = fetch_all(boards)                       # fetch fast sources once for the whole run
+    raw = fetch_all(boards) + fetch_extra()       # fast sources + aggregators, once for the run
     if jobtiger_limit > 0:
         known = {u for (u,) in db.execute(select(Posting.url)).all() if u}
         raw += jobtiger.fetch(limit=jobtiger_limit, delay=jobtiger_delay, skip_urls=known)

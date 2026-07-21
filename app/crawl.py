@@ -8,18 +8,44 @@ goes through requirement extraction + embeddings, so a 500-job board doesn't blo
 """
 from __future__ import annotations
 
+import logging
 import re
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import Posting, Match
-from .adapters import greenhouse, dev_bg
+from .adapters import greenhouse, dev_bg, remoteok, wwr, lever, ashby
 from .adapters.base import RawPosting, ingest
-from .adapters.seed_boards import GREENHOUSE_BOARDS
+from .adapters.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
 from .extraction import extract_requirements
 from .scoring import score
 from .filters import passes_hard_filters
+
+log = logging.getLogger(__name__)
+
+
+def _lever_all() -> list[RawPosting]:
+    return [rp for slug, name in LEVER_COMPANIES for rp in lever.fetch(slug, name)]
+
+
+def _ashby_all() -> list[RawPosting]:
+    return [rp for slug, name in ASHBY_COMPANIES for rp in ashby.fetch(slug, name)]
+
+
+# Fast sources run on every "Search now" (kept snappy): dev.bg RSS (BG market).
+FAST_SOURCES = [dev_bg.fetch]
+# Heavier aggregators/ATS run in the daily background job only.
+EXTRA_SOURCES = [remoteok.fetch, wwr.fetch, _lever_all, _ashby_all]
+
+
+def _safe(fn) -> list[RawPosting]:
+    """Run a source, isolating its failure — one broken source must not kill the whole run."""
+    try:
+        return list(fn())
+    except Exception as e:  # noqa: BLE001 — any adapter error degrades to "no postings"
+        log.warning("source %s failed: %s", getattr(fn, "__name__", fn), e)
+        return []
 
 DEFAULT_LIMIT = 40
 _TOKEN_RE = re.compile(r"[a-z0-9\+\#\.]+")
@@ -39,14 +65,26 @@ def _relevant(rp: RawPosting, keywords: set[str]) -> bool:
 
 
 def fetch_all(boards=None) -> list[RawPosting]:
-    """Fetch every fast source once (Greenhouse boards + the dev.bg RSS feeds). The daily job
-    fetches once and reuses across all profiles rather than re-hitting each source per user.
-    Slow sources with a crawl delay (JobTiger) are pulled separately by the daily job only."""
+    """Fetch the fast sources once (Greenhouse boards + dev.bg RSS) — used by both "Search now"
+    and the daily job. Each source is error-isolated. Heavier aggregators (RemoteOK/WWR/Lever/
+    Ashby via fetch_extra) and crawl-delayed sources (JobTiger) are added by the daily job only."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     out: list[RawPosting] = []
     for token, name in boards:
-        out.extend(greenhouse.fetch(token, company_name=name))
-    out.extend(dev_bg.fetch())
+        try:
+            out.extend(greenhouse.fetch(token, company_name=name))
+        except Exception as e:  # noqa: BLE001
+            log.warning("greenhouse %s failed: %s", token, e)
+    for src in FAST_SOURCES:
+        out.extend(_safe(src))
+    return out
+
+
+def fetch_extra() -> list[RawPosting]:
+    """RemoteOK / WWR / Lever / Ashby — broader coverage for the daily background run."""
+    out: list[RawPosting] = []
+    for src in EXTRA_SOURCES:
+        out.extend(_safe(src))
     return out
 
 

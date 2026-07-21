@@ -11,3 +11,13 @@ GREENHOUSE_BOARDS = [
     ("monzo", "Monzo"),
     ("vercel", "Vercel"),
 ]
+
+# Lever & Ashby boards (verified live to return jobs, 2026-07). (slug, display_name).
+LEVER_COMPANIES = [
+    ("spotify", "Spotify"),
+    ("voodoo", "Voodoo"),
+    ("swile", "Swile"),
+]
+ASHBY_COMPANIES = [
+    ("ramp", "Ramp"),
+]
