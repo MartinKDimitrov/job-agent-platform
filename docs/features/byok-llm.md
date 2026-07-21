@@ -15,9 +15,14 @@ raising `LLMError` with a short user-readable message on any failure. Security i
 keys are passed per call, never stored on modules, never logged, and scrubbed from error
 text defensively. Registry: `get_provider(name)` / `list_providers()`.
 
-**Coming next:** 3.2 encrypted per-user key storage + settings UI with "Test connection";
-3.3 versioned prompts + the generation use case (CEFR-aware, no invented skills);
-3.4 document storage + .docx download; 3.5 server-side Ollama fallback with daily limits
-(deploy phase).
+**BYOK settings (step 3.2):** the Account page has an "AI generation" card — pick a provider,
+paste a key, **Test & save** runs a tiny real call first; a key that fails the test is never
+stored. Keys are encrypted at rest (Fernet, key derived from the app `SECRET_KEY` —
+`data/keystore.py`, table `UserLLMConfig`), never rendered back to the browser, never logged,
+and removable any time. Keyless providers (Ollama) skip the key requirement.
 
-**Tests:** `tests/test_llm_providers.py`.
+**Coming next:** 3.3 versioned prompts + the generation use case (CEFR-aware, no invented
+skills); 3.4 document storage + .docx download; 3.5 server-side Ollama fallback with daily
+limits (deploy phase).
+
+**Tests:** `tests/test_llm_providers.py`, `tests/test_byok_settings.py`.

@@ -111,6 +111,19 @@ class DigestEntry(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class UserLLMConfig(Base):
+    """Per-user BYOK settings: which LLM provider to use and their API key, encrypted at rest
+    (Fernet — see data/keystore.py). One config per user; deletable any time. The plaintext key
+    is decrypted only at generation time and never logged or rendered back."""
+    __tablename__ = "user_llm_configs"
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(32))            # gemini / groq / ollama / ...
+    encrypted_key: Mapped[str] = mapped_column(Text, default="")  # empty for keyless (ollama)
+    model: Mapped[str] = mapped_column(String(128), default="")   # empty -> provider default
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class CrawlRun(Base):
     """One crawl run (a daily job or a Search-now), with per-source and total metrics in `stats`
     — so we can see how each source is performing over time. New table -> no migration."""
