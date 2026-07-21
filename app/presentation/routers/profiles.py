@@ -4,7 +4,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ...data.db import get_db
@@ -230,6 +230,10 @@ def profile_update(pid: int, request: Request, name: str = Form(""), target_role
     p.location_pref, p.remote_pref = location_pref, remote_pref
     p.salary_expectation, p.min_match = salary_expectation, mm
     p.embedding = None  # profile text changed → drop any cached vector
+    # the profile's matches were computed against the OLD skills/targets — clear them so the
+    # feed doesn't keep showing stale matches (e.g. ML jobs after removing an ML skill);
+    # the next Search now rebuilds them against the edited profile.
+    db.execute(delete(Match).where(Match.profile_id == p.id))
     db.commit()
     return redirect(f"/profiles/{p.id}")
 

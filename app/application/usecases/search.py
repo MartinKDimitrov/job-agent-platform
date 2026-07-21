@@ -59,18 +59,25 @@ def _safe(name: str, fn, stats=None) -> list[RawPosting]:
 DEFAULT_LIMIT = 40
 _TOKEN_RE = re.compile(r"[a-z0-9\+\#\.]+")
 
+# Tool tokens too generic to signal title relevance — the "Git" skill was matching GitLab's
+# "Tenant Scale: Git" job title and similar accidents (api/rest/sdk appear in countless titles).
+_GENERIC_TOKENS = {"git", "api", "rest", "sdk", "app", "apps", "web", "code"}
+
 
 def _profile_keywords(profile) -> set[str]:
     text = f"{profile.target_roles or ''} {profile.skills or ''}".lower()
-    return {tok for tok in _TOKEN_RE.findall(text) if len(tok) > 2}
+    return {tok for tok in _TOKEN_RE.findall(text)
+            if len(tok) > 2 and tok not in _GENERIC_TOKENS}
 
 
 def _relevant(rp: RawPosting, keywords: set[str]) -> bool:
-    """Cheap pre-filter: keep a posting only if its title mentions a profile keyword. Avoids
+    """Cheap pre-filter: keep a posting only if its TITLE shares a whole token with the profile
+    keywords (exact token match, not substring — 'api' must not match 'capital'). Avoids
     embedding hundreds of obviously-irrelevant roles (e.g. Sales jobs for an Android profile)."""
     if not keywords:
         return True
-    return any(k in (rp.title or "").lower() for k in keywords)
+    title_tokens = set(_TOKEN_RE.findall((rp.title or "").lower()))
+    return bool(keywords & title_tokens)
 
 
 def fetch_all(boards=None, stats=None) -> list[RawPosting]:

@@ -94,6 +94,48 @@ def test_search_now_button_flow(auth_client, monkeypatch):
     assert "https://x/1" in body                     # apply link present
 
 
+def test_generic_tool_tokens_do_not_match_titles(monkeypatch):
+    # Regression: the 'Git' skill was matching GitLab's "Tenant Scale: Git" job title.
+    sample = [RawPosting("ats_api", "1", "Backend Engineer (C), Tenant Scale: Git", "GitLab",
+                         location="Remote", url="https://x/git", apply_url="https://x/git",
+                         description="Requirements:\n- Go and Linux internals")]
+    _mock(monkeypatch, sample=sample)
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Android Developer",
+                              skills="Kotlin, Android SDK, REST API, Git, Gradle")
+        res = run_search(db, p)
+        assert res["scored"] == 0            # git/api/sdk are too generic to signal relevance
+
+
+def test_prefilter_is_exact_token_not_substring(monkeypatch):
+    # 'java' must not match 'JavaScript Developer' via substring — hmm, it's a prefix token;
+    # the guarantee we need: keywords match whole title tokens only.
+    sample = [RawPosting("ats_api", "1", "Capital Markets Analyst", "Acme",
+                         location="Remote", url="https://x/1", apply_url="https://x/1",
+                         description="Requirements:\n- Excel")]
+    _mock(monkeypatch, sample=sample)
+    with SessionLocal() as db:
+        # 'api' (even if it survived the stoplist) must not substring-match 'Capital'
+        p = _make_profile_row(db, target_roles="Backend", skills="REST API")
+        res = run_search(db, p)
+        assert res["scored"] == 0
+
+
+def test_profile_edit_clears_stale_matches(auth_client, monkeypatch):
+    _mock(monkeypatch)
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin, Compose", min_match=0)
+    client.post(f"/profiles/{pid}/search", follow_redirects=False)
+    assert "Senior Android Engineer" in client.get(f"/profiles/{pid}").text
+    # edit the profile (change skills) -> old matches must be cleared until the next search
+    client.post(f"/profiles/{pid}/edit",
+                data={"name": "Android", "target_roles": "Android", "skills": "Kotlin",
+                      "english_level": "B2", "remote_pref": "remote", "min_match": "0"})
+    body = client.get(f"/profiles/{pid}").text
+    assert "Senior Android Engineer" not in body
+    assert "No matches above threshold" in body
+
+
 def test_hard_filter_drops_management_role(monkeypatch):
     # An Android EM role passes the keyword pre-filter ("android") but must be hard-filtered out.
     sample = [
