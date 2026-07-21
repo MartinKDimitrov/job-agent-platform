@@ -27,9 +27,11 @@ the owner's own job search — see that project's `CLAUDE.md`).
 ## 2. Current state (Phase 1 — foundation, built and running)
 
 Working:
-- **Auth** — register / login with email + password (bcrypt, JWT in an httpOnly cookie).
-  Google OAuth is wired via Authlib but **inactive until** `GOOGLE_CLIENT_ID/SECRET` are set;
-  it degrades gracefully with a message.
+- **Auth** — register / login with email + password (bcrypt directly, JWT in an httpOnly cookie).
+  **Google OAuth is active and verified working** when `GOOGLE_CLIENT_ID/SECRET` are set in `.env`
+  (personal Google Cloud project; Web client; redirect URIs for `localhost:8001` + `127.0.0.1:8001`;
+  the owner's email is a **test user** while the consent screen is in Testing). It degrades
+  gracefully with a message when unconfigured (e.g. a fresh clone without those secrets).
 - **Profiles** — several per user (target roles, skills, experience, languages + CEFR English
   level, location/remote preference, salary, `min_match` threshold, default 65).
 - **Sources screen** (`/sources`) — lists built-in platforms and lets the user **add their own**
@@ -130,12 +132,14 @@ Open http://127.0.0.1:8001
 
 ## 7. Next steps
 
-**Finish Phase 1**
-1. Profile edit/delete; validation on the forms.
-2. Requirement extraction from a pasted JD is currently naive (line splitting in
-   `add_posting`) — improve it.
-3. Show covered/missing nicely in the UI; let the user tune `min_match` from the list view.
-4. Google OAuth: add credentials and test the flow.
+**Finish Phase 1** — done so far (all tested; see `tests/`):
+1. ✅ Profile edit/delete + form validation.
+2. ✅ Requirement extraction moved to `app/extraction.py` (rules-based must/nice/resp).
+3. ✅ Covered/missing shown as chips; `min_match` tunable from the list view.
+4. ✅ Google OAuth: credentials added, flow verified live.
+5. ✅ GDPR account export + delete.
+Remaining Phase 1 (see `ROADMAP.md`): **SEO foundation** (titles/meta, robots, sitemap,
+schema.org `JobPosting`, OG) and **BG/EN i18n scaffolding**.
 
 **Then Phase 2 (auto-fetch)**
 Adapters in priority order: ATS APIs (Greenhouse/Lever/Ashby/Workable — these also give the
