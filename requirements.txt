@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+psycopg2-binary
+pydantic>=2
+pydantic-settings
+python-multipart
+passlib[bcrypt]
+python-jose[cryptography]
+itsdangerous
+authlib
+httpx
+# Scoring (E5 embeddings). Optional at runtime — app falls back to keyword scoring
+# if these are not installed / model not downloaded.
+sentence-transformers
+numpy

@@ -1,0 +1,18 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    database_url: str = "postgresql+psycopg2://jobagent:jobagent@localhost:5432/jobagent"
+    secret_key: str = "change-me"
+    access_token_minutes: int = 10080  # 7 days
+
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    oauth_redirect_base: str = "http://localhost:8000"
+
+    e5_model: str = "intfloat/multilingual-e5-small"
+
+
+settings = Settings()
