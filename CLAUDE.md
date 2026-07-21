@@ -34,9 +34,14 @@ Working:
   level, location/remote preference, salary, `min_match` threshold, default 65).
 - **Sources screen** (`/sources`) — lists built-in platforms and lets the user **add their own**
   platform/link that we don't cover.
-- **Scoring** — paste a job description → `app/scoring.py` computes a match %, plus
-  covered/missing requirements. Uses **local E5 embeddings**; falls back to keyword overlap
-  if `sentence-transformers` / the model is unavailable.
+- **Scoring** — `app/extraction.py` parses a job description into must/nice/responsibility
+  requirements (rules-based, no LLM); `app/scoring.py` computes a match % (must-have weighted
+  higher) plus covered/missing. Uses **local E5 embeddings**; falls back to keyword overlap if
+  `sentence-transformers` / the model is unavailable.
+  - **The real product flow is: the user describes their skills → we find open positions and
+    apply links for them** (Phase 2 auto-fetch). The current "paste a JD" screen is a
+    **temporary Phase-1 scaffold** to exercise scoring before auto-fetch exists — the extractor
+    will then run on the postings *we* fetch, not on anything a user pastes.
 - **Apply** — each match row shows an Apply button to the posting/apply URL.
 - **Mobile-friendly** — responsive CSS in the shared page shell (tables become cards under
   700px, full-width buttons, 16px inputs to stop iOS zoom).
@@ -90,16 +95,27 @@ Open http://127.0.0.1:8001
 
 ## 5. Conventions (follow these)
 
-- **Server-rendered HTML** in `app/main.py` (keeps it indexable for SEO; no SPA for now).
+- **Modular by default** *(required)*: split code into small, single-concern modules/routers.
+  When a file grows or mixes concerns, break it up. The point is practical: a change should
+  touch a **small** file, so the working context (and token cost) per edit stays low, and new
+  functionality drops in as a **self-contained module** rather than swelling an existing one.
+  Layout: shared shell/helpers in `app/web.py`; feature routes in `app/routers/<feature>.py`;
+  `app/main.py` stays thin (app creation + `include_router`). Domain logic (scoring, extraction)
+  lives in its own module, not in a route handler.
+- **Automated tests, thorough** *(required)*: every module ships with detailed automated tests
+  (`pytest` in `tests/`). Tests must run **without the SSH tunnel** — they use a temporary
+  SQLite DB via a `get_db` dependency override, so they're fast and hermetic. New behaviour is
+  not "done" until it has tests and `pytest` is green. Cover happy paths, validation failures,
+  per-user isolation, and edge cases.
+- **Server-rendered HTML** (keeps it indexable for SEO; no SPA for now). Reuse the shared shell.
 - **Mobile-first**: every new page must work on a phone. The shared shell already has the
   responsive rules — reuse it, don't invent a second layout.
 - **Cheap by default**: the core pipeline (find → dedup → validate → score → apply link)
   must not require a paid LLM. Scoring = local embeddings. Generative LLM only for
   CV/cover letters, and that is **BYOK** (user's own key) — see `LLM_COST_STRATEGY.md`.
 - **Per-user isolation** on every query — a user must never see another user's data.
-- **Verify before declaring done**: run the app / compile / test. In this repo we used
-  `python -m py_compile app/*.py` plus a stubbed-FastAPI harness to exercise routes without
-  a live server. Don't say "done" on unrun code.
+- **Verify before declaring done**: `python -m py_compile`, run `pytest`, and exercise the real
+  route (live server or `TestClient`). Don't say "done" on unrun code.
 - **Honest over impressive** — if something is a stretch or unverified, say so.
 
 ## 6. Hard rules
