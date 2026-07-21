@@ -48,7 +48,7 @@
 | 10 | RSS адаптери: RemoteOK / WeWorkRemotely | ⚙️ |
 | 10б | **БГ пазар** *(проучено на живо, 2026-07)*: ✅ **dev.bg** — реализиран RSS адаптер (официален `?feed=job_feed`, per-категория, hourly); ✅ **JobTiger** — реализиран sitemap адаптер (robots позволява обявите, изричен `ClaudeBot Crawl-Delay: 30` — спазваме го; JSON-LD `JobPosting` парсинг; **всички професии**; само в дневния фонов job). **jobs.bg — прескочен** (403 на всичко, вкл. robots.txt — враждебен; не скрейпваме против волята им). Кандидати за после: **zaplata.bg, rabota.bg, karieri.bg** (robots позволяват, sitemap-и има); noblehire (SPA, API не е намерен) | ⚙️ |
 | 11 | LinkedIn: **авто-search извън обхват** (ToS/няма API). Клиентски: **OAuth профил-импорт (приоритет)** + paste на обява. Разширение — отложено | ⚙️ |
-| 12 | Deduplicator (A3) — преди скор | ⚙️ *(+🧠 near-duplicate)* |
+| 12 | ✅ Deduplicator (A3) — cross-source в `ingest` (`app/dedup.py`): норм. компания (кирилица↔латиница, правни суфикси) + title Jaccard/синоними; ATS дубликат ъпгрейдва apply_url (A5). In-memory; персистентен `dedup_key` при Alembic (ст. 35) | ⚙️ |
 | 13 | Requirement Extractor (A4) + валидност (404/expired) | 🔍 **ключов AI touchpoint** |
 | 14 | Apply-Link Resolver (A5) — каноничен ATS линк + **резолюция от платени агрегатори** | ⚙️ *(рядко 🌐)* |
 | 15 | Aggregator/Filter (A7) — праг, махни видяни/кандидатствани | ⚙️ |

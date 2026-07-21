@@ -73,9 +73,9 @@ def test_ingest_upserts_without_duplicates(monkeypatch):
     posts = gh.fetch("acme")
     with SessionLocal() as db:
         r1 = ingest(db, posts)
-        assert r1 == {"added": 2, "skipped": 0}
+        assert r1 == {"added": 2, "skipped": 0, "deduped": 0}
         r2 = ingest(db, posts)                       # same postings again
-        assert r2 == {"added": 0, "skipped": 2}
+        assert r2 == {"added": 0, "skipped": 2, "deduped": 0}
         stored = db.execute(select(Posting)).scalars().all()
         assert len(stored) == 2
         row = db.execute(
