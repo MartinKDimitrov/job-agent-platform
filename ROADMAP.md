@@ -46,7 +46,7 @@
 | 8 | Adapter framework (A2) + нормализирана схема за сурова обява | ⚙️ |
 | 9 | ATS адаптери (публичен JSON API): Greenhouse/Lever/Ashby/Workable | ⚙️ |
 | 10 | RSS адаптери: RemoteOK / WeWorkRemotely | ⚙️ |
-| 10б | **БГ пазар:** отделен специализиран адаптер за **dev.bg** и за **jobs.bg** (изолирани — промяна по единия не чупи другите) | ⚙️/🌐 |
+| 10б | **БГ пазар** *(проучено на живо, 2026-07)*: ✅ **dev.bg** — реализиран RSS адаптер (официален `?feed=job_feed`, per-категория, hourly); ✅ **JobTiger** — реализиран sitemap адаптер (robots позволява обявите, изричен `ClaudeBot Crawl-Delay: 30` — спазваме го; JSON-LD `JobPosting` парсинг; **всички професии**; само в дневния фонов job). **jobs.bg — прескочен** (403 на всичко, вкл. robots.txt — враждебен; не скрейпваме против волята им). Кандидати за после: **zaplata.bg, rabota.bg, karieri.bg** (robots позволяват, sitemap-и има); noblehire (SPA, API не е намерен) | ⚙️ |
 | 11 | LinkedIn: **авто-search извън обхват** (ToS/няма API). Клиентски: **OAuth профил-импорт (приоритет)** + paste на обява. Разширение — отложено | ⚙️ |
 | 12 | Deduplicator (A3) — преди скор | ⚙️ *(+🧠 near-duplicate)* |
 | 13 | Requirement Extractor (A4) + валидност (404/expired) | 🔍 **ключов AI touchpoint** |

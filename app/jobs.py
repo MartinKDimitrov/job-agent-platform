@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from .db import SessionLocal
 from .models import User, Profile, Match, Posting, DigestEntry
+from .adapters import jobtiger
 from .adapters.seed_boards import GREENHOUSE_BOARDS
 from .crawl import fetch_all, run_search
 from .activity import get_activity, is_active_for_search
@@ -41,10 +42,17 @@ def _compose(user: User, items) -> tuple[str, str]:
     return f"{len(items)} new job match(es) for you", html
 
 
-def run_daily_digest(db: Session, boards=None, send=send_email, now=None) -> dict:
+def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
+                     jobtiger_limit: int = 0, jobtiger_delay: float = jobtiger.CRAWL_DELAY) -> dict:
+    """`jobtiger_limit` > 0 additionally crawls up to that many NEW JobTiger pages (30s apart,
+    per their robots crawl-delay) — background/cron only; 0 keeps runs fast and network-free
+    beyond the fast sources."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     now = now or datetime.utcnow()
-    raw = fetch_all(boards)                       # fetch once for the whole run
+    raw = fetch_all(boards)                       # fetch fast sources once for the whole run
+    if jobtiger_limit > 0:
+        known = {u for (u,) in db.execute(select(Posting.url)).all() if u}
+        raw += jobtiger.fetch(limit=jobtiger_limit, delay=jobtiger_delay, skip_urls=known)
     users = db.execute(select(User)).scalars().all()
 
     notified = emails_sent = new_matches = skipped = 0
@@ -86,4 +94,4 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None) -> dic
 
 if __name__ == "__main__":  # cron entrypoint: `python -m app.jobs`
     with SessionLocal() as _db:
-        print(run_daily_digest(_db))
+        print(run_daily_digest(_db, jobtiger_limit=20))

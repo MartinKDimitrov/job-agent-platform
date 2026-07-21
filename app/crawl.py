@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import Posting, Match
-from .adapters import greenhouse
+from .adapters import greenhouse, dev_bg
 from .adapters.base import RawPosting, ingest
 from .adapters.seed_boards import GREENHOUSE_BOARDS
 from .extraction import extract_requirements
@@ -39,12 +39,14 @@ def _relevant(rp: RawPosting, keywords: set[str]) -> bool:
 
 
 def fetch_all(boards=None) -> list[RawPosting]:
-    """Fetch every board once. The daily job fetches once and reuses across all profiles rather
-    than re-hitting each board per user (avoids rate limits at scale)."""
+    """Fetch every fast source once (Greenhouse boards + the dev.bg RSS feeds). The daily job
+    fetches once and reuses across all profiles rather than re-hitting each source per user.
+    Slow sources with a crawl delay (JobTiger) are pulled separately by the daily job only."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     out: list[RawPosting] = []
     for token, name in boards:
         out.extend(greenhouse.fetch(token, company_name=name))
+    out.extend(dev_bg.fetch())
     return out
 
 

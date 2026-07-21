@@ -2,6 +2,7 @@
 from sqlalchemy import select
 
 import app.adapters.greenhouse as gh
+import app.adapters.dev_bg as dev_bg
 import app.crawl as crawl
 from app.adapters.base import RawPosting
 from app.crawl import run_search
@@ -20,6 +21,7 @@ SAMPLE = [
 
 def _mock(monkeypatch, sample=SAMPLE, boards=(("acme", "Acme"),)):
     monkeypatch.setattr(gh, "fetch", lambda token, company_name=None: list(sample))
+    monkeypatch.setattr(dev_bg, "fetch", lambda categories=None: [])   # keep tests offline
     monkeypatch.setattr(crawl, "GREENHOUSE_BOARDS", list(boards))
 
 
