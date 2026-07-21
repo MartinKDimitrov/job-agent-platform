@@ -49,10 +49,18 @@
 | 11 | 🔑 LinkedIn логнат браузър (без raw scraping) | 🌐 **Claude in Chrome** |
 | 12 | Deduplicator (A3) — преди скор | ⚙️ *(+🧠 near-duplicate)* |
 | 13 | Requirement Extractor (A4) + валидност (404/expired) | 🔍 **ключов AI touchpoint** |
-| 14 | Apply-Link Resolver (A5) — каноничен ATS линк | ⚙️ *(рядко 🌐)* |
+| 14 | Apply-Link Resolver (A5) — каноничен ATS линк + **резолюция от платени агрегатори** | ⚙️ *(рядко 🌐)* |
 | 15 | Aggregator/Filter (A7) — праг, махни видяни/кандидатствани | ⚙️ |
 | 16 | Orchestrator/Scheduler (A10) — дневен run + „Търси сега" + инкрементално | ⚙️ |
 | 17 | Наблюдаемост: логове/метрики per run | ⚙️ |
+
+> **Правило за платени агрегатори (RemoteRocketship и подобни):** когато позиция е намерена
+> на платен/paywalled агрегатор, **не** водим натам. Резолвърът (A5) намира същата обява на
+> **официалния сайт/кариерна страница на компанията** или нейния ATS
+> (Greenhouse/Lever/Ashby/Workable/Rippling/SmartRecruiters) и слага **директен** Apply линк.
+> Ако не се намери официален източник → маркираме обявата и не показваме платен линк.
+> (Вече ни ухапа: RemoteRocketship крие Apply зад абонамент; Chess.com Apply беше на Rippling.)
+> Свързано със skill-а `verify-job`.
 
 ---
 
