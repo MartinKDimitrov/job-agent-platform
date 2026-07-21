@@ -104,6 +104,12 @@ Open http://127.0.0.1:8001
   Layout: shared shell/helpers in `app/web.py`; feature routes in `app/routers/<feature>.py`;
   `app/main.py` stays thin (app creation + `include_router`). Domain logic (scoring, extraction)
   lives in its own module, not in a route handler.
+- **One adapter per source (isolation)** *(required)*: every job source — platform, service,
+  site, API, feed, without exception — gets its **own dedicated adapter module**
+  (`app/adapters/<source>.py`) behind the common interface, with its **own tests**. Sources are
+  brittle (HTML changes, API tweaks, rate limits); isolating each means a change to one never
+  risks another, and adding a source is a new file, not an edit to shared code. The pipeline
+  works only off the normalized `RawPosting`.
 - **Automated tests, thorough** *(required)*: every module ships with detailed automated tests
   (`pytest` in `tests/`). Tests must run **without the SSH tunnel** — they use a temporary
   SQLite DB via a `get_db` dependency override, so they're fast and hermetic. New behaviour is
