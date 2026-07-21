@@ -1,22 +1,23 @@
 from datetime import datetime, timedelta
 
+import bcrypt
 from jose import jwt, JWTError
-from passlib.context import CryptContext
 
 from .config import settings
 
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGO = "HS256"
 
-
+# bcrypt only considers the first 72 bytes of the password; bcrypt >= 4 raises on longer
+# input instead of truncating, so we cap explicitly. (We use the bcrypt library directly
+# rather than passlib: passlib 1.7.4's backend probe crashes against bcrypt 5.x.)
 def hash_password(p: str) -> str:
-    return pwd.hash(p)
+    return bcrypt.hashpw(p.encode("utf-8")[:72], bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(p: str, h: str) -> bool:
     try:
-        return pwd.verify(p, h)
-    except Exception:
+        return bcrypt.checkpw(p.encode("utf-8")[:72], h.encode("utf-8"))
+    except (ValueError, TypeError):
         return False
 
 

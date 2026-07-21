@@ -5,7 +5,7 @@ psycopg2-binary
 pydantic>=2
 pydantic-settings
 python-multipart
-passlib[bcrypt]
+bcrypt
 python-jose[cryptography]
 itsdangerous
 authlib
