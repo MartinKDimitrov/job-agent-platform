@@ -19,6 +19,7 @@ from .adapters.base import RawPosting, ingest
 from .adapters.seed_boards import GREENHOUSE_BOARDS
 from .extraction import extract_requirements
 from .scoring import score
+from .filters import passes_hard_filters
 
 DEFAULT_LIMIT = 40
 _TOKEN_RE = re.compile(r"[a-z0-9\+\#\.]+")
@@ -54,14 +55,18 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT) ->
     # 2. persist (dedup by content_hash).
     ing = ingest(db, candidates)
 
-    # 3. extract requirements (if missing) + score each candidate against the profile.
+    # 3. hard filters (location/seniority) BEFORE scoring, then extract + score what survives.
     ptext = profile.as_text()
-    matched = 0
+    scored = filtered = matched = 0
     for rp in candidates:
         post = db.execute(
             select(Posting).where(Posting.content_hash == rp.content_hash())).scalar_one_or_none()
         if not post:
             continue
+        ok, _reason = passes_hard_filters(profile, post.title, post.location, post.description)
+        if not ok:
+            filtered += 1
+            continue                       # dropped before any embedding cost
         if not post.requirements:
             post.requirements = extract_requirements(post.description or "")
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements)
@@ -72,8 +77,9 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT) ->
         else:
             db.add(Match(profile_id=profile.id, posting_id=post.id,
                          score=sc, covered=covered, missing=missing))
+        scored += 1
         if sc >= profile.min_match:
             matched += 1
     db.commit()
-    return {"fetched": fetched, "scored": len(candidates),
-            "added": ing["added"], "matched": matched}
+    return {"fetched": fetched, "candidates": len(candidates), "filtered": filtered,
+            "scored": scored, "added": ing["added"], "matched": matched}

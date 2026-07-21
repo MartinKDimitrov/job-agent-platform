@@ -92,6 +92,29 @@ def test_search_now_button_flow(auth_client, monkeypatch):
     assert "https://x/1" in body                     # apply link present
 
 
+def test_hard_filter_drops_management_role(monkeypatch):
+    # An Android EM role passes the keyword pre-filter ("android") but must be hard-filtered out.
+    sample = [
+        RawPosting("ats_api", "1", "Senior Android Engineer", "Acme", location="Remote",
+                   url="https://x/1", apply_url="https://x/1",
+                   description="Requirements:\n- Kotlin"),
+        RawPosting("ats_api", "2", "Android Engineering Manager", "Acme", location="Remote",
+                   url="https://x/2", apply_url="https://x/2",
+                   description="Requirements:\n- Kotlin\n- Lead a team"),
+    ]
+    _mock(monkeypatch, sample=sample)
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Android", min_match=0)
+        res = run_search(db, p)
+        assert res["filtered"] == 1          # the EM role dropped
+        assert res["scored"] == 1            # only the IC role scored
+        titles = {x.title for x in db.execute(select(Posting)).scalars().all()}
+        # both are ingested (postings are shared), but only the IC role gets a Match
+        matches = db.execute(select(Match).where(Match.profile_id == p.id)).scalars().all()
+        matched_titles = {db.get(Posting, m.posting_id).title for m in matches}
+        assert matched_titles == {"Senior Android Engineer"}
+
+
 def test_cannot_search_another_users_profile(client, monkeypatch):
     _mock(monkeypatch)
     register(client, email="owner2@test.local")

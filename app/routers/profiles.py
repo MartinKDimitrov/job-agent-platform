@@ -236,14 +236,14 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
     if not p or p.user_id != u.id:
         return redirect("/")
     res = run_search(db, p)
-    return redirect(f"/profiles/{p.id}?fetched={res['fetched']}"
-                    f"&new={res['added']}&found={res['matched']}")
+    return redirect(f"/profiles/{p.id}?fetched={res['fetched']}&new={res['added']}"
+                    f"&filtered={res['filtered']}&found={res['matched']}")
 
 
 @router.get("/profiles/{pid}", response_class=HTMLResponse)
 def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
                  fetched: int | None = None, new: int | None = None,
-                 found: int | None = None):
+                 filtered: int | None = None, found: int | None = None):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -265,9 +265,10 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
 
     banner = ""
     if found is not None:
+        filt = f"{filtered} filtered out (seniority/location), " if filtered else ""
         banner = (f"<div class='card' style='background:#e3f4e3;border-color:#2e7d32'>"
                   f"Search complete — fetched {fetched or 0} postings, {new or 0} new, "
-                  f"<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
+                  f"{filt}<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
 
     body = f"""{banner}<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
     <p class='small'>Target: {escape(p.target_roles)} · {escape(p.remote_pref)} · {escape(p.location_pref)}</p>
