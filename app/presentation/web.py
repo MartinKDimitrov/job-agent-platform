@@ -49,6 +49,7 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
     alternate-language <link>s for the public, language-prefixed pages."""
     if user:
         nav = (f"<a href='/'>{escape(t('nav.dashboard', lang))}</a>"
+               f"<a href='/documents'>{escape(t('nav.documents', lang))}</a>"
                f"<a href='/sources'>{escape(t('nav.sources', lang))}</a>"
                f"<a href='/account'>{escape(t('nav.account', lang))}</a>"
                f"<a href='/logout'>{escape(t('nav.logout', lang))}</a>")

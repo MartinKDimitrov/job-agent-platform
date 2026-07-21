@@ -12,7 +12,8 @@ DEFAULT_LANG = "en"
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
-        "nav.dashboard": "Dashboard", "nav.sources": "Sources", "nav.account": "Account",
+        "nav.dashboard": "Dashboard", "nav.documents": "Documents", "nav.sources": "Sources",
+        "nav.account": "Account",
         "nav.logout": "Logout", "nav.login": "Login", "nav.register": "Register",
         "landing.title": "Job Agent — find jobs that match your skills",
         "landing.description": ("Describe your professional skills and get open positions scored "
@@ -28,7 +29,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "register.submit": "Create account",
     },
     "bg": {
-        "nav.dashboard": "Табло", "nav.sources": "Източници", "nav.account": "Профил",
+        "nav.dashboard": "Табло", "nav.documents": "Документи", "nav.sources": "Източници",
+        "nav.account": "Профил",
         "nav.logout": "Изход", "nav.login": "Вход", "nav.register": "Регистрация",
         "landing.title": "Job Agent — работа, която пасва на уменията ти",
         "landing.description": ("Опиши професионалните си умения и получи отворени позиции, "

@@ -270,10 +270,14 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
     for m, post in db.execute(q).all():
         apply = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' target='_blank'>Apply</a>"
                  if (post.apply_url or post.url) else "<span class='small'>—</span>")
-        gen = (f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline'>"
+        # generation is a synchronous 5-20s LLM call — without instant feedback the buttons feel
+        # dead, so on submit we disable them and show a spinner label.
+        busy = ("onsubmit=\"var b=this.querySelector('button');"
+                "setTimeout(function(){b.disabled=true;b.textContent='⏳ Generating…';},0);\"")
+        gen = (f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
                f"<input type='hidden' name='kind' value='cv'>"
                f"<button class='btn gray' title='Generate a tailored CV (uses your AI key)'>CV</button></form> "
-               f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline'>"
+               f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
                f"<input type='hidden' name='kind' value='cover_letter'>"
                f"<button class='btn gray' title='Generate a cover letter (uses your AI key)'>Letter</button></form>")
         rows += (f"<tr><td><b>{m.score:.0f}%</b></td>"
