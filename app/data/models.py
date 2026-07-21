@@ -111,6 +111,24 @@ class DigestEntry(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class Document(Base):
+    """A generated CV or cover letter, tied to a user and a posting. Content is the LLM output
+    (the user reviews/edits before use — human in the loop). prompt_version records which
+    prompt template produced it, so prompt changes are traceable."""
+    __tablename__ = "documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    posting_id: Mapped[int | None] = mapped_column(
+        ForeignKey("postings.id", ondelete="SET NULL"), nullable=True)
+    kind: Mapped[str] = mapped_column(String(16), default="cv")       # cv / cover_letter
+    lang: Mapped[str] = mapped_column(String(8), default="en")        # en / bg
+    content: Mapped[str] = mapped_column(Text, default="")
+    provider: Mapped[str] = mapped_column(String(32), default="")
+    model: Mapped[str] = mapped_column(String(128), default="")
+    prompt_version: Mapped[str] = mapped_column(String(16), default="v1")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class UserLLMConfig(Base):
     """Per-user BYOK settings: which LLM provider to use and their API key, encrypted at rest
     (Fernet — see data/keystore.py). One config per user; deletable any time. The plaintext key

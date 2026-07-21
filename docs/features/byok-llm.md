@@ -21,8 +21,18 @@ stored. Keys are encrypted at rest (Fernet, key derived from the app `SECRET_KEY
 `data/keystore.py`, table `UserLLMConfig`), never rendered back to the browser, never logged,
 and removable any time. Keyless providers (Ollama) skip the key requirement.
 
-**Coming next:** 3.3 versioned prompts + the generation use case (CEFR-aware, no invented
-skills); 3.4 document storage + .docx download; 3.5 server-side Ollama fallback with daily
-limits (deploy phase).
+**Generation (step 3.3):** every match row has **CV** and **Letter** buttons. The use case
+(`application/usecases/generate_document.py`) loads the user's BYOK config, builds a
+**versioned prompt** (`domain/prompts/documents_v1.py`) from STRUCTURED data — profile fields,
+extracted must/nice requirements, covered/missing from the match (never whole pages; tokens
+are the user's money) — calls the provider, and stores a `Document` (kind, lang en/bg,
+provider/model, prompt_version). Prompt constraints: mid-register tone, the candidate's CEFR
+English level, and the hard honesty rule — never invent skills/experience; missing
+requirements are listed explicitly as "do NOT claim these". The document view says plainly:
+review and edit before using (human in the loop). Failures (no key configured, provider
+errors) surface as readable banners, never 500s.
 
-**Tests:** `tests/test_llm_providers.py`, `tests/test_byok_settings.py`.
+**Coming next:** 3.4 .docx download + regenerate controls; 3.5 server-side Ollama fallback
+with daily limits (deploy phase); prompt eval harness after first real-world use.
+
+**Tests:** `tests/test_llm_providers.py`, `tests/test_byok_settings.py`, `tests/test_generate.py`.

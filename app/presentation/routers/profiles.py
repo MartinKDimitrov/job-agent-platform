@@ -254,7 +254,8 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
 @router.get("/profiles/{pid}", response_class=HTMLResponse)
 def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
                  fetched: int | None = None, new: int | None = None,
-                 filtered: int | None = None, found: int | None = None):
+                 filtered: int | None = None, found: int | None = None,
+                 gen_err: str | None = None):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -269,17 +270,26 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
     for m, post in db.execute(q).all():
         apply = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' target='_blank'>Apply</a>"
                  if (post.apply_url or post.url) else "<span class='small'>—</span>")
+        gen = (f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline'>"
+               f"<input type='hidden' name='kind' value='cv'>"
+               f"<button class='btn gray' title='Generate a tailored CV (uses your AI key)'>CV</button></form> "
+               f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline'>"
+               f"<input type='hidden' name='kind' value='cover_letter'>"
+               f"<button class='btn gray' title='Generate a cover letter (uses your AI key)'>Letter</button></form>")
         rows += (f"<tr><td><b>{m.score:.0f}%</b></td>"
                  f"<td><b>{escape(post.title)}</b><br><span class='small'>{escape(post.company)} · {escape(post.location)}</span></td>"
-                 f"<td>{_gaps_cell(m.covered, m.missing)}</td><td>{apply}</td></tr>")
+                 f"<td>{_gaps_cell(m.covered, m.missing)}</td><td>{apply}<br>{gen}</td></tr>")
     rows = rows or "<tr><td colspan='4' class='small'>No matches above threshold yet. Run a search or add a posting below.</td></tr>"
 
     banner = ""
+    if gen_err:
+        banner += (f"<div class='card' style='border-color:#c0392b;background:#fdecea'>"
+                   f"<b style='color:#c0392b'>Generation failed:</b> {escape(gen_err)}</div>")
     if found is not None:
         filt = f"{filtered} filtered out (seniority/location), " if filtered else ""
-        banner = (f"<div class='card' style='background:#e3f4e3;border-color:#2e7d32'>"
-                  f"Search complete — fetched {fetched or 0} postings, {new or 0} new, "
-                  f"{filt}<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
+        banner += (f"<div class='card' style='background:#e3f4e3;border-color:#2e7d32'>"
+                   f"Search complete — fetched {fetched or 0} postings, {new or 0} new, "
+                   f"{filt}<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
 
     body = f"""{banner}<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
     <p class='small'>Target: {escape(p.target_roles)} · {escape(p.remote_pref)} · {escape(p.location_pref)}</p>
