@@ -34,6 +34,9 @@ def generate(system: str, prompt: str, api_key: str = "", model: str = "") -> st
         raise LLMError("Gemini rejected the API key — check it in your account settings.")
     if r.status_code == 429:
         raise LLMError("Gemini rate limit reached — try again in a minute.")
+    if r.status_code == 503:
+        raise LLMError("Gemini is overloaded right now (free-tier high demand) — "
+                       "try again in a few minutes.")
     if r.status_code == 404:
         raise LLMError(f"Gemini model '{model}' not found or retired — leave Model empty to use "
                        f"the latest, or pick one from ai.google.dev/gemini-api/docs/models.")
