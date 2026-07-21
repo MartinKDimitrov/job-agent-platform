@@ -9,7 +9,9 @@ import httpx
 from .base import GENERATION_TIMEOUT, LLMError, ProviderInfo, register, scrub
 
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-DEFAULT_MODEL = "gemini-2.5-flash"
+# The -latest alias always points to the current flash model, so a retired model id can never
+# break generation again (gemini-2.5-flash got retired for new users and 404'd us).
+DEFAULT_MODEL = "gemini-flash-latest"
 
 
 def generate(system: str, prompt: str, api_key: str = "", model: str = "") -> str:
@@ -29,6 +31,9 @@ def generate(system: str, prompt: str, api_key: str = "", model: str = "") -> st
         raise LLMError("Gemini rejected the API key — check it in your account settings.")
     if r.status_code == 429:
         raise LLMError("Gemini rate limit reached — try again in a minute.")
+    if r.status_code == 404:
+        raise LLMError(f"Gemini model '{model}' not found or retired — leave Model empty to use "
+                       f"the latest, or pick one from ai.google.dev/gemini-api/docs/models.")
     if r.status_code != 200:
         raise LLMError(scrub(f"Gemini error {r.status_code}: {r.text[:200]}", api_key))
     try:

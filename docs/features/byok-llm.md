@@ -6,7 +6,7 @@ LLM-free). One isolated module per provider behind a single contract:
 
 | Provider | Module | Key | Default model |
 |---|---|---|---|
-| Google Gemini | `data/llm/gemini.py` | required (free tier at aistudio.google.com) | `gemini-2.5-flash` |
+| Google Gemini | `data/llm/gemini.py` | required (free tier at aistudio.google.com) | `gemini-flash-latest` (alias — always the current flash model) |
 | Groq | `data/llm/groq.py` | required (free tier at console.groq.com) | `llama-3.3-70b-versatile` |
 | Ollama (local) | `data/llm/ollama.py` | none — localhost:11434 | `llama3.1` |
 
