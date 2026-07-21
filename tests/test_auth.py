@@ -1,4 +1,10 @@
 """Auth: register, login, logout, protection, OAuth-unconfigured behaviour."""
+import pytest
+
+from app.routers import auth as auth_module
+from app.models import User
+from app.db import SessionLocal
+from sqlalchemy import select
 from tests.conftest import register
 
 
@@ -54,3 +60,48 @@ def test_password_over_72_bytes_does_not_crash(client):
 def test_google_oauth_unconfigured_message(client):
     r = client.get("/auth/google", follow_redirects=True)
     assert "not configured" in r.text.lower()
+
+
+# ---- Google OAuth callback (mocked so we don't hit Google) ----
+class _FakeGoogle:
+    def __init__(self, userinfo):
+        self._userinfo = userinfo
+
+    async def authorize_access_token(self, request):
+        return {"userinfo": self._userinfo}
+
+
+class _FakeOAuth:
+    def __init__(self, userinfo):
+        self.google = _FakeGoogle(userinfo)
+
+
+def _mock_oauth(monkeypatch, userinfo):
+    monkeypatch.setattr(auth_module, "_oauth", _FakeOAuth(userinfo))
+
+
+def test_oauth_callback_creates_new_user(client, monkeypatch):
+    _mock_oauth(monkeypatch, {"email": "New.OAuth@Test.local", "name": "New", "sub": "g-1"})
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303 and "token" in r.cookies
+    with SessionLocal() as db:
+        u = db.execute(select(User).where(User.email == "new.oauth@test.local")).scalar_one()
+        assert u.google_sub == "g-1" and u.password_hash is None  # OAuth user has no password
+
+
+def test_oauth_callback_reuses_existing_user(client, monkeypatch):
+    register(client, email="both@test.local")           # user already exists (password account)
+    client.cookies.clear()
+    _mock_oauth(monkeypatch, {"email": "both@test.local", "name": "B", "sub": "g-2"})
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303
+    with SessionLocal() as db:
+        n = db.execute(select(User).where(User.email == "both@test.local")).scalars().all()
+        assert len(n) == 1  # no duplicate account created
+
+
+def test_oauth_callback_without_email_goes_to_login(client, monkeypatch):
+    _mock_oauth(monkeypatch, {"name": "No Email"})       # provider returned no email
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].endswith("/login")
+    assert "token" not in r.cookies

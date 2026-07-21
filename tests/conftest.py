@@ -7,9 +7,13 @@ every test, and force the keyword scoring path so nothing downloads an embedding
 import os
 import tempfile
 
-# Must be set before importing anything under `app` — the engine is built at import time.
+# Must be set before importing anything under `app` — settings/engine are built at import time.
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ["SECRET_KEY"] = "test-secret-key"
+# Keep tests hermetic: never inherit real Google OAuth creds from a local .env. Callback tests
+# inject a fake _oauth explicitly; everything else should see OAuth as unconfigured.
+os.environ["GOOGLE_CLIENT_ID"] = ""
+os.environ["GOOGLE_CLIENT_SECRET"] = ""
 
 import pytest
 from sqlalchemy import event
