@@ -228,6 +228,49 @@ def test_print_view_escapes_content(auth_client):
     assert "<script>alert(1)</script>" not in body     # escaped, not executable
 
 
+def test_document_edit_and_save(auth_client):
+    _fake_provider(name="editprov")
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
+    client.post("/account/llm", data={"provider": "editprov", "api_key": "sk-x"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    client.post(f"/profiles/{pid}/postings/{post_id}/generate", data={"kind": "cv"})
+    with SessionLocal() as db:
+        doc_id = db.execute(select(Document.id)).scalar_one()
+    # save an edit
+    r = client.post(f"/documents/{doc_id}/save",
+                    data={"content": "My hand-edited CV text."}, follow_redirects=True)
+    assert "Saved." in r.text and "My hand-edited CV text." in r.text
+    # the print/PDF view uses the edited text
+    assert "My hand-edited CV text." in client.get(f"/documents/{doc_id}/print").text
+
+
+def test_document_save_is_owner_only(auth_client):
+    _fake_provider(name="editown")
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
+    client.post("/account/llm", data={"provider": "editown", "api_key": "sk-x"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    client.post(f"/profiles/{pid}/postings/{post_id}/generate", data={"kind": "cv"})
+    with SessionLocal() as db:
+        doc_id = db.execute(select(Document.id)).scalar_one()
+        original = db.get(Document, doc_id).content
+    register_user(client, email="sneak@test.local")
+    r = client.post(f"/documents/{doc_id}/save", data={"content": "hijacked"},
+                    follow_redirects=True)
+    assert "Not found" in r.text
+    with SessionLocal() as db:
+        assert db.get(Document, doc_id).content == original   # unchanged
+
+
 def test_document_view_is_owner_only(auth_client):
     _fake_provider(name="ownprov")
     client, _ = auth_client

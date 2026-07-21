@@ -92,18 +92,39 @@ def document_view(doc_id: int, request: Request, db: Session = Depends(get_db)):
             f"<input type='hidden' name='kind' value='{other_kind}'>"
             f"<input type='hidden' name='lang' value='{escape(d.lang)}'>"
             f"<button class='btn gray'>{_KIND_LABEL[other_kind]} for this job</button></form>")
+    saved_note = ("<p class='small' style='color:var(--green)'><b>Saved.</b> The PDF uses "
+                  "your edited text.</p>" if request.query_params.get("saved") else "")
     body = f"""<div class='card'>
     <h2>{_KIND_LABEL.get(d.kind, d.kind)} <span class='small'>· {escape(d.lang.upper())} ·
     {escape(d.provider)}/{escape(d.model)} · prompt {escape(d.prompt_version)}</span></h2>
     <p class='small'>For: {job}</p>
     <p class='small'><b>Review and edit before using</b> — AI output is a draft, you own the
-    final text.</p>
-    <textarea rows='24' style='font-family:Georgia,serif' readonly>{escape(d.content)}</textarea>
+    final text. Edit below and save; the PDF always uses your latest text.</p>
+    {saved_note}
+    <form method='post' action='/documents/{d.id}/save'>
+    <textarea name='content' rows='24' style='font-family:Georgia,serif'>{escape(d.content)}</textarea>
     <p style='margin-top:12px'>
+    <button class='btn green'>Save changes</button>
     <a class='btn' href='/documents/{d.id}/print' target='_blank'>⬇ Download PDF</a>
-    {apply_btn} {regen}
-    <a class='btn gray' href='/documents'>My documents</a></p></div>"""
+    {apply_btn}</p></form>
+    <p style='margin-top:12px'>{regen}
+    <a class='btn gray small' href='/documents'>My documents</a></p></div>"""
     return page(body, u, title=f"{_KIND_LABEL.get(d.kind, d.kind)} — Job Agent")
+
+
+@router.post("/documents/{doc_id}/save")
+def document_save(doc_id: int, request: Request, content: str = Form(""),
+                  db: Session = Depends(get_db)):
+    """Persist the user's edits — human in the loop is the rule; their text is the final text."""
+    u = current_user(request, db)
+    if not u:
+        return redirect("/login")
+    d = db.get(Document, doc_id)
+    if d is None or d.user_id != u.id:
+        return page("<div class='card'>Not found.</div>", u)
+    d.content = content
+    db.commit()
+    return redirect(f"/documents/{d.id}?saved=1")
 
 
 @router.get("/documents/{doc_id}/print", response_class=HTMLResponse)
