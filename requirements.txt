@@ -14,3 +14,6 @@ httpx
 # if these are not installed / model not downloaded.
 sentence-transformers
 numpy
+
+# Tests (run without the SSH tunnel — use a temp SQLite DB, see tests/conftest.py)
+pytest
