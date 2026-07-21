@@ -10,6 +10,7 @@ from ..db import get_db
 from ..models import Profile, Posting, Match
 from ..scoring import score
 from ..extraction import extract_requirements
+from ..crawl import run_search
 from ..web import page, current_user, redirect, escape
 
 router = APIRouter()
@@ -224,8 +225,25 @@ def profile_set_min_match(pid: int, request: Request, min_match: str = Form("65"
     return redirect(f"/profiles/{p.id}")
 
 
+@router.post("/profiles/{pid}/search")
+def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
+    """On-demand crawl: fetch from the seed sources, score against this profile, show matches.
+    Synchronous for now; the daily background run is Step 16."""
+    u = current_user(request, db)
+    if not u:
+        return redirect("/login")
+    p = db.get(Profile, pid)
+    if not p or p.user_id != u.id:
+        return redirect("/")
+    res = run_search(db, p)
+    return redirect(f"/profiles/{p.id}?fetched={res['fetched']}"
+                    f"&new={res['added']}&found={res['matched']}")
+
+
 @router.get("/profiles/{pid}", response_class=HTMLResponse)
-def profile_view(pid: int, request: Request, db: Session = Depends(get_db)):
+def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
+                 fetched: int | None = None, new: int | None = None,
+                 found: int | None = None):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -243,11 +261,19 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db)):
         rows += (f"<tr><td><b>{m.score:.0f}%</b></td>"
                  f"<td><b>{escape(post.title)}</b><br><span class='small'>{escape(post.company)} · {escape(post.location)}</span></td>"
                  f"<td>{_gaps_cell(m.covered, m.missing)}</td><td>{apply}</td></tr>")
-    rows = rows or "<tr><td colspan='4' class='small'>No matches above threshold yet. Add a posting below.</td></tr>"
+    rows = rows or "<tr><td colspan='4' class='small'>No matches above threshold yet. Run a search or add a posting below.</td></tr>"
 
-    body = f"""<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
+    banner = ""
+    if found is not None:
+        banner = (f"<div class='card' style='background:#e3f4e3;border-color:#2e7d32'>"
+                  f"Search complete — fetched {fetched or 0} postings, {new or 0} new, "
+                  f"<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
+
+    body = f"""{banner}<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
     <p class='small'>Target: {escape(p.target_roles)} · {escape(p.remote_pref)} · {escape(p.location_pref)}</p>
-    <p><a class='btn gray' href='/profiles/{p.id}/edit'>Edit</a>
+    <p><form method='post' action='/profiles/{p.id}/search' style='display:inline'>
+      <button class='btn green'>🔎 Search now</button></form>
+    <a class='btn gray' href='/profiles/{p.id}/edit'>Edit</a>
     <form method='post' action='/profiles/{p.id}/delete' style='display:inline'
       onsubmit="return confirm('Delete this profile and its matches? This cannot be undone.')">
       <button class='btn' style='background:#c0392b'>Delete</button></form></p>
