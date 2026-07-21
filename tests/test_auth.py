@@ -105,3 +105,29 @@ def test_oauth_callback_without_email_goes_to_login(client, monkeypatch):
     r = client.get("/auth/google/callback", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"].endswith("/login")
     assert "token" not in r.cookies
+
+
+class _FailingGoogle:
+    async def authorize_access_token(self, request):
+        raise RuntimeError("mismatching_state: CSRF Warning!")
+
+
+def test_oauth_state_mismatch_is_not_a_500(client, monkeypatch):
+    # Stale state / expired session (e.g. localhost vs 127.0.0.1 cookie split, or a stale tab)
+    # must degrade to a friendly retry, never a 500.
+    fake = _FakeOAuth({})
+    fake.google = _FailingGoogle()
+    monkeypatch.setattr(auth_module, "_oauth", fake)
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303 and "oauth_err=1" in r.headers["location"]
+    page = client.get("/login?oauth_err=1")
+    assert "try again" in page.text.lower()
+
+
+def test_auth_google_canonicalizes_host(client, monkeypatch):
+    # Starting the flow on a non-canonical host must bounce to the canonical one first,
+    # otherwise the state cookie is set on a host the callback never sees.
+    monkeypatch.setattr(auth_module, "_oauth", _FakeOAuth({}))   # configured
+    r = client.get("/auth/google", follow_redirects=False)       # testserver != localhost:8001
+    assert r.status_code == 303
+    assert r.headers["location"] == "http://localhost:8001/auth/google"

@@ -96,9 +96,14 @@ def register(email: str = Form(...), password: str = Form(...), name: str = Form
 
 
 @router.get("/login", response_class=HTMLResponse)
-def login_form(request: Request):
+def login_form(request: Request, oauth_err: str | None = None):
     lang = current_lang(request)
-    body = (f"<div class='card'><h2>{escape(t('login.heading', lang))}</h2>"
+    err = ""
+    if oauth_err:
+        err = ("<div class='card' style='border-color:#c0392b;background:#fdecea'>"
+               "Google sign-in didn't complete (the session expired or the page was stale). "
+               "Please try again.</div>")
+    body = (f"{err}<div class='card'><h2>{escape(t('login.heading', lang))}</h2>"
             "<form method='post' action='/login'>"
             f"<label>{escape(t('login.email', lang))}</label><input name='email' type='email' required>"
             f"<label>{escape(t('login.password', lang))}</label><input name='password' type='password' required>"
@@ -143,6 +148,14 @@ async def auth_google(request: Request):
     if not _oauth:
         return page("<div class='card'>Google login is not configured yet "
                     "(set GOOGLE_CLIENT_ID / SECRET in .env). Use email + password.</div>")
+    # Canonicalize the host BEFORE starting the flow: the state lives in a session cookie, and
+    # a cookie set on 127.0.0.1 is not sent to localhost (and vice versa) — starting on one host
+    # and returning on the redirect-URI host guarantees a MismatchingStateError. So if the user
+    # opened the app on a non-canonical host, bounce them to the canonical one first.
+    from urllib.parse import urlparse
+    canonical = urlparse(settings.oauth_redirect_base).netloc
+    if canonical and request.url.netloc != canonical:
+        return redirect(f"{settings.oauth_redirect_base}/auth/google")
     redirect_uri = settings.oauth_redirect_base + "/auth/google/callback"
     return await _oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -151,7 +164,10 @@ async def auth_google(request: Request):
 async def auth_google_cb(request: Request, db: Session = Depends(get_db)):
     if not _oauth:
         return redirect("/login")
-    token = await _oauth.google.authorize_access_token(request)
+    try:
+        token = await _oauth.google.authorize_access_token(request)
+    except Exception:  # noqa: BLE001 — stale state / expired session / user retried: not a 500
+        return redirect("/login?oauth_err=1")
     info = token.get("userinfo") or {}
     email = (info.get("email") or "").lower()
     if not email:
