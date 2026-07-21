@@ -11,6 +11,7 @@ file in the same change that alters behaviour (required — see CLAUDE.md §5).
 - [daily-digest.md](daily-digest.md) — daily background search + email notifications
 - [observability.md](observability.md) — per-run/per-source metrics
 - [seo-and-i18n.md](seo-and-i18n.md) — SEO foundation and BG/EN localization
+- [byok-llm.md](byok-llm.md) — BYOK LLM provider layer for CV/cover-letter generation (Phase 3)
 
 Product-level design lives at the repo root: `ARCHITECTURE.md` (agents/phases),
 `DECISIONS.md`, `ROADMAP.md`, `LLM_COST_STRATEGY.md`. Code-level architecture:
