@@ -14,5 +14,9 @@ class Settings(BaseSettings):
 
     e5_model: str = "intfloat/multilingual-e5-small"
 
+    # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
+    # Set to the real domain in production (e.g. https://jobagent.example).
+    site_url: str = "http://localhost:8001"
+
 
 settings = Settings()

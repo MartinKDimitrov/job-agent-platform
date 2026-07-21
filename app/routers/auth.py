@@ -9,6 +9,7 @@ from ..models import User, Profile
 from ..security import hash_password, verify_password, make_token
 from ..config import settings
 from ..web import page, current_user, redirect, escape
+from ..seo import site_jsonld
 
 router = APIRouter()
 
@@ -28,7 +29,13 @@ def home(request: Request, db: Session = Depends(get_db)):
                 "<p class='small'>Create profiles, score openings against them, and apply directly.</p>"
                 "<a class='btn' href='/register'>Get started</a> "
                 "<a class='btn gray' href='/login'>Login</a></div>")
-        return page(body)
+        # The only public, indexable page for now — real title/description + site JSON-LD.
+        return page(
+            body,
+            title="Job Agent — find jobs that match your skills",
+            description=("Describe your professional skills and get open positions scored "
+                         "against your profile, with a direct apply link for each match."),
+            path="/", noindex=False, head_extra=site_jsonld())
     profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
     rows = "".join(
         f"<tr><td><a href='/profiles/{p.id}'>{escape(p.name)}</a></td>"

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from .models import User
 from .security import read_token
+from .seo import meta_tags
 
 __all__ = ["escape", "page", "current_user", "redirect"]
 
@@ -29,13 +30,21 @@ def redirect(url: str) -> RedirectResponse:
     return RedirectResponse(url, status_code=303)
 
 
-def page(body: str, user: User | None = None, title: str = "Job Agent") -> str:
+def page(body: str, user: User | None = None, *, title: str = "Job Agent",
+         description: str = "", path: str = "/", noindex: bool = True,
+         head_extra: str = "") -> str:
+    """Render the page shell. `noindex` defaults to True so private pages never leak into
+    search by accident — public pages opt in with noindex=False and a real description.
+    `head_extra` is for extra <head> content such as JSON-LD on public pages."""
     nav = ("<a href='/'>Dashboard</a><a href='/sources'>Sources</a>"
            "<a href='/account'>Account</a><a href='/logout'>Logout</a>") if user else \
           ("<a href='/login'>Login</a><a href='/register'>Register</a>")
     who = f"<span class='who'>{escape(user.email)}</span>" if user else ""
+    seo = meta_tags(title, description, path, noindex=noindex)
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)}</title>
+{seo}
+{head_extra}
 <style>
 *{{box-sizing:border-box}} body{{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f5f6fa;color:#222}}
 header{{background:#1f3864;color:#fff;padding:12px 22px;display:flex;gap:16px;align-items:center}}

@@ -138,8 +138,11 @@ Open http://127.0.0.1:8001
 3. ✅ Covered/missing shown as chips; `min_match` tunable from the list view.
 4. ✅ Google OAuth: credentials added, flow verified live.
 5. ✅ GDPR account export + delete.
-Remaining Phase 1 (see `ROADMAP.md`): **SEO foundation** (titles/meta, robots, sitemap,
-schema.org `JobPosting`, OG) and **BG/EN i18n scaffolding**.
+6. ✅ SEO foundation: per-page title/description/canonical/OG, `robots.txt`, `sitemap.xml`,
+   Organization/WebSite JSON-LD on the landing; **private pages are noindex by default**
+   (`app/seo.py`, `app/routers/seo.py`). `JobPosting` schema deferred until public job pages
+   exist (Phase 2/4).
+Remaining Phase 1 (see `ROADMAP.md`): **BG/EN i18n scaffolding**.
 
 **Then Phase 2 (auto-fetch)**
 Adapters in priority order: ATS APIs (Greenhouse/Lever/Ashby/Workable — these also give the
