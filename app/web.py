@@ -13,6 +13,7 @@ from .models import User
 from .security import read_token
 from .seo import meta_tags
 from .i18n import t, LANGS, DEFAULT_LANG
+from .activity import touch
 
 __all__ = ["escape", "page", "current_user", "redirect"]
 
@@ -24,7 +25,10 @@ def current_user(request: Request, db: Session) -> User | None:
     uid = read_token(tok)
     if not uid:
         return None
-    return db.get(User, uid)
+    u = db.get(User, uid)
+    if u:
+        touch(db, u.id)          # record activity (throttled) — drives the daily job's "active" gate
+    return u
 
 
 def redirect(url: str) -> RedirectResponse:

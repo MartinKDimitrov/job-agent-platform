@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Profile, Application
 from ..web import page, current_user, redirect, escape
+from ..activity import get_activity, set_found_job
 
 router = APIRouter()
 
@@ -17,10 +18,24 @@ def account_view(request: Request, db: Session = Depends(get_db)):
     if not u:
         return redirect("/login")
     profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
+    act = get_activity(db, u.id)
+    paused = bool(act and act.found_job)
+    if paused:
+        status = ("<b style='color:#2e7d32'>Paused</b> — you marked that you found a job, "
+                  "so we're not searching for you.")
+        btn = ("<input type='hidden' name='value' value='0'>"
+               "<button class='btn'>Resume my searches</button>")
+    else:
+        status = ("<b>Active</b> — we search daily and email you new matches "
+                  "(if you're active in the last 5 days).")
+        btn = ("<input type='hidden' name='value' value='1'>"
+               "<button class='btn green'>🎉 I found a job — pause searches</button>")
     body = f"""<div class='card'><h2>Account</h2>
     <p class='small'>{escape(u.email)} · joined {u.created_at:%Y-%m-%d}</p>
     <p>{len(profiles)} search profile(s).</p>
     <p><a class='btn gray' href='/account/export'>Export my data (JSON)</a></p></div>
+    <div class='card'><h3>Job search status</h3><p class='small'>{status}</p>
+    <form method='post' action='/account/found-job'>{btn}</form></div>
     <div class='card' style='border-color:#c0392b'>
     <h3 style='color:#c0392b'>Delete account</h3>
     <p class='small'>Permanently deletes your account, profiles, matches and applications.
@@ -32,6 +47,16 @@ def account_view(request: Request, db: Session = Depends(get_db)):
         <button class='btn' style='background:#c0392b'>Delete my account</button></p>
     </form></div>"""
     return page(body, u)
+
+
+@router.post("/account/found-job")
+def account_found_job(request: Request, value: str = Form("0"),
+                      db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return redirect("/login")
+    set_found_job(db, u.id, value == "1")
+    return redirect("/account")
 
 
 @router.get("/account/export")

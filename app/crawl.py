@@ -38,19 +38,28 @@ def _relevant(rp: RawPosting, keywords: set[str]) -> bool:
     return any(k in (rp.title or "").lower() for k in keywords)
 
 
-def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT) -> dict:
-    """Fetch → pre-filter → ingest → extract → score for one profile. Returns a small summary."""
+def fetch_all(boards=None) -> list[RawPosting]:
+    """Fetch every board once. The daily job fetches once and reuses across all profiles rather
+    than re-hitting each board per user (avoids rate limits at scale)."""
+    boards = GREENHOUSE_BOARDS if boards is None else boards
+    out: list[RawPosting] = []
+    for token, name in boards:
+        out.extend(greenhouse.fetch(token, company_name=name))
+    return out
+
+
+def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
+               raw_postings=None) -> dict:
+    """Fetch → pre-filter → ingest → extract → score for one profile. Returns a small summary.
+    Pass `raw_postings` to score an already-fetched batch (used by the daily digest job)."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     keywords = _profile_keywords(profile)
 
-    # 1. fetch each board and keep only profile-relevant postings (cheap), then cap.
-    fetched = 0
-    candidates: list[RawPosting] = []
-    for token, name in boards:
-        posts = greenhouse.fetch(token, company_name=name)
-        fetched += len(posts)
-        candidates.extend(rp for rp in posts if _relevant(rp, keywords))
-    candidates = candidates[:limit]
+    # 1. get postings (fetch, or reuse a pre-fetched batch) and keep only relevant ones, capped.
+    if raw_postings is None:
+        raw_postings = fetch_all(boards)
+    fetched = len(raw_postings)
+    candidates = [rp for rp in raw_postings if _relevant(rp, keywords)][:limit]
 
     # 2. persist (dedup by content_hash).
     ing = ingest(db, candidates)

@@ -18,5 +18,12 @@ class Settings(BaseSettings):
     # Set to the real domain in production (e.g. https://jobagent.example).
     site_url: str = "http://localhost:8001"
 
+    # Email (daily digest). If smtp_host is empty we run in dev mode: emails are logged, not sent.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    email_from: str = "Job Agent <noreply@localhost>"
+
 
 settings = Settings()

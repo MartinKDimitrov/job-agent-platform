@@ -88,6 +88,29 @@ class Match(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class UserActivity(Base):
+    """Per-user signals for the daily job: when we last saw them, and whether they paused
+    searching because they found a job. Separate table so we don't ALTER the users table
+    (no migration needed — create_all just adds this)."""
+    __tablename__ = "user_activity"
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    found_job: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class DigestEntry(Base):
+    """Records that a (profile, posting) match was already included in a digest email, so the
+    daily job never notifies the same match twice."""
+    __tablename__ = "digest_entries"
+    __table_args__ = (UniqueConstraint("profile_id", "posting_id", name="uq_digest_profile_posting"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
+    posting_id: Mapped[int] = mapped_column(ForeignKey("postings.id", ondelete="CASCADE"), index=True)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class Application(Base):
     __tablename__ = "applications"
     id: Mapped[int] = mapped_column(primary_key=True)
