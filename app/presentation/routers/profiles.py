@@ -126,11 +126,19 @@ def _gaps_chips(covered, missing) -> str:
     must_miss = [r for r in missing if _req_kind(r) == "must"]
     nice_miss = [r for r in missing if _req_kind(r) == "nice"]
     n_scored = len([r for r in covered if _req_kind(r) != "resp"])
+
+    def chip(r, cls: str) -> str:
+        # chips are glanceable labels, not paragraphs — truncate long requirement sentences
+        # (they were overflowing the card) and keep the full text in the tooltip.
+        full = _req_text(r)
+        short = full if len(full) <= 60 else full[:57].rstrip() + "…"
+        return (f"<span class='chip {cls}' title='{escape(full)}'>{escape(short)}</span>")
+
     out = []
     if n_scored:
         out.append(f"<span class='chip count'>✓ {n_scored} covered</span>")
-    out += [f"<span class='chip must'>{escape(_req_text(r))}</span>" for r in must_miss[:3]]
-    out += [f"<span class='chip nice'>{escape(_req_text(r))}</span>" for r in nice_miss[:2]]
+    out += [chip(r, "must") for r in must_miss[:3]]
+    out += [chip(r, "nice") for r in nice_miss[:2]]
     hidden = max(0, len(must_miss) - 3) + max(0, len(nice_miss) - 2)
     if hidden:
         out.append(f"<span class='chip more'>+{hidden} more</span>")
@@ -288,8 +296,13 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document]) -> st
 
     docs_html = ""
     if docs:
-        links = []
+        # show only the LATEST document per (kind, lang) — regenerations were stacking up as
+        # six identical "Letter (EN)" links. docs arrive newest-first.
+        latest: dict[tuple[str, str], Document] = {}
         for d in docs:
+            latest.setdefault((d.kind, d.lang), d)
+        links = []
+        for d in latest.values():
             ic = "doc" if d.kind == "cv" else "mail"
             label = "CV" if d.kind == "cv" else "Letter"
             links.append(f"<a href='/documents/{d.id}'>{icon(ic, 'icon')}"

@@ -72,6 +72,20 @@ def test_scoring_view_shows_gaps_as_chips(auth_client):
     assert "CI/CD" in body                    # missing must-have chip
 
 
+def test_long_requirement_chips_truncated(auth_client):
+    client, _ = auth_client
+    pid = make_profile(client, skills="Kotlin", min_match=0)
+    long_req = ("Familiarity with Go for backend development and understanding of Linux "
+                "internals such as processes and memory management")
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": f"Requirements:\n- Kotlin experience\n- {long_req}"})
+    body = client.get(f"/profiles/{pid}").text
+    assert f">{long_req}<" not in body     # full sentence never rendered as visible chip text
+    assert "…</span>" in body              # truncated with ellipsis
+    assert "Familiarity with Go" in body   # full text preserved (tooltip title attribute)
+
+
 def test_min_match_clamped(auth_client):
     client, _ = auth_client
     pid = make_profile(client, min_match=0)

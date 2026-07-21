@@ -258,6 +258,9 @@ input::placeholder, textarea::placeholder { color: #97a0af; }
   border: 1px solid transparent;
   line-height: 1.2;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .chip.covered { background: var(--green-soft); color: var(--green); }

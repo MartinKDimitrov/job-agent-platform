@@ -228,6 +228,23 @@ def test_print_view_escapes_content(auth_client):
     assert "<script>alert(1)</script>" not in body     # escaped, not executable
 
 
+def test_docs_row_shows_only_latest_per_kind_lang(auth_client):
+    _fake_provider(name="dedupprov")
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
+    client.post("/account/llm", data={"provider": "dedupprov", "api_key": "sk-x"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    # regenerate the same kind+lang three times
+    for _ in range(3):
+        client.post(f"/profiles/{pid}/postings/{post_id}/generate", data={"kind": "cv"})
+    body = client.get(f"/profiles/{pid}").text
+    assert body.count("CV (EN)") == 1      # only the latest shown, not one link per generation
+
+
 def test_document_edit_and_save(auth_client):
     _fake_provider(name="editprov")
     client, _ = auth_client
