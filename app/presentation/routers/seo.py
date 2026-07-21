@@ -13,8 +13,12 @@ router = APIRouter()
 # Areas behind login / holding personal data — keep crawlers out.
 PRIVATE_PREFIXES = ["/profiles", "/account", "/sources", "/documents", "/onboarding",
                     "/login", "/register", "/auth"]
-# Public, indexable URLs (extended in Phase 4). Both language variants of the landing.
-PUBLIC_PATHS = ["/", "/bg"]
+from ...domain.taxonomy import OCCUPATIONS
+
+# Public, indexable URLs: both landing languages + the profession pages (EN + BG variants).
+PUBLIC_PATHS = (["/", "/bg", "/jobs"]
+                + [f"/jobs/{o['id']}" for o in OCCUPATIONS]
+                + [f"/bg/jobs/{o['id']}" for o in OCCUPATIONS])
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
