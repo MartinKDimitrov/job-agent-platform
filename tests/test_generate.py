@@ -49,6 +49,20 @@ def test_cover_letter_prompt_bg_language():
     assert "English" in system_en
 
 
+def test_v2_skills_whitelist_rule():
+    # v2 regression: real v1 output blended a skill from the JOB TITLE into Key Skills for a
+    # candidate whose profile had no such skill. The whitelist rule must be explicit in both
+    # the system prompt and the CV task.
+    assert PROMPT_VERSION == "v2"
+    system, user = build_cv_prompt(P(), Post(), lang="en")
+    assert "SKILLS WHITELIST" in system
+    assert "never import skills from the job title" in system
+    assert "ONLY items copied verbatim" in user
+    system_cl, user_cl = build_cover_letter_prompt(P(), Post(), lang="en")
+    assert "SKILLS WHITELIST" in system_cl
+    assert "only ones present in their profile" in user_cl
+
+
 # ---- use case ----
 def _fake_provider(name="genprov", fail=False):
     def gen(system, prompt, api_key="", model=""):
