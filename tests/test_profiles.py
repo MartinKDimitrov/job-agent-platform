@@ -68,11 +68,14 @@ def test_scoring_view_shows_gaps_as_chips(auth_client):
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Co", "description": jd})
     body = client.get(f"/profiles/{pid}").text
-    assert "covered" in body                 # green covered count
-    assert "CI/CD" in body                    # missing must-have chip
+    assert "covered" in body                  # covered count chip
+    assert "to check" in body                 # calm warning chip instead of loud red chips
+    assert "CI/CD" in body                    # full missing text inside the expandable panel
 
 
-def test_long_requirement_chips_truncated(auth_client):
+def test_gaps_collapsed_with_full_text_in_panel(auth_client):
+    # Owner feedback: red chips were too intrusive. Collapsed summary by default; the full
+    # requirement sentences live inside the expandable details panel, tidy and complete.
     client, _ = auth_client
     pid = make_profile(client, skills="Kotlin", min_match=0)
     long_req = ("Familiarity with Go for backend development and understanding of Linux "
@@ -81,9 +84,10 @@ def test_long_requirement_chips_truncated(auth_client):
                 data={"title": "Role", "company": "Acme",
                       "description": f"Requirements:\n- Kotlin experience\n- {long_req}"})
     body = client.get(f"/profiles/{pid}").text
-    assert f">{long_req}<" not in body     # full sentence never rendered as visible chip text
-    assert "…</span>" in body              # truncated with ellipsis
-    assert "Familiarity with Go" in body   # full text preserved (tooltip title attribute)
+    assert "<details class='gaps'>" in body            # collapsed by default
+    assert "chip warn" in body and "to check" in body  # calm ⚠ summary chip
+    assert f"<li>{long_req}</li>" in body              # full text, tidy list in the panel
+    assert "Not in your profile" in body
 
 
 def test_min_match_clamped(auth_client):

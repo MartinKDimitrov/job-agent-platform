@@ -118,31 +118,39 @@ def _score_ring(sc: float) -> str:
             f"</svg><span class='num'>{pct}%</span></div>")
 
 
-def _gaps_chips(covered, missing) -> str:
-    """Why a posting scored as it did: covered count + missing must (red) / nice (grey) chips.
-    Transparency over a bare number."""
+def _gaps_block(covered, missing) -> str:
+    """Why a posting scored as it did — calm by default (owner feedback: the red chips were too
+    intrusive). Collapsed: '✓ N covered · ⚠ N to check'. Click expands a tidy two-column panel
+    with the FULL requirement texts (covered vs missing). Transparency on demand."""
     covered = covered or []
     missing = missing or []
+    cov_items = [r for r in covered if _req_kind(r) != "resp"]
     must_miss = [r for r in missing if _req_kind(r) == "must"]
     nice_miss = [r for r in missing if _req_kind(r) == "nice"]
-    n_scored = len([r for r in covered if _req_kind(r) != "resp"])
+    n_missing = len(must_miss) + len(nice_miss)
 
-    def chip(r, cls: str) -> str:
-        # chips are glanceable labels, not paragraphs — truncate long requirement sentences
-        # (they were overflowing the card) and keep the full text in the tooltip.
-        full = _req_text(r)
-        short = full if len(full) <= 60 else full[:57].rstrip() + "…"
-        return (f"<span class='chip {cls}' title='{escape(full)}'>{escape(short)}</span>")
+    chips = ""
+    if cov_items:
+        chips += f"<span class='chip count'>✓ {len(cov_items)} covered</span>"
+    if n_missing:
+        chips += f"<span class='chip warn'>⚠ {n_missing} to check</span>"
+    if not chips:
+        return ""
+    if not n_missing:
+        return f"<div class='chips'>{chips}</div>"
 
-    out = []
-    if n_scored:
-        out.append(f"<span class='chip count'>✓ {n_scored} covered</span>")
-    out += [chip(r, "must") for r in must_miss[:3]]
-    out += [chip(r, "nice") for r in nice_miss[:2]]
-    hidden = max(0, len(must_miss) - 3) + max(0, len(nice_miss) - 2)
-    if hidden:
-        out.append(f"<span class='chip more'>+{hidden} more</span>")
-    return "".join(out) or "<span class='small'>—</span>"
+    cov_list = "".join(f"<li>{escape(_req_text(r))}</li>" for r in cov_items[:10])
+    miss_list = "".join(f"<li>{escape(_req_text(r))}</li>" for r in must_miss)
+    nice_list = "".join(f"<li class='nice'>{escape(_req_text(r))}</li>" for r in nice_miss)
+    cov_col = (f"<div class='col ok'><h5>✓ You cover</h5><ul>{cov_list}</ul></div>"
+               if cov_list else "")
+    return f"""<details class='gaps'>
+    <summary><span class='chips'>{chips}</span>
+    <span class='small'>tap for details</span></summary>
+    <div class='gaps-detail'>{cov_col}
+    <div class='col warn'><h5>⚠ Not in your profile</h5><ul>{miss_list}{nice_list}</ul>
+    <p class='small'>Be honest about these when applying — or add them to your profile if you
+    have them.</p></div></div></details>"""
 
 
 # ---------- routes (order matters: /profiles/new before /profiles/{pid}) ----------
@@ -321,7 +329,7 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document]) -> st
            f"<button class='btn gray small' title='Generate a cover letter (uses your AI key)'>{icon('mail')}Letter</button></form>")
     return (f"<div class='match-card'>{_score_ring(m.score)}<div class='body'>"
             f"<div class='title'>{escape(post.title)}</div>{meta_html}"
-            f"<div class='chips'>{_gaps_chips(m.covered, m.missing)}</div>{docs_html}"
+            f"{_gaps_block(m.covered, m.missing)}{docs_html}"
             f"<div class='actions'>{apply_btn}{gen}</div></div></div>")
 
 
