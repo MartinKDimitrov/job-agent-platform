@@ -45,25 +45,47 @@ def _cosine(a, b) -> float:
     return float(np.dot(a, b) / denom)
 
 
-def score(profile_text: str, posting_text: str, requirements: list[str] | None = None):
-    """Return (score_0_100, covered[list], missing[list]).
+# Weight of each requirement kind in the keyword-coverage ratio. Must-haves dominate the
+# score; nice-to-haves nudge it; responsibilities are shown for context but not scored as gaps.
+_KIND_WEIGHT = {"must": 1.0, "nice": 0.4, "resp": 0.0}
+
+
+def _norm_reqs(requirements) -> list[dict]:
+    """Accept either the new [{'text','kind'}] shape or the old [str] one (older rows / callers)
+    so scoring never breaks on legacy data."""
+    norm = []
+    for r in requirements or []:
+        if isinstance(r, dict):
+            norm.append({"text": r.get("text", ""), "kind": r.get("kind", "must")})
+        else:
+            norm.append({"text": str(r), "kind": "must"})
+    return norm
+
+
+def score(profile_text: str, posting_text: str, requirements=None):
+    """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
-    - Keyword overlap on the profile's skills vs the posting gives covered/missing
-      and a fallback score when embeddings are unavailable.
+    - Weighted keyword coverage (must-have > nice-to-have) gives covered/missing and a
+      fallback score when embeddings are unavailable. Each covered/missing entry keeps its
+      {'text','kind'} so the UI can show *why* a posting scored the way it did.
     """
-    requirements = requirements or []
+    reqs = _norm_reqs(requirements)
     p_tok = _tokens(profile_text)
     covered, missing = [], []
-    for req in requirements:
-        rtok = _tokens(req)
-        if rtok and rtok & p_tok:
-            covered.append(req)
-        else:
-            missing.append(req)
+    w_cov = w_tot = 0.0
+    for r in reqs:
+        rtok = _tokens(r["text"])
+        hit = bool(rtok and rtok & p_tok)
+        w = _KIND_WEIGHT.get(r["kind"], 1.0)
+        if w > 0:                       # responsibilities (w=0) are not scored as gaps
+            w_tot += w
+            if hit:
+                w_cov += w
+        (covered if hit else missing).append(r)
 
-    # keyword-based ratio (fallback / blend)
-    kw_ratio = len(covered) / len(requirements) if requirements else None
+    # weighted keyword ratio (fallback / blend)
+    kw_ratio = (w_cov / w_tot) if w_tot else None
 
     pe, se = embed(profile_text), embed(posting_text)
     if pe is not None and se is not None:
