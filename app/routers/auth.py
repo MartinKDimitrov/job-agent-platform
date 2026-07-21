@@ -9,7 +9,8 @@ from ..models import User, Profile
 from ..security import hash_password, verify_password, make_token
 from ..config import settings
 from ..web import page, current_user, redirect, escape
-from ..seo import site_jsonld
+from ..seo import site_jsonld, abs_url
+from ..i18n import t, current_lang, LANGS
 
 router = APIRouter()
 
@@ -21,21 +22,23 @@ def _login_response(user_id: int):
     return resp
 
 
+def _landing(lang: str, path: str) -> str:
+    """Public, indexable landing in the given language, with hreflang + site JSON-LD."""
+    body = (f"<div class='card'><h2>{escape(t('landing.h1', lang))}</h2>"
+            f"<p class='small'>{escape(t('landing.sub', lang))}</p>"
+            f"<a class='btn' href='/register'>{escape(t('landing.get_started', lang))}</a> "
+            f"<a class='btn gray' href='/login'>{escape(t('landing.login', lang))}</a></div>")
+    hreflang = [("en", abs_url("/")), ("bg", abs_url("/bg")), ("x-default", abs_url("/"))]
+    return page(body, title=t("landing.title", lang), description=t("landing.description", lang),
+                path=path, noindex=False, head_extra=site_jsonld(), lang=lang,
+                switch_urls={"en": "/", "bg": "/bg"}, hreflang=hreflang)
+
+
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
-        body = ("<div class='card'><h2>Find jobs that match you</h2>"
-                "<p class='small'>Create profiles, score openings against them, and apply directly.</p>"
-                "<a class='btn' href='/register'>Get started</a> "
-                "<a class='btn gray' href='/login'>Login</a></div>")
-        # The only public, indexable page for now — real title/description + site JSON-LD.
-        return page(
-            body,
-            title="Job Agent — find jobs that match your skills",
-            description=("Describe your professional skills and get open positions scored "
-                         "against your profile, with a direct apply link for each match."),
-            path="/", noindex=False, head_extra=site_jsonld())
+        return _landing("en", "/")
     profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
     rows = "".join(
         f"<tr><td><a href='/profiles/{p.id}'>{escape(p.name)}</a></td>"
@@ -48,15 +51,37 @@ def home(request: Request, db: Session = Depends(get_db)):
     return page(body, u)
 
 
+@router.get("/bg", response_class=HTMLResponse)
+def home_bg(request: Request, db: Session = Depends(get_db)):
+    if current_user(request, db):
+        return redirect("/")            # logged-in users go to their dashboard
+    return _landing("bg", "/bg")
+
+
+@router.get("/lang/{code}")
+def set_lang(code: str, request: Request):
+    """Set the UI language cookie and return to where the user was (same-site only)."""
+    base = settings.site_url.rstrip("/")
+    ref = request.headers.get("referer") or "/"
+    target = ref if (ref.startswith(base) or ref.startswith("/")) else "/"
+    resp = redirect(target)
+    if code in LANGS:
+        resp.set_cookie("lang", code, max_age=60 * 60 * 24 * 365, samesite="lax")
+    return resp
+
+
 @router.get("/register", response_class=HTMLResponse)
-def register_form():
-    body = ("<div class='card'><h2>Register</h2><form method='post' action='/register'>"
-            "<label>Name</label><input name='name'>"
-            "<label>Email</label><input name='email' type='email' required>"
-            "<label>Password</label><input name='password' type='password' required>"
-            "<p style='margin-top:12px'><button class='btn'>Create account</button></p></form>"
-            "<p class='small'>Or <a href='/auth/google'>Sign in with Google</a></p></div>")
-    return page(body)
+def register_form(request: Request):
+    lang = current_lang(request)
+    body = (f"<div class='card'><h2>{escape(t('register.heading', lang))}</h2>"
+            "<form method='post' action='/register'>"
+            f"<label>{escape(t('register.name', lang))}</label><input name='name'>"
+            f"<label>{escape(t('register.email', lang))}</label><input name='email' type='email' required>"
+            f"<label>{escape(t('register.password', lang))}</label><input name='password' type='password' required>"
+            f"<p style='margin-top:12px'><button class='btn'>{escape(t('register.submit', lang))}</button></p></form>"
+            f"<p class='small'>{escape(t('login.or', lang))} <a href='/auth/google'>{escape(t('auth.google', lang))}</a></p></div>")
+    return page(body, title=t("register.title", lang), lang=lang,
+                switch_urls={"en": "/lang/en", "bg": "/lang/bg"})
 
 
 @router.post("/register")
@@ -71,13 +96,16 @@ def register(email: str = Form(...), password: str = Form(...), name: str = Form
 
 
 @router.get("/login", response_class=HTMLResponse)
-def login_form():
-    body = ("<div class='card'><h2>Login</h2><form method='post' action='/login'>"
-            "<label>Email</label><input name='email' type='email' required>"
-            "<label>Password</label><input name='password' type='password' required>"
-            "<p style='margin-top:12px'><button class='btn'>Login</button></p></form>"
-            "<p class='small'>Or <a href='/auth/google'>Sign in with Google</a></p></div>")
-    return page(body)
+def login_form(request: Request):
+    lang = current_lang(request)
+    body = (f"<div class='card'><h2>{escape(t('login.heading', lang))}</h2>"
+            "<form method='post' action='/login'>"
+            f"<label>{escape(t('login.email', lang))}</label><input name='email' type='email' required>"
+            f"<label>{escape(t('login.password', lang))}</label><input name='password' type='password' required>"
+            f"<p style='margin-top:12px'><button class='btn'>{escape(t('login.submit', lang))}</button></p></form>"
+            f"<p class='small'>{escape(t('login.or', lang))} <a href='/auth/google'>{escape(t('auth.google', lang))}</a></p></div>")
+    return page(body, title=t("login.title", lang), lang=lang,
+                switch_urls={"en": "/lang/en", "bg": "/lang/bg"})
 
 
 @router.post("/login")

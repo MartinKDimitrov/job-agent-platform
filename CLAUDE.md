@@ -142,7 +142,14 @@ Open http://127.0.0.1:8001
    Organization/WebSite JSON-LD on the landing; **private pages are noindex by default**
    (`app/seo.py`, `app/routers/seo.py`). `JobPosting` schema deferred until public job pages
    exist (Phase 2/4).
-Remaining Phase 1 (see `ROADMAP.md`): **BG/EN i18n scaffolding**.
+7. ✅ BG/EN i18n scaffolding (`app/i18n.py`): dict catalog + `t()` + language resolution
+   (URL → cookie → Accept-Language → en). Public landing is language-prefixed (`/` en, `/bg`)
+   with **hreflang**; login/register + nav localized. Internal screens are English-only for
+   now (keys ready in the catalog).
+
+**Phase 1 is complete.** Next is **Phase 2 — auto-fetch** (see `ROADMAP.md` steps 8–17):
+ATS API + RSS adapters, dedup, requirement extraction on fetched postings, apply-link
+resolver, scheduler. This is where the real product value (skills in → matches out) lands.
 
 **Then Phase 2 (auto-fetch)**
 Adapters in priority order: ATS APIs (Greenhouse/Lever/Ashby/Workable — these also give the

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from .models import User
 from .security import read_token
 from .seo import meta_tags
+from .i18n import t, LANGS, DEFAULT_LANG
 
 __all__ = ["escape", "page", "current_user", "redirect"]
 
@@ -32,24 +33,49 @@ def redirect(url: str) -> RedirectResponse:
 
 def page(body: str, user: User | None = None, *, title: str = "Job Agent",
          description: str = "", path: str = "/", noindex: bool = True,
-         head_extra: str = "") -> str:
-    """Render the page shell. `noindex` defaults to True so private pages never leak into
-    search by accident — public pages opt in with noindex=False and a real description.
-    `head_extra` is for extra <head> content such as JSON-LD on public pages."""
-    nav = ("<a href='/'>Dashboard</a><a href='/sources'>Sources</a>"
-           "<a href='/account'>Account</a><a href='/logout'>Logout</a>") if user else \
-          ("<a href='/login'>Login</a><a href='/register'>Register</a>")
+         head_extra: str = "", lang: str = DEFAULT_LANG,
+         switch_urls: dict[str, str] | None = None,
+         hreflang: list[tuple[str, str]] | None = None) -> str:
+    """Render the page shell.
+
+    `noindex` defaults to True so private pages never leak into search by accident — public
+    pages opt in with noindex=False and a real description. `head_extra` is extra <head> content
+    (e.g. JSON-LD). `lang` sets <html lang> and localises the nav. `switch_urls` (per-language
+    target URLs) renders a language switcher — only public pages pass it. `hreflang` renders
+    alternate-language <link>s for the public, language-prefixed pages."""
+    if user:
+        nav = (f"<a href='/'>{escape(t('nav.dashboard', lang))}</a>"
+               f"<a href='/sources'>{escape(t('nav.sources', lang))}</a>"
+               f"<a href='/account'>{escape(t('nav.account', lang))}</a>"
+               f"<a href='/logout'>{escape(t('nav.logout', lang))}</a>")
+    else:
+        nav = (f"<a href='/login'>{escape(t('nav.login', lang))}</a>"
+               f"<a href='/register'>{escape(t('nav.register', lang))}</a>")
     who = f"<span class='who'>{escape(user.email)}</span>" if user else ""
+    switcher = ""
+    if switch_urls:
+        parts = []
+        for code in LANGS:
+            url = switch_urls.get(code, f"/lang/{code}")
+            active = " style='font-weight:700;color:#fff'" if code == lang else ""
+            parts.append(f"<a href='{escape(url)}'{active}>{code.upper()}</a>")
+        switcher = "<span class='langsw'>" + " · ".join(parts) + "</span>"
     seo = meta_tags(title, description, path, noindex=noindex)
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+    hl = "\n".join(
+        f'<link rel="alternate" hreflang="{escape(code)}" href="{escape(url)}">'
+        for code, url in (hreflang or []))
+    return f"""<!doctype html><html lang="{escape(lang)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)}</title>
 {seo}
+{hl}
 {head_extra}
 <style>
 *{{box-sizing:border-box}} body{{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f5f6fa;color:#222}}
 header{{background:#1f3864;color:#fff;padding:12px 22px;display:flex;gap:16px;align-items:center}}
 header b{{font-size:16px}} header a{{color:#cfe0ff;text-decoration:none;font-size:14px}}
-.who{{margin-left:auto;font-size:12px;color:#9fb4dd}}
+.who{{font-size:12px;color:#9fb4dd}}
+.right{{margin-left:auto;display:flex;gap:12px;align-items:center}}
+.langsw a{{font-size:12px}}
 .wrap{{padding:20px 22px;max-width:1000px;margin:0 auto}}
 .card{{background:#fff;border:1px solid #e3e6ee;border-radius:8px;padding:16px 18px;margin-bottom:14px}}
 label{{display:block;font-size:12px;color:#555;margin:8px 0 3px}} input,select,textarea{{width:100%;padding:8px;border:1px solid #c8ccd8;border-radius:6px;font-size:14px}}
@@ -77,5 +103,5 @@ table{{width:100%;border-collapse:collapse}} th,td{{padding:8px;border-bottom:1p
   input,select,textarea{{font-size:16px}} /* prevents iOS zoom-on-focus */
 }}
 </style></head><body>
-<header><b>🧭 Job Agent</b>{nav}{who}</header>
+<header><b>🧭 Job Agent</b>{nav}<span class='right'>{who}{switcher}</span></header>
 <div class="wrap">{body}</div></body></html>"""

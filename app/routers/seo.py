@@ -12,8 +12,8 @@ router = APIRouter()
 
 # Areas behind login / holding personal data — keep crawlers out.
 PRIVATE_PREFIXES = ["/profiles", "/account", "/sources", "/login", "/register", "/auth"]
-# Public, indexable URLs (extended in Phase 4).
-PUBLIC_PATHS = ["/"]
+# Public, indexable URLs (extended in Phase 4). Both language variants of the landing.
+PUBLIC_PATHS = ["/", "/bg"]
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
