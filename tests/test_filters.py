@@ -60,6 +60,14 @@ def test_any_pref_and_unknown_location_pass():
     assert location_ok(P(remote_pref="remote"), "") is True       # unknown -> don't hide
 
 
+def test_remote_with_no_preferred_cities_drops_onsite():
+    # remote candidate who gave no cities can't take an onsite role
+    assert location_ok(P(remote_pref="remote", location_pref=""), "Bangalore, India") is False
+    assert location_ok(P(remote_pref="remote", location_pref=""), "Remote, India") is True
+    # an onsite-seeking candidate with no city given: we can't judge, keep it
+    assert location_ok(P(remote_pref="onsite", location_pref=""), "Bangalore, India") is True
+
+
 # ---- combined ----
 def test_passes_hard_filters_reasons():
     ic_remote = P(target_roles="Android", remote_pref="remote", location_pref="Remote / Varna")

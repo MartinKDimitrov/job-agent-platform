@@ -64,9 +64,11 @@ def location_ok(profile, location: str) -> bool:
         return True                       # a remote posting suits remote/hybrid/onsite alike
     # onsite posting: keep it only if it's in one of the candidate's preferred locations
     pref = _tokens(profile.location_pref) - {"remote", "hybrid", "onsite", "any"}
-    if not pref:
-        return True
-    return bool(_tokens(loc) & pref)
+    if pref:
+        return bool(_tokens(loc) & pref)
+    # no preferred cities given: a remote/hybrid candidate can't take an onsite role -> drop it;
+    # an onsite-seeking candidate with no city given, we can't judge -> keep.
+    return remote_pref not in ("remote", "hybrid")
 
 
 def seniority_ok(profile, title: str) -> bool:
