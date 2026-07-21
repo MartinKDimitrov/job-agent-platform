@@ -10,6 +10,7 @@ from .db import get_db, init_db
 from .models import User, Profile, Source, Posting, Match, Application
 from .security import hash_password, verify_password, make_token, read_token
 from .scoring import score
+from .extraction import extract_requirements
 from .config import settings
 
 app = FastAPI(title="Job Agent Platform")
@@ -59,6 +60,8 @@ label{{display:block;font-size:12px;color:#555;margin:8px 0 3px}} input,select,t
 .btn.green{{background:#2e7d32}} .btn.gray{{background:#8a94a6}}
 table{{width:100%;border-collapse:collapse}} th,td{{padding:8px;border-bottom:1px solid #eef0f5;font-size:13px;text-align:left;vertical-align:top}} th{{background:#1f3864;color:#fff}}
 .badge{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#c6e0b4}}
+.chip{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;margin:2px 3px 2px 0;line-height:1.5}}
+.tuner{{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}}
 .small{{color:#777;font-size:12px}} .row2{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
 /* --- mobile-friendly: stack the layout and turn table rows into cards --- */
 @media (max-width:700px){{
@@ -271,6 +274,34 @@ def _validate_profile(name, min_match, english_level, remote_pref, salary_expect
     return errors, name, mm
 
 
+# ---------- score / requirement rendering ----------
+def _req_text(r) -> str:
+    return r.get("text", "") if isinstance(r, dict) else str(r)
+
+
+def _req_kind(r) -> str:
+    return r.get("kind", "must") if isinstance(r, dict) else "must"
+
+
+def _chip(text: str, color: str, bg: str) -> str:
+    return f"<span class='chip' style='color:{color};background:{bg}'>{escape(text)}</span>"
+
+
+def _gaps_cell(covered, missing) -> str:
+    """Show why a posting scored as it did: missing must-haves (red) and nice-to-haves (grey)
+    as chips, with a green count of what's covered. Transparency over a bare number."""
+    covered = covered or []
+    missing = missing or []
+    must_miss = [r for r in missing if _req_kind(r) == "must"]
+    nice_miss = [r for r in missing if _req_kind(r) == "nice"]
+    chips = "".join(_chip(_req_text(r), "#a02020", "#fdecea") for r in must_miss[:6])
+    chips += "".join(_chip(_req_text(r), "#555", "#eceff4") for r in nice_miss[:4])
+    n_scored = len([r for r in covered if _req_kind(r) != "resp"])
+    cov = (f"<div class='chip' style='color:#1e6b2a;background:#e3f4e3'>✓ {n_scored} covered</div>"
+           if n_scored else "")
+    return (cov + chips) or "<span class='small'>—</span>"
+
+
 # ---------- profiles ----------
 @app.get("/profiles/new", response_class=HTMLResponse)
 def profile_new(request: Request, db: Session = Depends(get_db)):
@@ -358,6 +389,26 @@ def profile_delete(pid: int, request: Request, db: Session = Depends(get_db)):
     return _redirect("/")
 
 
+@app.post("/profiles/{pid}/min_match")
+def profile_set_min_match(pid: int, request: Request, min_match: str = Form("65"),
+                          db: Session = Depends(get_db)):
+    """Lightweight threshold tuner from the list view (no full edit round-trip). This is the
+    same min_match that will later filter auto-fetched matches — see ROADMAP onboarding."""
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    p = db.get(Profile, pid)
+    if not p or p.user_id != u.id:
+        return _redirect("/")
+    try:
+        mm = int(min_match)
+    except (TypeError, ValueError):
+        mm = p.min_match
+    p.min_match = max(0, min(100, mm))
+    db.commit()
+    return _redirect(f"/profiles/{p.id}")
+
+
 @app.get("/profiles/{pid}", response_class=HTMLResponse)
 def profile_view(pid: int, request: Request, db: Session = Depends(get_db)):
     u = current_user(request, db)
@@ -374,10 +425,9 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db)):
     for m, post in db.execute(q).all():
         apply = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' target='_blank'>Apply</a>"
                  if (post.apply_url or post.url) else "<span class='small'>—</span>")
-        miss = ", ".join(m.missing or [])[:80]
-        rows += (f"<tr><td>{m.score}%</td>"
+        rows += (f"<tr><td><b>{m.score:.0f}%</b></td>"
                  f"<td><b>{escape(post.title)}</b><br><span class='small'>{escape(post.company)} · {escape(post.location)}</span></td>"
-                 f"<td class='small'>{escape(miss)}</td><td>{apply}</td></tr>")
+                 f"<td>{_gaps_cell(m.covered, m.missing)}</td><td>{apply}</td></tr>")
     rows = rows or "<tr><td colspan='4' class='small'>No matches above threshold yet. Add a posting below.</td></tr>"
 
     body = f"""<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
@@ -386,7 +436,11 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db)):
     <form method='post' action='/profiles/{p.id}/delete' style='display:inline'
       onsubmit="return confirm('Delete this profile and its matches? This cannot be undone.')">
       <button class='btn' style='background:#c0392b'>Delete</button></form></p>
-    <table><tr><th>Match</th><th>Role / Company</th><th>Missing</th><th></th></tr>{rows}</table></div>
+    <form method='post' action='/profiles/{p.id}/min_match' class='tuner'>
+      <label style='margin:0'>Show matches ≥</label>
+      <input name='min_match' type='number' min='0' max='100' value='{p.min_match}' style='width:80px'>
+      <span class='small'>%</span><button class='btn gray'>Apply</button></form>
+    <table><tr><th>Match</th><th>Role / Company</th><th>Gaps (missing)</th><th></th></tr>{rows}</table></div>
     <div class='card'><h3>Add a posting to score</h3>
     <form method='post' action='/profiles/{p.id}/postings'>
       <label>Job URL</label><input name='url' placeholder='https://...'>
@@ -414,9 +468,7 @@ def add_posting(pid: int, request: Request, url: str = Form(""), apply_url: str 
     chash = hashlib.sha256((url or title + company + description).encode("utf-8")).hexdigest()[:64]
     post = db.execute(select(Posting).where(Posting.content_hash == chash)).scalar_one_or_none()
     if not post:
-        # naive requirement extraction (Phase 1): split JD into bullet-ish lines.
-        reqs = [ln.strip("•-*  ").strip() for ln in description.splitlines()
-                if len(ln.strip()) > 8][:40]
+        reqs = extract_requirements(description)  # rules-based: must/nice/resp, no LLM cost
         post = Posting(title=title, company=company, url=url, apply_url=apply_url,
                        location=location, description=description, requirements=reqs,
                        content_hash=chash)
