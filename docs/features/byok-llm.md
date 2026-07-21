@@ -32,7 +32,15 @@ requirements are listed explicitly as "do NOT claim these". The document view sa
 review and edit before using (human in the loop). Failures (no key configured, provider
 errors) surface as readable banners, never 500s.
 
-**Coming next:** 3.4 .docx download + regenerate controls; 3.5 server-side Ollama fallback
-with daily limits (deploy phase); prompt eval harness after first real-world use.
+**PDF & design (step 3.4):** the document view has **⬇ Download PDF** — it opens
+`/documents/{id}/print`, a standalone A4 view of the **Lovable-designed template**
+(`presentation/doc_template.py`; Lovable project 038dd6c8): navy accent matching the app,
+system fonts (Cyrillic-safe), ATS-friendly, print button hidden in print, `noindex`. The
+browser's print dialog saves the styled PDF; at deploy time the same template gets a
+server-side renderer (weasyprint) for one-click downloads. Regenerate controls (other
+language EN↔BG, other kind CV↔Letter) resolve the profile via the Match table.
+
+**Coming next:** 3.5 server-side Ollama fallback with daily limits + server-side PDF
+rendering (deploy phase); prompt eval harness after first real-world use.
 
 **Tests:** `tests/test_llm_providers.py`, `tests/test_byok_settings.py`, `tests/test_generate.py`.

@@ -155,6 +155,65 @@ def test_generate_route_without_key_shows_error(auth_client):
     assert "Generation failed" in r.text and "Account" in r.text
 
 
+def test_print_view_renders_a4_template(auth_client):
+    _fake_provider(name="printprov")
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
+    client.post("/account/llm", data={"provider": "printprov", "api_key": "sk-x"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    client.post(f"/profiles/{pid}/postings/{post_id}/generate", data={"kind": "cv"})
+    with SessionLocal() as db:
+        doc_id = db.execute(select(Document.id)).scalar_one()
+    body = client.get(f"/documents/{doc_id}/print").text
+    assert "Curriculum Vitae" in body                 # kind title
+    assert "GENERATED" in body                        # the content
+    assert "Role — Acme" in body                      # role subtitle
+    assert "size: A4" in body and "window.print()" in body   # print CSS + PDF button
+    assert 'name="robots" content="noindex' in body   # personal docs never indexable
+    # view page links to it and offers regenerate controls
+    view = client.get(f"/documents/{doc_id}").text
+    assert f"/documents/{doc_id}/print" in view
+    assert "Regenerate in BG" in view and "Cover letter for this job" in view
+
+
+def test_print_view_is_owner_only(auth_client):
+    _fake_provider(name="printown")
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
+    client.post("/account/llm", data={"provider": "printown", "api_key": "sk-x"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    client.post(f"/profiles/{pid}/postings/{post_id}/generate", data={"kind": "cv"})
+    with SessionLocal() as db:
+        doc_id = db.execute(select(Document.id)).scalar_one()
+    register_user(client, email="peek@test.local")
+    assert "Not found" in client.get(f"/documents/{doc_id}/print").text
+
+
+def test_print_view_escapes_content(auth_client):
+    _fake_provider(name="escprov")
+    client, _ = auth_client
+    pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "<script>alert(1)</script>", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
+    client.post("/account/llm", data={"provider": "escprov", "api_key": "sk-x"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    client.post(f"/profiles/{pid}/postings/{post_id}/generate", data={"kind": "cv"})
+    with SessionLocal() as db:
+        doc_id = db.execute(select(Document.id)).scalar_one()
+    body = client.get(f"/documents/{doc_id}/print").text
+    assert "<script>alert(1)</script>" not in body     # escaped, not executable
+
+
 def test_document_view_is_owner_only(auth_client):
     _fake_provider(name="ownprov")
     client, _ = auth_client
