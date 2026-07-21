@@ -3,7 +3,7 @@
 The `no_embeddings` autouse fixture forces the weighted-keyword path, so these assert the
 scoring *logic* (weighting, covered/missing, legacy shapes) deterministically without a model.
 """
-from app.scoring import score
+from app.domain.scoring import score
 
 
 def test_covered_and_missing_shapes():

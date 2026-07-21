@@ -1,12 +1,12 @@
 """On-demand search wiring: fetch -> pre-filter -> ingest -> score -> matches (adapter mocked)."""
 from sqlalchemy import select
 
-import app.adapters.greenhouse as gh
-import app.crawl as crawl
-from app.adapters.base import RawPosting
-from app.crawl import run_search
-from app.db import SessionLocal
-from app.models import User, Profile, Posting, Match
+import app.data.sources.greenhouse as gh
+import app.application.usecases.search as crawl
+from app.domain.entities import RawPosting
+from app.application.usecases.search import run_search
+from app.data.db import SessionLocal
+from app.data.models import User, Profile, Posting, Match
 from tests.conftest import register, make_profile
 
 SAMPLE = [

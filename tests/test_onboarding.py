@@ -1,9 +1,9 @@
 """Light onboarding: taxonomy + occupation-first profile creation."""
 from sqlalchemy import select
 
-from app.taxonomy import OCCUPATIONS, by_id, all_skills
-from app.db import SessionLocal
-from app.models import Profile
+from app.domain.taxonomy import OCCUPATIONS, by_id, all_skills
+from app.data.db import SessionLocal
+from app.data.models import Profile
 from tests.conftest import register
 
 

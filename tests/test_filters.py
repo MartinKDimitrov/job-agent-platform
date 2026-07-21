@@ -1,5 +1,5 @@
 """Hard filters: seniority (management/IC, junior/senior) and location compatibility."""
-from app.filters import location_ok, seniority_ok, passes_hard_filters
+from app.domain.filters import location_ok, seniority_ok, passes_hard_filters
 
 
 class P:

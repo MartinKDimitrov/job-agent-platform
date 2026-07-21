@@ -19,10 +19,10 @@ import pytest
 from sqlalchemy import event
 from fastapi.testclient import TestClient
 
-from app.db import engine, Base, SessionLocal
-from app import models  # noqa: F401  (register models on Base)
+from app.data.db import engine, Base, SessionLocal
+from app.data import models  # noqa: F401  (register models on Base)
 from app.main import app
-import app.scoring as scoring
+import app.domain.scoring as scoring
 
 
 # SQLite enforces ON DELETE CASCADE only when this pragma is on — needed to test cascades.

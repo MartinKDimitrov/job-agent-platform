@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import select
 
-import app.adapters.greenhouse as gh
-import app.crawl as crawl
-from app.adapters.base import RawPosting
-from app.jobs import run_daily_digest
-from app.db import SessionLocal
-from app.models import User, Profile, UserActivity, DigestEntry
+import app.data.sources.greenhouse as gh
+import app.application.usecases.search as crawl
+from app.domain.entities import RawPosting
+from app.application.usecases.digest import run_daily_digest
+from app.data.db import SessionLocal
+from app.data.models import User, Profile, UserActivity, DigestEntry
 
 BOARDS = [("acme", "Acme")]
 

@@ -1,14 +1,15 @@
-"""App wiring: create the FastAPI app, add middleware, init the DB on startup, mount routers.
+"""Composition root: create the FastAPI app, add middleware, init the DB, mount routers.
 
-Kept intentionally thin — features live in `app/routers/<feature>.py` and shared layout in
-`app/web.py`, so a change touches a small module (see CLAUDE.md §5, "Modular by default").
+The codebase follows Clean Architecture (see docs/architecture.md):
+core → domain → data / application → presentation, with dependencies pointing inward.
+Other entrypoints: app/jobs.py (cron daily digest), app/metrics.py (metrics CLI).
 """
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
-from .config import settings
-from .db import init_db
-from .routers import auth, profiles, account, sources, seo, onboarding
+from .core.config import settings
+from .data.db import init_db
+from .presentation.routers import auth, profiles, account, sources, seo, onboarding
 
 app = FastAPI(title="Job Agent Platform")
 

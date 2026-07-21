@@ -1,8 +1,8 @@
 """RemoteOK, WeWorkRemotely, Lever, Ashby adapters (HTTP mocked — hermetic)."""
-import app.adapters.remoteok as rok
-import app.adapters.wwr as wwr
-import app.adapters.lever as lever
-import app.adapters.ashby as ashby
+import app.data.sources.remoteok as rok
+import app.data.sources.wwr as wwr
+import app.data.sources.lever as lever
+import app.data.sources.ashby as ashby
 
 
 # ---- RemoteOK ----

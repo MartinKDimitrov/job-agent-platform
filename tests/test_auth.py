@@ -1,9 +1,9 @@
 """Auth: register, login, logout, protection, OAuth-unconfigured behaviour."""
 import pytest
 
-from app.routers import auth as auth_module
-from app.models import User
-from app.db import SessionLocal
+from app.presentation.routers import auth as auth_module
+from app.data.models import User
+from app.data.db import SessionLocal
 from sqlalchemy import select
 from tests.conftest import register
 

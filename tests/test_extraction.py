@@ -1,5 +1,5 @@
 """Tests for the rules-based requirement extractor."""
-from app.extraction import extract_requirements
+from app.domain.extraction import extract_requirements
 
 JD = """
 About the company

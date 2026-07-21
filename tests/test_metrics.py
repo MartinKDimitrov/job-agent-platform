@@ -3,14 +3,15 @@ from datetime import datetime
 
 from sqlalchemy import select
 
-import app.adapters.greenhouse as gh
-import app.crawl as crawl
-import app.routers.profiles as profiles_router
-from app.adapters.base import RawPosting
-from app.db import SessionLocal
-from app.metrics import RunStats, summary, format_summary
-from app.models import User, Profile, UserActivity, CrawlRun
-from app.jobs import run_daily_digest
+import app.data.sources.greenhouse as gh
+import app.application.usecases.search as crawl
+import app.presentation.routers.profiles as profiles_router
+from app.domain.entities import RawPosting
+from app.data.db import SessionLocal
+from app.application.run_stats import RunStats
+from app.data.metrics_repo import summary, format_summary
+from app.data.models import User, Profile, UserActivity, CrawlRun
+from app.application.usecases.digest import run_daily_digest
 from tests.conftest import register, make_profile
 
 SAMPLE = [RawPosting("ats_api", "1", "Senior Android Engineer", "Acme", location="Remote",
@@ -58,7 +59,7 @@ def test_daily_run_records_crawlrun(monkeypatch):
 
 def test_daily_run_records_failure(monkeypatch):
     _offline(monkeypatch)
-    monkeypatch.setattr("app.jobs.fetch_all",
+    monkeypatch.setattr("app.application.usecases.digest.fetch_all",
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kaboom")))
     with SessionLocal() as db:
         try:

@@ -1,10 +1,13 @@
 """Adapter framework + Greenhouse adapter (HTTP mocked, so hermetic and offline)."""
 from sqlalchemy import select
 
-import app.adapters.greenhouse as gh
-from app.adapters.base import html_to_text, ingest, RawPosting, get_adapter
-from app.db import SessionLocal
-from app.models import Posting
+import app.data.sources.greenhouse as gh
+from app.domain.entities import RawPosting
+from app.domain.text import html_to_text
+from app.data.ingest import ingest
+from app.data.sources.base import get_adapter
+from app.data.db import SessionLocal
+from app.data.models import Posting
 
 SAMPLE = {"jobs": [
     {"id": 101, "title": "Senior Android Engineer",

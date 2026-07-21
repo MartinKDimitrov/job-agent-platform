@@ -1,7 +1,7 @@
 """SEO foundation: robots.txt, sitemap.xml, indexable landing, noindex private pages."""
 import xml.etree.ElementTree as ET
 
-from app.seo import meta_tags, site_jsonld, abs_url
+from app.presentation.seo import meta_tags, site_jsonld, abs_url
 
 PRIVATE = ["/profiles", "/account", "/sources"]
 

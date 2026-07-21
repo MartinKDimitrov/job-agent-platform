@@ -1,6 +1,6 @@
 """JobTiger sitemap adapter (HTTP mocked — hermetic). Crawl-delay is honoured via an injected
 sleep so tests verify politeness without actually waiting."""
-import app.adapters.jobtiger as jt
+import app.data.sources.jobtiger as jt
 
 SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

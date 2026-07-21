@@ -1,8 +1,8 @@
 """Per-user activity tracking + the 'I found a job' toggle."""
 from sqlalchemy import select
 
-from app.db import SessionLocal
-from app.models import UserActivity
+from app.data.db import SessionLocal
+from app.data.models import UserActivity
 
 
 def test_authenticated_visit_records_activity(auth_client):

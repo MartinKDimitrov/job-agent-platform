@@ -1,10 +1,11 @@
 """Cross-source dedup: company normalization (incl. Cyrillic), title similarity, ingest merge."""
 from sqlalchemy import select
 
-from app.dedup import normalize_company, normalize_title, similar_titles, is_duplicate
-from app.adapters.base import RawPosting, ingest
-from app.db import SessionLocal
-from app.models import Posting
+from app.domain.dedup import normalize_company, normalize_title, similar_titles, is_duplicate
+from app.domain.entities import RawPosting
+from app.data.ingest import ingest
+from app.data.db import SessionLocal
+from app.data.models import Posting
 
 
 # ---- normalization ----

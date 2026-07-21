@@ -1,5 +1,5 @@
 """i18n scaffolding: translation fallback, language resolution, switch, and localized landings."""
-from app.i18n import t, _parse_accept_language
+from app.presentation.i18n import t, _parse_accept_language
 
 
 # ---- unit: translation + parsing ----
