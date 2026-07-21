@@ -2,12 +2,12 @@ import hashlib
 from html import escape
 
 from fastapi import FastAPI, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import get_db, init_db
-from .models import User, Profile, Source, Posting, Match
+from .models import User, Profile, Source, Posting, Match, Application
 from .security import hash_password, verify_password, make_token, read_token
 from .scoring import score
 from .config import settings
@@ -42,7 +42,7 @@ def _redirect(url: str):
 # ---------- HTML shell ----------
 def page(body: str, user: User | None = None, title="Job Agent") -> str:
     nav = ("<a href='/'>Dashboard</a><a href='/sources'>Sources</a>"
-           "<a href='/logout'>Logout</a>") if user else \
+           "<a href='/account'>Account</a><a href='/logout'>Logout</a>") if user else \
           ("<a href='/login'>Login</a><a href='/register'>Register</a>")
     who = f"<span class='who'>{escape(user.email)}</span>" if user else ""
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -196,54 +196,166 @@ async def auth_google_cb(request: Request, db: Session = Depends(get_db)):
     return resp
 
 
+# ---------- profile form + validation (shared by create and edit) ----------
+CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"]
+REMOTE_PREFS = ["remote", "hybrid", "onsite", "any"]
+
+
+def _err_box(errors: list[str]) -> str:
+    if not errors:
+        return ""
+    items = "".join(f"<li>{escape(e)}</li>" for e in errors)
+    return ("<div class='card' style='border-color:#c0392b;background:#fdecea'>"
+            f"<b style='color:#c0392b'>Please fix:</b>"
+            f"<ul style='margin:6px 0 0 18px'>{items}</ul></div>")
+
+
+def _profile_form(action: str, v: dict, heading: str, errors: list[str] | None = None) -> str:
+    """Render the profile form prefilled from `v`. Used by both create and edit so the two
+    stay in sync and validation can re-render with the user's input preserved."""
+    def sel(val, current):
+        return " selected" if val == current else ""
+    cefr = "".join(f"<option{sel(x, v.get('english_level', 'B2'))}>{x}</option>" for x in CEFR_LEVELS)
+    remote = "".join(f"<option{sel(x, v.get('remote_pref', 'remote'))}>{x}</option>" for x in REMOTE_PREFS)
+    return f"""{_err_box(errors or [])}<div class='card'><h2>{escape(heading)}</h2>
+    <form method='post' action='{action}'>
+    <label>Profile name (e.g. "Senior Android")</label>
+    <input name='name' required maxlength='255' value="{escape(v.get('name', ''))}">
+    <label>Target roles (comma-separated)</label>
+    <input name='target_roles' value="{escape(v.get('target_roles', ''))}">
+    <label>Skills (comma-separated)</label>
+    <textarea name='skills' rows='3'>{escape(v.get('skills', ''))}</textarea>
+    <label>Experience (short)</label>
+    <textarea name='experience' rows='3'>{escape(v.get('experience', ''))}</textarea>
+    <div class='row2'>
+      <div><label>Languages</label>
+        <input name='languages' value="{escape(v.get('languages', 'Bulgarian, English'))}"></div>
+      <div><label>English level (CEFR)</label><select name='english_level'>{cefr}</select></div>
+    </div>
+    <div class='row2'>
+      <div><label>Location preference</label>
+        <input name='location_pref' value="{escape(v.get('location_pref', 'Remote / Varna'))}"></div>
+      <div><label>Remote preference</label><select name='remote_pref'>{remote}</select></div>
+    </div>
+    <div class='row2'>
+      <div><label>Salary expectation</label>
+        <input name='salary_expectation' maxlength='64' value="{escape(v.get('salary_expectation', ''))}"></div>
+      <div><label>Min match %</label>
+        <input name='min_match' type='number' min='0' max='100' value="{escape(str(v.get('min_match', 65)))}"></div>
+    </div>
+    <p style='margin-top:12px'><button class='btn'>Save</button>
+    <a class='btn gray' href='/'>Cancel</a></p></form></div>"""
+
+
+def _validate_profile(name, min_match, english_level, remote_pref, salary_expectation):
+    """Return (errors, clean_name, clean_min_match). Keeps create and edit consistent."""
+    errors: list[str] = []
+    name = (name or "").strip()
+    if not name:
+        errors.append("Profile name is required.")
+    elif len(name) > 255:
+        errors.append("Profile name is too long (max 255 characters).")
+    try:
+        mm = int(min_match)
+    except (TypeError, ValueError):
+        mm = None
+    if mm is None or not (0 <= mm <= 100):
+        errors.append("Min match must be a whole number between 0 and 100.")
+        mm = 65
+    if english_level not in CEFR_LEVELS:
+        errors.append("English level must be one of A2, B1, B2, C1, C2.")
+    if remote_pref not in REMOTE_PREFS:
+        errors.append("Remote preference must be remote, hybrid, onsite or any.")
+    if len(salary_expectation or "") > 64:
+        errors.append("Salary expectation is too long (max 64 characters).")
+    return errors, name, mm
+
+
 # ---------- profiles ----------
 @app.get("/profiles/new", response_class=HTMLResponse)
 def profile_new(request: Request, db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return _redirect("/login")
-    body = """<div class='card'><h2>New profile</h2><form method='post' action='/profiles'>
-    <label>Profile name (e.g. "Senior Android")</label><input name='name' required>
-    <label>Target roles (comma-separated)</label><input name='target_roles'>
-    <label>Skills (comma-separated)</label><textarea name='skills' rows='3'></textarea>
-    <label>Experience (short)</label><textarea name='experience' rows='3'></textarea>
-    <div class='row2'>
-      <div><label>Languages</label><input name='languages' value='Bulgarian, English'></div>
-      <div><label>English level (CEFR)</label>
-        <select name='english_level'><option>A2</option><option>B1</option>
-        <option selected>B2</option><option>C1</option><option>C2</option></select></div>
-    </div>
-    <div class='row2'>
-      <div><label>Location preference</label><input name='location_pref' value='Remote / Varna'></div>
-      <div><label>Remote preference</label>
-        <select name='remote_pref'><option selected>remote</option><option>hybrid</option>
-        <option>onsite</option><option>any</option></select></div>
-    </div>
-    <div class='row2'>
-      <div><label>Salary expectation</label><input name='salary_expectation'></div>
-      <div><label>Min match %</label><input name='min_match' type='number' value='65' min='0' max='100'></div>
-    </div>
-    <p style='margin-top:12px'><button class='btn'>Create</button>
-    <a class='btn gray' href='/'>Cancel</a></p></form></div>"""
-    return page(body, u)
+    return page(_profile_form("/profiles", {}, "New profile"), u)
 
 
 @app.post("/profiles")
-def profile_create(request: Request, name: str = Form(...), target_roles: str = Form(""),
+def profile_create(request: Request, name: str = Form(""), target_roles: str = Form(""),
                    skills: str = Form(""), experience: str = Form(""),
                    languages: str = Form(""), english_level: str = Form("B2"),
                    location_pref: str = Form(""), remote_pref: str = Form("remote"),
-                   salary_expectation: str = Form(""), min_match: int = Form(65),
+                   salary_expectation: str = Form(""), min_match: str = Form("65"),
                    db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return _redirect("/login")
+    errors, name, mm = _validate_profile(name, min_match, english_level, remote_pref, salary_expectation)
+    v = dict(name=name, target_roles=target_roles, skills=skills, experience=experience,
+             languages=languages, english_level=english_level, location_pref=location_pref,
+             remote_pref=remote_pref, salary_expectation=salary_expectation, min_match=min_match)
+    if errors:
+        return page(_profile_form("/profiles", v, "New profile", errors), u)
     p = Profile(user_id=u.id, name=name, target_roles=target_roles, skills=skills,
                 experience=experience, languages=languages, english_level=english_level,
                 location_pref=location_pref, remote_pref=remote_pref,
-                salary_expectation=salary_expectation, min_match=int(min_match))
+                salary_expectation=salary_expectation, min_match=mm)
     db.add(p); db.commit(); db.refresh(p)
     return _redirect(f"/profiles/{p.id}")
+
+
+@app.get("/profiles/{pid}/edit", response_class=HTMLResponse)
+def profile_edit_form(pid: int, request: Request, db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    p = db.get(Profile, pid)
+    if not p or p.user_id != u.id:
+        return page("<div class='card'>Not found.</div>", u)
+    v = dict(name=p.name, target_roles=p.target_roles, skills=p.skills, experience=p.experience,
+             languages=p.languages, english_level=p.english_level, location_pref=p.location_pref,
+             remote_pref=p.remote_pref, salary_expectation=p.salary_expectation, min_match=p.min_match)
+    return page(_profile_form(f"/profiles/{pid}/edit", v, "Edit profile"), u)
+
+
+@app.post("/profiles/{pid}/edit")
+def profile_update(pid: int, request: Request, name: str = Form(""), target_roles: str = Form(""),
+                   skills: str = Form(""), experience: str = Form(""),
+                   languages: str = Form(""), english_level: str = Form("B2"),
+                   location_pref: str = Form(""), remote_pref: str = Form("remote"),
+                   salary_expectation: str = Form(""), min_match: str = Form("65"),
+                   db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    p = db.get(Profile, pid)
+    if not p or p.user_id != u.id:
+        return page("<div class='card'>Not found.</div>", u)
+    errors, name, mm = _validate_profile(name, min_match, english_level, remote_pref, salary_expectation)
+    v = dict(name=name, target_roles=target_roles, skills=skills, experience=experience,
+             languages=languages, english_level=english_level, location_pref=location_pref,
+             remote_pref=remote_pref, salary_expectation=salary_expectation, min_match=min_match)
+    if errors:
+        return page(_profile_form(f"/profiles/{pid}/edit", v, "Edit profile", errors), u)
+    p.name, p.target_roles, p.skills = name, target_roles, skills
+    p.experience, p.languages, p.english_level = experience, languages, english_level
+    p.location_pref, p.remote_pref = location_pref, remote_pref
+    p.salary_expectation, p.min_match = salary_expectation, mm
+    p.embedding = None  # profile text changed → drop any cached vector
+    db.commit()
+    return _redirect(f"/profiles/{p.id}")
+
+
+@app.post("/profiles/{pid}/delete")
+def profile_delete(pid: int, request: Request, db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    p = db.get(Profile, pid)
+    if not p or p.user_id != u.id:
+        return _redirect("/")
+    db.delete(p); db.commit()  # matches cascade via FK ondelete
+    return _redirect("/")
 
 
 @app.get("/profiles/{pid}", response_class=HTMLResponse)
@@ -270,6 +382,10 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db)):
 
     body = f"""<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
     <p class='small'>Target: {escape(p.target_roles)} · {escape(p.remote_pref)} · {escape(p.location_pref)}</p>
+    <p><a class='btn gray' href='/profiles/{p.id}/edit'>Edit</a>
+    <form method='post' action='/profiles/{p.id}/delete' style='display:inline'
+      onsubmit="return confirm('Delete this profile and its matches? This cannot be undone.')">
+      <button class='btn' style='background:#c0392b'>Delete</button></form></p>
     <table><tr><th>Match</th><th>Role / Company</th><th>Missing</th><th></th></tr>{rows}</table></div>
     <div class='card'><h3>Add a posting to score</h3>
     <form method='post' action='/profiles/{p.id}/postings'>
@@ -357,3 +473,72 @@ def add_source(request: Request, name: str = Form(...), url: str = Form(...),
     db.add(Source(user_id=u.id, name=name, url=url, kind="manual", enabled=True))
     db.commit()
     return _redirect("/sources")
+
+
+# ---------- account (GDPR: data export + account deletion) ----------
+@app.get("/account", response_class=HTMLResponse)
+def account_view(request: Request, db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
+    body = f"""<div class='card'><h2>Account</h2>
+    <p class='small'>{escape(u.email)} · joined {u.created_at:%Y-%m-%d}</p>
+    <p>{len(profiles)} search profile(s).</p>
+    <p><a class='btn gray' href='/account/export'>Export my data (JSON)</a></p></div>
+    <div class='card' style='border-color:#c0392b'>
+    <h3 style='color:#c0392b'>Delete account</h3>
+    <p class='small'>Permanently deletes your account, profiles, matches and applications.
+    This cannot be undone. Type your email address to confirm.</p>
+    <form method='post' action='/account/delete'
+      onsubmit="return confirm('Permanently delete your account and all your data?')">
+      <input name='confirm_email' placeholder="{escape(u.email)}" autocomplete='off'>
+      <p style='margin-top:12px'>
+        <button class='btn' style='background:#c0392b'>Delete my account</button></p>
+    </form></div>"""
+    return page(body, u)
+
+
+@app.get("/account/export")
+def account_export(request: Request, db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
+    apps = db.execute(select(Application).where(Application.user_id == u.id)).scalars().all()
+    data = {
+        "user": {"email": u.email, "name": u.name, "created_at": u.created_at.isoformat()},
+        "profiles": [
+            {"name": p.name, "target_roles": p.target_roles, "skills": p.skills,
+             "experience": p.experience, "languages": p.languages,
+             "english_level": p.english_level, "location_pref": p.location_pref,
+             "remote_pref": p.remote_pref, "salary_expectation": p.salary_expectation,
+             "min_match": p.min_match, "created_at": p.created_at.isoformat()}
+            for p in profiles
+        ],
+        "applications": [
+            {"status": a.status, "date_sent": a.date_sent, "reply": a.reply,
+             "reply_date": a.reply_date, "next_step": a.next_step,
+             "created_at": a.created_at.isoformat()}
+            for a in apps
+        ],
+    }
+    return JSONResponse(
+        data, headers={"Content-Disposition": "attachment; filename=my-job-agent-data.json"})
+
+
+@app.post("/account/delete")
+def account_delete(request: Request, confirm_email: str = Form(""),
+                   db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return _redirect("/login")
+    if (confirm_email or "").strip().lower() != u.email.lower():
+        body = ("<div class='card' style='border-color:#c0392b'>"
+                "<b style='color:#c0392b'>The email you typed does not match.</b> "
+                "Your account was not deleted. <a href='/account'>Back to account</a></div>")
+        return page(body, u)
+    db.delete(u); db.commit()  # cascades profiles → matches, plus applications/sources via FKs
+    resp = _redirect("/")
+    resp.delete_cookie("token")
+    return resp
