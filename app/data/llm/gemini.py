@@ -25,6 +25,9 @@ def generate(system: str, prompt: str, api_key: str = "", model: str = "") -> st
     try:
         r = httpx.post(API.format(model=model), json=body,
                        headers={"X-goog-api-key": api_key}, timeout=GENERATION_TIMEOUT)
+    except httpx.TimeoutException as e:
+        raise LLMError("Gemini took too long to respond (free-tier congestion happens) — "
+                       "please try again.") from e
     except httpx.HTTPError as e:
         raise LLMError(scrub(f"Gemini request failed: {e}", api_key)) from e
     if r.status_code in (401, 403):

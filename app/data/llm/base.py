@@ -13,7 +13,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-GENERATION_TIMEOUT = 90.0   # generation can be slow; bounded so requests can't hang forever
+import httpx
+
+# Generation can be slow — free-tier thinking models routinely need >90s for a full CV (short
+# cover letters pass, long CVs were timing out). Generous read window, tight connect, still
+# bounded so requests can't hang forever.
+GENERATION_TIMEOUT = httpx.Timeout(connect=15.0, read=180.0, write=30.0, pool=15.0)
 
 
 class LLMError(Exception):
