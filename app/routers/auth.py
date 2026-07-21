@@ -47,7 +47,7 @@ def home(request: Request, db: Session = Depends(get_db)):
     ) or "<tr><td colspan='3' class='small'>No profiles yet.</td></tr>"
     body = (f"<div class='card'><h2>Your search profiles</h2>"
             f"<table><tr><th>Profile</th><th>Target roles</th><th>Min match</th></tr>{rows}</table>"
-            f"<p style='margin-top:12px'><a class='btn' href='/profiles/new'>+ New profile</a></p></div>")
+            f"<p style='margin-top:12px'><a class='btn' href='/onboarding'>+ New profile</a></p></div>")
     return page(body, u)
 
 

@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .config import settings
 from .db import init_db
-from .routers import auth, profiles, account, sources, seo
+from .routers import auth, profiles, account, sources, seo, onboarding
 
 app = FastAPI(title="Job Agent Platform")
 
@@ -26,3 +26,4 @@ app.include_router(profiles.router)
 app.include_router(account.router)
 app.include_router(sources.router)
 app.include_router(seo.router)
+app.include_router(onboarding.router)
