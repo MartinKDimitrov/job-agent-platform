@@ -53,7 +53,7 @@
 | 14 | Apply-Link Resolver (A5) — каноничен ATS линк + **резолюция от платени агрегатори** | ⚙️ *(рядко 🌐)* |
 | 15 | Aggregator/Filter (A7) — праг, махни видяни/кандидатствани | ⚙️ |
 | 16 | Orchestrator/Scheduler (A10) — дневен run + „Търси сега" + инкрементално | ⚙️ |
-| 17 | Наблюдаемост: логове/метрики per run | ⚙️ |
+| 17 | ✅ Наблюдаемост: `CrawlRun` таблица + `app/metrics.py` (per-source fetched + totals: added/deduped/filtered/matched/notified). Записва се за daily + search_now; терминален отчет `python -m app.metrics` | ⚙️ |
 
 > **Правило за платени агрегатори (RemoteRocketship и подобни):** когато позиция е намерена
 > на платен/paywalled агрегатор, **не** водим натам. Резолвърът (A5) намира същата обява на

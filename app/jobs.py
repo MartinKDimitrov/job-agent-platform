@@ -21,6 +21,7 @@ from .adapters.seed_boards import GREENHOUSE_BOARDS
 from .crawl import fetch_all, fetch_extra, run_search
 from .activity import get_activity, is_active_for_search
 from .mailer import send_email
+from .metrics import RunStats, record_run
 
 
 def _compose(user: User, items) -> tuple[str, str]:
@@ -49,47 +50,58 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
     beyond the fast sources."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     now = now or datetime.utcnow()
-    raw = fetch_all(boards) + fetch_extra()       # fast sources + aggregators, once for the run
-    if jobtiger_limit > 0:
-        known = {u for (u,) in db.execute(select(Posting.url)).all() if u}
-        raw += jobtiger.fetch(limit=jobtiger_limit, delay=jobtiger_delay, skip_urls=known)
-    users = db.execute(select(User)).scalars().all()
+    started = datetime.utcnow()
+    stats = RunStats()
+    try:
+        raw = fetch_all(boards, stats=stats) + fetch_extra(stats=stats)   # once for the whole run
+        if jobtiger_limit > 0:
+            known = {u for (u,) in db.execute(select(Posting.url)).all() if u}
+            jt = jobtiger.fetch(limit=jobtiger_limit, delay=jobtiger_delay, skip_urls=known)
+            raw += jt
+            stats.source("jobtiger", fetched=len(jt))
+        users = db.execute(select(User)).scalars().all()
 
-    notified = emails_sent = new_matches = skipped = 0
-    for u in users:
-        profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
-        if not profiles:
-            continue
-        if not is_active_for_search(u, get_activity(db, u.id), now):
-            skipped += 1
-            continue
+        notified = emails_sent = new_matches = skipped = 0
+        for u in users:
+            profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
+            if not profiles:
+                continue
+            if not is_active_for_search(u, get_activity(db, u.id), now):
+                skipped += 1
+                continue
 
-        already = set(db.execute(
-            select(DigestEntry.profile_id, DigestEntry.posting_id)
-            .where(DigestEntry.user_id == u.id)).all())
-        fresh = []
-        for p in profiles:
-            run_search(db, p, boards=boards, raw_postings=raw)
-            q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
-                 .where(Match.profile_id == p.id, Match.score >= p.min_match)
-                 .order_by(Match.score.desc()))
-            for m, post in db.execute(q).all():
-                if (p.id, post.id) in already:
-                    continue
-                already.add((p.id, post.id))
-                fresh.append((p, m, post))
+            already = set(db.execute(
+                select(DigestEntry.profile_id, DigestEntry.posting_id)
+                .where(DigestEntry.user_id == u.id)).all())
+            fresh = []
+            for p in profiles:
+                run_search(db, p, boards=boards, raw_postings=raw, stats=stats)
+                q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
+                     .where(Match.profile_id == p.id, Match.score >= p.min_match)
+                     .order_by(Match.score.desc()))
+                for m, post in db.execute(q).all():
+                    if (p.id, post.id) in already:
+                        continue
+                    already.add((p.id, post.id))
+                    fresh.append((p, m, post))
 
-        if fresh:
-            subject, html = _compose(u, fresh)
-            if send(u.email, subject, html):
-                emails_sent += 1
-            for p, m, post in fresh:
-                db.add(DigestEntry(user_id=u.id, profile_id=p.id, posting_id=post.id))
-            notified += 1
-            new_matches += len(fresh)
-    db.commit()
-    return {"users": len(users), "notified": notified, "emails_sent": emails_sent,
-            "new_matches": new_matches, "skipped": skipped}
+            if fresh:
+                subject, html = _compose(u, fresh)
+                if send(u.email, subject, html):
+                    emails_sent += 1
+                for p, m, post in fresh:
+                    db.add(DigestEntry(user_id=u.id, profile_id=p.id, posting_id=post.id))
+                notified += 1
+                new_matches += len(fresh)
+        db.commit()
+        stats.add(users=len(users), notified=notified, emails_sent=emails_sent,
+                  new_matches=new_matches, skipped=skipped)
+        record_run(db, "daily", stats, started, ok=True)
+        return {"users": len(users), "notified": notified, "emails_sent": emails_sent,
+                "new_matches": new_matches, "skipped": skipped}
+    except Exception as e:  # noqa: BLE001 — record the failure, then re-raise
+        record_run(db, "daily", stats, started, ok=False, error=str(e))
+        raise
 
 
 if __name__ == "__main__":  # cron entrypoint: `python -m app.jobs`

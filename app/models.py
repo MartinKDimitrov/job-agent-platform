@@ -111,6 +111,19 @@ class DigestEntry(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class CrawlRun(Base):
+    """One crawl run (a daily job or a Search-now), with per-source and total metrics in `stats`
+    — so we can see how each source is performing over time. New table -> no migration."""
+    __tablename__ = "crawl_runs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), default="daily")   # daily / search_now
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ok: Mapped[bool] = mapped_column(Boolean, default=True)
+    error: Mapped[str] = mapped_column(Text, default="")
+    stats: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
 class Application(Base):
     __tablename__ = "applications"
     id: Mapped[int] = mapped_column(primary_key=True)

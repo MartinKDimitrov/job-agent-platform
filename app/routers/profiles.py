@@ -1,5 +1,6 @@
 """Search profiles: CRUD, validation, the scoring view, and the (Phase-1 scaffold) posting form."""
 import hashlib
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
@@ -11,6 +12,7 @@ from ..models import Profile, Posting, Match
 from ..scoring import score
 from ..extraction import extract_requirements
 from ..crawl import run_search
+from ..metrics import RunStats, record_run
 from ..web import page, current_user, redirect, escape
 
 router = APIRouter()
@@ -235,7 +237,15 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
     p = db.get(Profile, pid)
     if not p or p.user_id != u.id:
         return redirect("/")
-    res = run_search(db, p)
+    started = datetime.utcnow()
+    stats = RunStats()
+    err = ""
+    try:
+        res = run_search(db, p, stats=stats)
+    except Exception as e:  # noqa: BLE001 — degrade gracefully, still record the run
+        err = str(e)
+        res = {"fetched": 0, "added": 0, "filtered": 0, "matched": 0}
+    record_run(db, "search_now", stats, started, ok=not err, error=err)
     return redirect(f"/profiles/{p.id}?fetched={res['fetched']}&new={res['added']}"
                     f"&filtered={res['filtered']}&found={res['matched']}")
 
