@@ -97,13 +97,27 @@ Open http://127.0.0.1:8001
 
 ## 5. Conventions (follow these)
 
-- **Modular by default** *(required)*: split code into small, single-concern modules/routers.
-  When a file grows or mixes concerns, break it up. The point is practical: a change should
-  touch a **small** file, so the working context (and token cost) per edit stays low, and new
-  functionality drops in as a **self-contained module** rather than swelling an existing one.
-  Layout: shared shell/helpers in `app/web.py`; feature routes in `app/routers/<feature>.py`;
-  `app/main.py` stays thin (app creation + `include_router`). Domain logic (scoring, extraction)
-  lives in its own module, not in a route handler.
+- **Clean Architecture** *(required)*: the code is organized in four layers with dependencies
+  pointing inward — see `docs/architecture.md` for the full map:
+  - `app/core/` — configuration.
+  - `app/domain/` — **pure business logic** (entities, scoring, extraction, filters, dedup,
+    taxonomy, activity rules, text utils). No FastAPI, no SQLAlchemy, no I/O — fully unit-testable.
+  - `app/data/` — I/O: DB (`db`, `models`), auth crypto, mailer, repositories
+    (`activity_repo`, `metrics_repo`, `ingest`) and **`sources/`** (one isolated adapter per
+    job source).
+  - `app/application/usecases/` — orchestration (`search.py` = Search-now pipeline,
+    `digest.py` = daily digest); `run_stats.py` = metrics collector.
+  - `app/presentation/` — HTTP layer: `web.py` shell, `seo.py`, `i18n.py`, `routers/`.
+  - Entrypoints (composition roots): `app/main.py` (web), `app/jobs.py` (cron),
+    `app/metrics.py` (CLI).
+  Rule of thumb: domain must import nothing from other layers; data may import domain;
+  application may import domain+data; presentation may import all. New functionality drops in
+  as a self-contained module in the right layer — a change should touch a **small** file.
+  *(MVI is deliberately NOT used here — it's a client-side UI pattern; it becomes relevant for
+  the Phase 4 frontend, where client state exists.)*
+- **Documentation in English, kept current** *(required)*: `docs/architecture.md` (layers,
+  dependency rule) and `docs/features/*.md` (one file per functionality — what it does + which
+  modules implement it). Update the relevant doc in the same change that alters behaviour.
 - **One adapter per source (isolation)** *(required)*: every job source — platform, service,
   site, API, feed, without exception — gets its **own dedicated adapter module**
   (`app/adapters/<source>.py`) behind the common interface, with its **own tests**. Sources are

@@ -189,7 +189,11 @@ Google Ads/AdSense не е „сложи banner" — има изисквания
 | 35 | Alembic миграции (сега auto-create) | щом схемата стабилизира |
 | 36 | Sentry + PostHog | след деплой |
 | 37 | CI (Bitbucket Pipelines) — compile/тест на push | |
-| 38 | 🎨 **Lovable** — полиран UI/дизайн (публични страници + app redesign) | **Фаза 4** / щом ядрото е готово за реални потребители; пази SEO (server-render vs SPA) |
+| 38 | 🎨 **Lovable** — полиран UI/дизайн (публични страници + app redesign). Клиентският state там се управлява с **MVI-стил еднопосочен поток** (intent → state → view) — уместен едва когато има клиентски state, не в server-rendered backend-а | **Фаза 4** / щом ядрото е готово за реални потребители; пази SEO (server-render vs SPA) |
+
+> **Организация на кода (от 2026-07):** Clean Architecture — `core / domain / data /
+> application / presentation` + entrypoints (`main.py`, `jobs.py`, `metrics.py`).
+> Пълна карта: `docs/architecture.md`; документация по функционалности: `docs/features/`.
 
 ---
 
