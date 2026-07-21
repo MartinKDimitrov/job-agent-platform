@@ -39,16 +39,18 @@ def home(request: Request, db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return _landing("en", "/")
-    profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
-    rows = "".join(
-        f"<tr><td><a href='/profiles/{p.id}'>{escape(p.name)}</a></td>"
-        f"<td class='small'>{escape(p.target_roles)}</td>"
-        f"<td>{p.min_match}%</td></tr>" for p in profiles
-    ) or "<tr><td colspan='3' class='small'>No profiles yet.</td></tr>"
-    body = (f"<div class='card'><h2>Your search profiles</h2>"
-            f"<table><tr><th>Profile</th><th>Target roles</th><th>Min match</th></tr>{rows}</table>"
-            f"<p style='margin-top:12px'><a class='btn' href='/onboarding'>+ New profile</a></p></div>")
-    return page(body, u)
+    profiles = db.execute(select(Profile).where(Profile.user_id == u.id)
+                          .order_by(Profile.created_at)).scalars().all()
+    if not profiles:
+        # brand-new user: the empty state IS the onboarding — no navigation (one-page design)
+        from .onboarding import onboarding_card
+        body = ("<div class='page-head'><div class='title-block'><h1>Welcome 👋</h1>"
+                "<p class='sub'>No profiles yet — create your first search profile in about "
+                "30 seconds.</p></div></div>" + onboarding_card())
+        return page(body, u, title="Get started — Job Agent")
+    # one-page app: first profile active (tabs switch via /profiles/{id})
+    from .profiles import render_app
+    return render_app(db, u, profiles[0], profiles)
 
 
 @router.get("/bg", response_class=HTMLResponse)

@@ -14,7 +14,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
         "nav.dashboard": "Dashboard", "nav.documents": "Documents", "nav.sources": "Sources",
         "nav.account": "Account",
-        "nav.logout": "Logout", "nav.login": "Login", "nav.register": "Register",
+        "nav.logout": "Log out", "nav.login": "Sign in", "nav.register": "Register",
+        "menu.pause": "I found a job — pause", "menu.resume": "Resume my search",
+        "menu.settings": "AI key & settings", "menu.export": "Export my data",
+        "menu.delete": "Delete account",
         "landing.title": "Job Agent — find jobs that match your skills",
         "landing.description": ("Describe your professional skills and get open positions scored "
                                 "against your profile, with a direct apply link for each match."),
@@ -32,6 +35,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.dashboard": "Табло", "nav.documents": "Документи", "nav.sources": "Източници",
         "nav.account": "Профил",
         "nav.logout": "Изход", "nav.login": "Вход", "nav.register": "Регистрация",
+        "menu.pause": "Намерих работа — пауза", "menu.resume": "Продължи търсенето",
+        "menu.settings": "AI ключ и настройки", "menu.export": "Изтегли данните ми",
+        "menu.delete": "Изтрий акаунта",
         "landing.title": "Job Agent — работа, която пасва на уменията ти",
         "landing.description": ("Опиши професионалните си умения и получи отворени позиции, "
                                 "оценени спрямо профила ти, с директен линк за кандидатстване "

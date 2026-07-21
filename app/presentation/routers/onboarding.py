@@ -19,31 +19,37 @@ router = APIRouter()
 _DEFAULT_LOCATION = "Bulgaria, Sofia, Varna"
 
 
-@router.get("/onboarding", response_class=HTMLResponse)
-def onboarding_form(request: Request, db: Session = Depends(get_db)):
-    u = current_user(request, db)
-    if not u:
-        return redirect("/login")
+def onboarding_card(heading: str = "Quick start — build your profile",
+                    sub: str = "Pick your profession and we'll suggest the typical skills.") -> str:
+    """The onboarding card + chip script — reused by /onboarding and by the one-page home for
+    brand-new users (the empty state IS the onboarding, no navigation)."""
     options = "".join(
         f"<option value='{escape(o['id'])}'>{escape(o['bg'])}</option>" for o in OCCUPATIONS)
     datalist = "".join(f"<option value=\"{escape(s)}\">" for s in all_skills())
     tax_json = json.dumps({o["id"]: {"skills": o["skills"]} for o in OCCUPATIONS},
                           ensure_ascii=False)
-    body = f"""<div class='card'><h2>Quick start — build your profile</h2>
-    <p class='small'>Pick your profession and we'll suggest the typical skills. Tweak them, then
-    create your profile.</p>
+    steps = """<div class='mini-steps' aria-label='How it works'>
+    <div class='s'><span class='n'>1</span><span class='t'>Tell us your skills</span></div>
+    <div class='s'><span class='n'>2</span><span class='t'>We find matching jobs</span></div>
+    <div class='s'><span class='n'>3</span><span class='t'>You apply with one click</span></div>
+    </div>"""
+    return f"""{steps}<div class='card'><h2>{escape(heading)}</h2>
+    <p class='small'>{escape(sub)}</p>
     <form method='post' action='/onboarding'>
       <label>Profession</label>
       <select name='occupation' id='occ' required>
         <option value='' disabled selected>Choose…</option>{options}
       </select>
-      <label style='margin-top:10px'>Skills <span class='small'>(uncheck any that don't fit)</span></label>
-      <div id='skills' class='small'>Select a profession to see suggested skills.</div>
-      <label style='margin-top:10px'>Add more skills (comma-separated)</label>
+      <div style='margin-top:16px'>
+      <label>Skills <span class='small'>(tap to toggle)</span></label>
+      <div id='skills' class='small'>Select a profession to see suggested skills.</div></div>
+      <div style='margin-top:16px'>
+      <label>Add more skills (comma-separated)</label>
       <input name='extra_skills' list='skilllist' placeholder='e.g. GraphQL, Terraform'>
-      <datalist id='skilllist'>{datalist}</datalist>
-      <p style='margin-top:12px'><button class='btn'>Create profile</button>
-      <a class='btn gray' href='/profiles/new'>Use the full form</a></p>
+      <datalist id='skilllist'>{datalist}</datalist></div>
+      <p style='margin-top:18px'><button class='btn big block'>Create profile</button></p>
+      <p class='small center'><a href='/profiles/new'>Use the full form instead</a> ·
+      you can change everything later.</p>
     </form></div>
     <script>
     const TAX = {tax_json};
@@ -51,18 +57,32 @@ def onboarding_form(request: Request, db: Session = Depends(get_db)):
       const o = TAX[this.value], box = document.getElementById('skills');
       box.innerHTML = '';
       if (!o) return;
+      box.style.display = 'flex'; box.style.flexWrap = 'wrap'; box.style.gap = '8px';
       o.skills.forEach(function(s) {{
         const w = document.createElement('label');
-        w.style.cssText = 'display:inline-block;margin:3px 8px 3px 0;font-size:13px;color:#222';
+        w.className = 'chip toggle on';
+        w.style.margin = '0';
         const cb = document.createElement('input');
         cb.type = 'checkbox'; cb.name = 'skills'; cb.value = s; cb.checked = true;
-        cb.style.width = 'auto';
-        w.appendChild(cb); w.appendChild(document.createTextNode(' ' + s));
+        cb.style.display = 'none';
+        w.appendChild(cb); w.appendChild(document.createTextNode(s));
+        w.addEventListener('click', function(e) {{
+          e.preventDefault();
+          cb.checked = !cb.checked;
+          w.classList.toggle('on', cb.checked);
+        }});
         box.appendChild(w);
       }});
     }});
     </script>"""
-    return page(body, u, title="Quick start — Job Agent")
+
+
+@router.get("/onboarding", response_class=HTMLResponse)
+def onboarding_form(request: Request, db: Session = Depends(get_db)):
+    u = current_user(request, db)
+    if not u:
+        return redirect("/login")
+    return page(onboarding_card(), u, title="Quick start — Job Agent")
 
 
 @router.post("/onboarding")

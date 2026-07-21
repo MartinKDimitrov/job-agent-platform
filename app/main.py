@@ -4,7 +4,10 @@ The codebase follows Clean Architecture (see docs/architecture.md):
 core → domain → data / application → presentation, with dependencies pointing inward.
 Other entrypoints: app/jobs.py (cron daily digest), app/metrics.py (metrics CLI).
 """
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from .core.config import settings
@@ -15,6 +18,10 @@ app = FastAPI(title="Job Agent Platform")
 
 # Session cookie is required by Authlib's OAuth flow (stores the state param).
 app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, same_site="lax")
+
+# Design system stylesheet + any future static assets (Lovable-produced design.css).
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "presentation" / "static"),
+          name="static")
 
 
 @app.on_event("startup")

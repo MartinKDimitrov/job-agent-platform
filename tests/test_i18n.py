@@ -5,8 +5,8 @@ from app.presentation.i18n import t, _parse_accept_language
 # ---- unit: translation + parsing ----
 def test_translation_and_fallback():
     assert t("nav.login", "bg") == "Вход"
-    assert t("nav.login", "en") == "Login"
-    assert t("nav.login", "fr") == "Login"          # unknown lang -> default (en)
+    assert t("nav.login", "en") == "Sign in"
+    assert t("nav.login", "fr") == "Sign in"        # unknown lang -> default (en)
     assert t("does.not.exist", "bg") == "does.not.exist"  # unknown key -> the key itself
 
 

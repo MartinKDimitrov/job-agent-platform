@@ -1,7 +1,8 @@
 """Shared web layer: the HTML shell and per-request user/session helpers.
 
-Every router imports from here so the layout and auth-cookie handling live in one place.
-Keeping this small is deliberate — feature routers stay focused on their own concern.
+One-page app design (Lovable project 038dd6c8): styles live in /static/design.css; the shell
+carries the header (brand mark, language switch, user dropdown menu) and the inline SVG icon
+symbols used across pages. Every router imports from here so layout stays in one place.
 """
 from html import escape  # re-exported so routers import escape from one place
 
@@ -15,7 +16,7 @@ from .seo import meta_tags
 from .i18n import t, LANGS, DEFAULT_LANG
 from ..data.activity_repo import touch
 
-__all__ = ["escape", "page", "current_user", "redirect"]
+__all__ = ["escape", "page", "current_user", "redirect", "icon"]
 
 
 def current_user(request: Request, db: Session) -> User | None:
@@ -35,78 +36,101 @@ def redirect(url: str) -> RedirectResponse:
     return RedirectResponse(url, status_code=303)
 
 
+def icon(name: str, cls: str = "icon") -> str:
+    """Inline SVG icon by symbol id (defs are embedded once in the shell)."""
+    return f"<svg class='{cls}' aria-hidden='true'><use href='#i-{name}'/></svg>"
+
+
+# Inline SVG symbol definitions (1.75px stroke line icons + the brand mark), embedded once per
+# page — offline-safe, no icon fonts/CDNs.
+_SVG_DEFS = """<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16"/><path d="M3 21h18"/><path d="M9 8h.01M9 12h.01M9 16h.01M14 8h.01M14 12h.01M14 16h.01"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+<symbol id="i-plane" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 10.2-10.2M17 6l3 3M14 9l3 3"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13"/><path d="m7 12 5 5 5-5"/><path d="M4 21h16"/></symbol>
+<symbol id="i-warning" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><path d="M12 18h.01"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="i-logo" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#1f3864" stroke-width="2"/><path d="M16 5 L19.5 16 L16 27 L12.5 16 Z" fill="#1f3864" stroke="none"/><circle cx="16" cy="16" r="2.6" fill="#e8963a" stroke="none"/></symbol>
+</defs></svg>"""
+
+
+def _usermenu(user: User, lang: str, paused: bool | None) -> str:
+    """The account dropdown (details/summary — no JS). Account actions live here, not on a
+    separate screen (one-page design)."""
+    pause_item = ""
+    if paused is False:
+        pause_item = (
+            "<form method='post' action='/account/found-job' style='margin:0'>"
+            "<input type='hidden' name='value' value='1'>"
+            f"<button type='submit'>{icon('pause', 'icon sm')}"
+            f"🎉 {escape(t('menu.pause', lang))}</button></form><div class='sep'></div>")
+    elif paused is True:
+        pause_item = (
+            "<form method='post' action='/account/found-job' style='margin:0'>"
+            "<input type='hidden' name='value' value='0'>"
+            f"<button type='submit'>{icon('play', 'icon sm')}"
+            f"{escape(t('menu.resume', lang))}</button></form><div class='sep'></div>")
+    name = user.name or user.email.split("@")[0]
+    return f"""<details class='usermenu'><summary>{escape(name)}</summary><div class='menu'>
+{pause_item}<a href='/documents'>{icon('doc', 'icon sm')}{escape(t('nav.documents', lang))}</a>
+<a href='/account'>{icon('key', 'icon sm')}{escape(t('menu.settings', lang))}</a>
+<a href='/account/export'>{icon('download', 'icon sm')}{escape(t('menu.export', lang))}</a>
+<a href='/sources'>{icon('search', 'icon sm')}{escape(t('nav.sources', lang))}</a>
+<div class='sep'></div>
+<a href='/account#delete' class='danger'>{icon('warning', 'icon sm')}{escape(t('menu.delete', lang))}</a>
+<a href='/logout'>{icon('logout', 'icon sm')}{escape(t('nav.logout', lang))}</a>
+</div></details>"""
+
+
 def page(body: str, user: User | None = None, *, title: str = "Job Agent",
          description: str = "", path: str = "/", noindex: bool = True,
          head_extra: str = "", lang: str = DEFAULT_LANG,
          switch_urls: dict[str, str] | None = None,
-         hreflang: list[tuple[str, str]] | None = None) -> str:
+         hreflang: list[tuple[str, str]] | None = None,
+         paused: bool | None = None, full_bleed: bool = False) -> str:
     """Render the page shell.
 
     `noindex` defaults to True so private pages never leak into search by accident — public
     pages opt in with noindex=False and a real description. `head_extra` is extra <head> content
-    (e.g. JSON-LD). `lang` sets <html lang> and localises the nav. `switch_urls` (per-language
-    target URLs) renders a language switcher — only public pages pass it. `hreflang` renders
-    alternate-language <link>s for the public, language-prefixed pages."""
-    if user:
-        nav = (f"<a href='/'>{escape(t('nav.dashboard', lang))}</a>"
-               f"<a href='/documents'>{escape(t('nav.documents', lang))}</a>"
-               f"<a href='/sources'>{escape(t('nav.sources', lang))}</a>"
-               f"<a href='/account'>{escape(t('nav.account', lang))}</a>"
-               f"<a href='/logout'>{escape(t('nav.logout', lang))}</a>")
-    else:
-        nav = (f"<a href='/login'>{escape(t('nav.login', lang))}</a>"
-               f"<a href='/register'>{escape(t('nav.register', lang))}</a>")
-    who = f"<span class='who'>{escape(user.email)}</span>" if user else ""
+    (e.g. JSON-LD). `lang` sets <html lang> and localises the chrome. `switch_urls` renders the
+    language switcher (public pages). `hreflang` renders alternate-language links. `paused`
+    (when known) enables the direct pause/resume item in the user menu."""
     switcher = ""
     if switch_urls:
         parts = []
         for code in LANGS:
             url = switch_urls.get(code, f"/lang/{code}")
-            active = " style='font-weight:700;color:#fff'" if code == lang else ""
+            active = " class='active'" if code == lang else ""
             parts.append(f"<a href='{escape(url)}'{active}>{code.upper()}</a>")
-        switcher = "<span class='langsw'>" + " · ".join(parts) + "</span>"
+        switcher = "<span class='langsw'>" + "".join(parts) + "</span>"
+    if user:
+        right = f"{switcher}{_usermenu(user, lang, paused)}"
+    else:
+        right = (f"{switcher}<a class='btn gray small' href='/login'>{escape(t('nav.login', lang))}</a>"
+                 f"<a class='btn small' href='/register'>{escape(t('nav.register', lang))}</a>")
     seo = meta_tags(title, description, path, noindex=noindex)
     hl = "\n".join(
         f'<link rel="alternate" hreflang="{escape(code)}" href="{escape(url)}">'
         for code, url in (hreflang or []))
+    content = body if full_bleed else f'<main class="wrap">{body}</main>'
     return f"""<!doctype html><html lang="{escape(lang)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)}</title>
 {seo}
 {hl}
 {head_extra}
-<style>
-*{{box-sizing:border-box}} body{{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f5f6fa;color:#222}}
-header{{background:#1f3864;color:#fff;padding:12px 22px;display:flex;gap:16px;align-items:center}}
-header b{{font-size:16px}} header a{{color:#cfe0ff;text-decoration:none;font-size:14px}}
-.who{{font-size:12px;color:#9fb4dd}}
-.right{{margin-left:auto;display:flex;gap:12px;align-items:center}}
-.langsw a{{font-size:12px}}
-.wrap{{padding:20px 22px;max-width:1000px;margin:0 auto}}
-.card{{background:#fff;border:1px solid #e3e6ee;border-radius:8px;padding:16px 18px;margin-bottom:14px}}
-label{{display:block;font-size:12px;color:#555;margin:8px 0 3px}} input,select,textarea{{width:100%;padding:8px;border:1px solid #c8ccd8;border-radius:6px;font-size:14px}}
-.btn{{background:#2e5496;color:#fff;border:0;padding:9px 14px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-block;font-size:14px}}
-.btn.green{{background:#2e7d32}} .btn.gray{{background:#8a94a6}}
-table{{width:100%;border-collapse:collapse}} th,td{{padding:8px;border-bottom:1px solid #eef0f5;font-size:13px;text-align:left;vertical-align:top}} th{{background:#1f3864;color:#fff}}
-.badge{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#c6e0b4}}
-.chip{{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;margin:2px 3px 2px 0;line-height:1.5}}
-.tuner{{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}}
-.small{{color:#777;font-size:12px}} .row2{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
-/* --- mobile-friendly: stack the layout and turn table rows into cards --- */
-@media (max-width:700px){{
-  header{{flex-wrap:wrap;gap:10px;padding:10px 14px}}
-  .who{{margin-left:0;width:100%}}
-  .wrap{{padding:14px}}
-  .row2{{grid-template-columns:1fr}}
-  .card{{padding:14px}}
-  table{{background:transparent}}
-  thead{{display:none}}
-  table,tbody,tr,td{{display:block;width:100%}}
-  tr{{background:#fff;border:1px solid #e3e6ee;border-radius:8px;margin-bottom:10px;padding:6px 4px}}
-  td{{border:0;border-bottom:1px solid #f1f3f8;padding:8px 10px}}
-  td:last-child{{border-bottom:0}}
-  .btn{{width:100%;text-align:center}}
-  input,select,textarea{{font-size:16px}} /* prevents iOS zoom-on-focus */
-}}
-</style></head><body>
-<header><b>🧭 Job Agent</b>{nav}<span class='right'>{who}{switcher}</span></header>
-<div class="wrap">{body}</div></body></html>"""
+<link rel="stylesheet" href="/static/design.css">
+</head><body>
+{_SVG_DEFS}
+<header><span class="brand"><a href="/">{icon('logo', 'logo')}Job Agent</a></span>
+<span class="right">{right}</span></header>
+{content}
+<footer class="site">Job Agent</footer></body></html>"""

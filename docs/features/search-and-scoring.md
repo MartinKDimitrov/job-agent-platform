@@ -12,6 +12,8 @@ threshold (`min_match`, default 65%) is tunable inline from the list.
 requirement coverage (must-have > nice-to-have; responsibilities shown but not scored),
 falling back to keyword-only when the model is unavailable.
 
+**UI (one-page app):** the logged-in experience is a single screen — profile tabs + threshold + Search now in a sticky control strip, match cards with a circular score ring, gap chips, generated documents inline on each card, and the onboarding card as the empty state for brand-new users. Account actions live in the header dropdown menu.
+
 **Modules**
 - `application/usecases/search.py` — the pipeline (`run_search`, `fetch_all`, `fetch_extra`,
   source lists, per-source error isolation).

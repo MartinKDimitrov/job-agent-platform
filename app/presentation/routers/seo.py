@@ -11,7 +11,8 @@ from ...core.config import settings
 router = APIRouter()
 
 # Areas behind login / holding personal data — keep crawlers out.
-PRIVATE_PREFIXES = ["/profiles", "/account", "/sources", "/login", "/register", "/auth"]
+PRIVATE_PREFIXES = ["/profiles", "/account", "/sources", "/documents", "/onboarding",
+                    "/login", "/register", "/auth"]
 # Public, indexable URLs (extended in Phase 4). Both language variants of the landing.
 PUBLIC_PATHS = ["/", "/bg"]
 

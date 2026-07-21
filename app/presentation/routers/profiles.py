@@ -8,13 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...data.db import get_db
-from ...data.models import Profile, Posting, Match
+from ...data.models import Profile, Posting, Match, Document
+from ...data.activity_repo import get_activity
 from ...domain.scoring import score
 from ...domain.extraction import extract_requirements
 from ...application.usecases.search import run_search
 from ...application.run_stats import RunStats
 from ...data.metrics_repo import record_run
-from ..web import page, current_user, redirect, escape
+from ..web import page, current_user, redirect, escape, icon
 
 router = APIRouter()
 
@@ -102,23 +103,38 @@ def _req_kind(r) -> str:
     return r.get("kind", "must") if isinstance(r, dict) else "must"
 
 
-def _chip(text: str, color: str, bg: str) -> str:
-    return f"<span class='chip' style='color:{color};background:{bg}'>{escape(text)}</span>"
+_RING_C = 175.93   # circumference of the r=28 score ring
 
 
-def _gaps_cell(covered, missing) -> str:
-    """Show why a posting scored as it did: missing must-haves (red) and nice-to-haves (grey)
-    as chips, with a green count of what's covered. Transparency over a bare number."""
+def _score_ring(sc: float) -> str:
+    """Circular progress ring (Lovable design): arc fills to the %, color-coded."""
+    pct = max(0, min(100, int(round(sc))))
+    cls = "high" if pct >= 65 else ("mid" if pct >= 45 else "low")
+    offset = _RING_C * (1 - pct / 100)
+    return (f"<div class='score {cls}'><svg viewBox='0 0 64 64' aria-hidden='true'>"
+            f"<circle class='track' cx='32' cy='32' r='28' stroke-width='6' fill='none'/>"
+            f"<circle class='bar' cx='32' cy='32' r='28' stroke-width='6' fill='none' "
+            f"stroke-linecap='round' stroke-dasharray='{_RING_C}' stroke-dashoffset='{offset:.2f}'/>"
+            f"</svg><span class='num'>{pct}%</span></div>")
+
+
+def _gaps_chips(covered, missing) -> str:
+    """Why a posting scored as it did: covered count + missing must (red) / nice (grey) chips.
+    Transparency over a bare number."""
     covered = covered or []
     missing = missing or []
     must_miss = [r for r in missing if _req_kind(r) == "must"]
     nice_miss = [r for r in missing if _req_kind(r) == "nice"]
-    chips = "".join(_chip(_req_text(r), "#a02020", "#fdecea") for r in must_miss[:6])
-    chips += "".join(_chip(_req_text(r), "#555", "#eceff4") for r in nice_miss[:4])
     n_scored = len([r for r in covered if _req_kind(r) != "resp"])
-    cov = (f"<div class='chip' style='color:#1e6b2a;background:#e3f4e3'>✓ {n_scored} covered</div>"
-           if n_scored else "")
-    return (cov + chips) or "<span class='small'>—</span>"
+    out = []
+    if n_scored:
+        out.append(f"<span class='chip count'>✓ {n_scored} covered</span>")
+    out += [f"<span class='chip must'>{escape(_req_text(r))}</span>" for r in must_miss[:3]]
+    out += [f"<span class='chip nice'>{escape(_req_text(r))}</span>" for r in nice_miss[:2]]
+    hidden = max(0, len(must_miss) - 3) + max(0, len(nice_miss) - 2)
+    if hidden:
+        out.append(f"<span class='chip more'>+{hidden} more</span>")
+    return "".join(out) or "<span class='small'>—</span>"
 
 
 # ---------- routes (order matters: /profiles/new before /profiles/{pid}) ----------
@@ -165,7 +181,13 @@ def profile_edit_form(pid: int, request: Request, db: Session = Depends(get_db))
     v = dict(name=p.name, target_roles=p.target_roles, skills=p.skills, experience=p.experience,
              languages=p.languages, english_level=p.english_level, location_pref=p.location_pref,
              remote_pref=p.remote_pref, salary_expectation=p.salary_expectation, min_match=p.min_match)
-    return page(_profile_form(f"/profiles/{pid}/edit", v, "Edit profile"), u)
+    delete_card = f"""<div class='card' style='border-color:var(--red-soft)'>
+    <h3 style='color:var(--red)'>Delete this profile</h3>
+    <p class='small'>Removes the profile and its matches. This cannot be undone.</p>
+    <form method='post' action='/profiles/{pid}/delete'
+      onsubmit="return confirm('Delete this profile and its matches? This cannot be undone.')">
+      <button class='btn danger'>Delete profile</button></form></div>"""
+    return page(_profile_form(f"/profiles/{pid}/edit", v, "Edit profile") + delete_card, u)
 
 
 @router.post("/profiles/{pid}/edit")
@@ -251,6 +273,114 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
                     f"&filtered={res['filtered']}&found={res['matched']}")
 
 
+# ---------- the one-page app (control strip + match feed) ----------
+_BUSY_JS = ("onsubmit=\"var b=this.querySelector('button');"
+            "setTimeout(function(){b.disabled=true;b.textContent='⏳ Generating…';},0);\"")
+
+
+def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document]) -> str:
+    meta = []
+    if post.company:
+        meta.append(f"<span class='m'>{icon('building', 'icon sm')}{escape(post.company)}</span>")
+    if post.location:
+        meta.append(f"<span class='m'>{icon('pin', 'icon sm')}{escape(post.location)}</span>")
+    meta_html = f"<div class='meta'>{''.join(meta)}</div>" if meta else ""
+
+    docs_html = ""
+    if docs:
+        links = []
+        for d in docs:
+            ic = "doc" if d.kind == "cv" else "mail"
+            label = "CV" if d.kind == "cv" else "Letter"
+            links.append(f"<a href='/documents/{d.id}'>{icon(ic, 'icon')}"
+                         f"{label} ({escape(d.lang.upper())})</a>")
+        docs_html = ("<div class='docs'><span class='label'>Your documents</span>"
+                     + "<span class='sep'>·</span>".join(links) + "</div>")
+
+    apply_btn = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' "
+                 f"target='_blank'>{icon('plane')}Apply</a>"
+                 if (post.apply_url or post.url) else "")
+    gen = (f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {_BUSY_JS}>"
+           f"<input type='hidden' name='kind' value='cv'>"
+           f"<button class='btn gray small' title='Generate a tailored CV (uses your AI key)'>{icon('doc')}CV</button></form>"
+           f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {_BUSY_JS}>"
+           f"<input type='hidden' name='kind' value='cover_letter'>"
+           f"<button class='btn gray small' title='Generate a cover letter (uses your AI key)'>{icon('mail')}Letter</button></form>")
+    return (f"<div class='match-card'>{_score_ring(m.score)}<div class='body'>"
+            f"<div class='title'>{escape(post.title)}</div>{meta_html}"
+            f"<div class='chips'>{_gaps_chips(m.covered, m.missing)}</div>{docs_html}"
+            f"<div class='actions'>{apply_btn}{gen}</div></div></div>")
+
+
+def render_app(db: Session, u, active: Profile, profiles: list[Profile],
+               fetched=None, new=None, filtered=None, found=None, gen_err=None) -> str:
+    """The single logged-in screen: control strip (profile tabs + threshold + Search now) and
+    the match feed for the active profile. Used by both / and /profiles/{id}."""
+    p = active
+    tabs = "".join(
+        f"<a class='tab{' active' if pr.id == p.id else ''}' href='/profiles/{pr.id}'>{escape(pr.name)}</a>"
+        for pr in profiles)
+    tabs += "<a class='tab add' href='/onboarding'>+ New</a>"
+
+    strip = f"""<div class='control-strip'>
+    <div class='profile-tabs'>{tabs}</div>
+    <form method='post' action='/profiles/{p.id}/min_match' class='mini-tuner'>
+      <label for='mm' style='margin:0'>Matches ≥</label>
+      <input id='mm' name='min_match' type='number' min='0' max='100' value='{p.min_match}'>
+      <span class='value'>min {p.min_match}%</span>
+      <button class='btn gray small'>Apply</button></form>
+    <a class='btn gray small' href='/profiles/{p.id}/edit' title='Edit this profile'>{icon('edit')}Edit</a>
+    <form method='post' action='/profiles/{p.id}/search' style='margin:0'>
+      <button class='btn green search-now'>{icon('search')}Search now</button></form>
+    </div>"""
+
+    banner = ""
+    if gen_err:
+        banner += (f"<div class='card' style='border-color:var(--red);background:var(--red-soft)'>"
+                   f"<b style='color:var(--red)'>Generation failed:</b> {escape(gen_err)}</div>")
+    if found is not None:
+        filt = f"{filtered} filtered out (seniority/location), " if filtered else ""
+        banner += (f"<div class='card' style='background:var(--green-soft);border-color:var(--green)'>"
+                   f"Search complete — fetched {fetched or 0} postings, {new or 0} new, "
+                   f"{filt}<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
+
+    q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
+         .where(Match.profile_id == p.id, Match.score >= p.min_match)
+         .order_by(Match.score.desc()))
+    pairs = db.execute(q).all()
+    # documents per posting, one query
+    docs_by_post: dict[int, list[Document]] = {}
+    for d in db.execute(select(Document).where(Document.user_id == u.id)
+                        .order_by(Document.created_at.desc())).scalars().all():
+        if d.posting_id:
+            docs_by_post.setdefault(d.posting_id, []).append(d)
+
+    cards = []
+    for i, (m, post) in enumerate(pairs):
+        cards.append(_match_card(p, m, post, docs_by_post.get(post.id, [])))
+        if i == 0:
+            cards.append("<div class='ad-slot'>Ad space</div>")   # hidden until activated (M1)
+    feed = "".join(cards) or (
+        "<div class='empty-state'><h3>No matches above threshold yet</h3>"
+        "<p>Run a search, lower the threshold, or add a posting manually below.</p></div>")
+
+    scaffold = f"""<details class='card'><summary class='small' style='cursor:pointer'>
+    Add a posting manually (advanced)</summary>
+    <form method='post' action='/profiles/{p.id}/postings' style='margin-top:12px'>
+      <label>Job URL</label><input name='url' placeholder='https://...'>
+      <label>Apply URL (direct, if different)</label><input name='apply_url'>
+      <div class='row2'><div><label>Title</label><input name='title'></div>
+      <div><label>Company</label><input name='company'></div></div>
+      <label>Location</label><input name='location'>
+      <label>Description / requirements (paste the JD)</label><textarea name='description' rows='6'></textarea>
+      <p style='margin-top:12px'><button class='btn'>Score it</button></p></form></details>"""
+
+    act = get_activity(db, u.id)
+    return page(banner + strip + feed + scaffold, u,
+                title=f"{p.name} — Job Agent",
+                paused=bool(act.found_job) if act else False)
+
+
 @router.get("/profiles/{pid}", response_class=HTMLResponse)
 def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
                  fetched: int | None = None, new: int | None = None,
@@ -262,64 +392,10 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
     p = db.get(Profile, pid)
     if not p or p.user_id != u.id:
         return page("<div class='card'>Not found.</div>", u)
-    # matches above threshold, sorted desc
-    q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
-         .where(Match.profile_id == p.id, Match.score >= p.min_match)
-         .order_by(Match.score.desc()))
-    rows = ""
-    for m, post in db.execute(q).all():
-        apply = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' target='_blank'>Apply</a>"
-                 if (post.apply_url or post.url) else "<span class='small'>—</span>")
-        # generation is a synchronous 5-20s LLM call — without instant feedback the buttons feel
-        # dead, so on submit we disable them and show a spinner label.
-        busy = ("onsubmit=\"var b=this.querySelector('button');"
-                "setTimeout(function(){b.disabled=true;b.textContent='⏳ Generating…';},0);\"")
-        gen = (f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
-               f"<input type='hidden' name='kind' value='cv'>"
-               f"<button class='btn gray' title='Generate a tailored CV (uses your AI key)'>CV</button></form> "
-               f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
-               f"<input type='hidden' name='kind' value='cover_letter'>"
-               f"<button class='btn gray' title='Generate a cover letter (uses your AI key)'>Letter</button></form>")
-        rows += (f"<tr><td><b>{m.score:.0f}%</b></td>"
-                 f"<td><b>{escape(post.title)}</b><br><span class='small'>{escape(post.company)} · {escape(post.location)}</span></td>"
-                 f"<td>{_gaps_cell(m.covered, m.missing)}</td><td>{apply}<br>{gen}</td></tr>")
-    rows = rows or "<tr><td colspan='4' class='small'>No matches above threshold yet. Run a search or add a posting below.</td></tr>"
-
-    banner = ""
-    if gen_err:
-        banner += (f"<div class='card' style='border-color:#c0392b;background:#fdecea'>"
-                   f"<b style='color:#c0392b'>Generation failed:</b> {escape(gen_err)}</div>")
-    if found is not None:
-        filt = f"{filtered} filtered out (seniority/location), " if filtered else ""
-        banner += (f"<div class='card' style='background:#e3f4e3;border-color:#2e7d32'>"
-                   f"Search complete — fetched {fetched or 0} postings, {new or 0} new, "
-                   f"{filt}<b>{found} match(es)</b> above your {p.min_match}% threshold.</div>")
-
-    body = f"""{banner}<div class='card'><h2>{escape(p.name)} <span class='small'>· min {p.min_match}%</span></h2>
-    <p class='small'>Target: {escape(p.target_roles)} · {escape(p.remote_pref)} · {escape(p.location_pref)}</p>
-    <p><form method='post' action='/profiles/{p.id}/search' style='display:inline'>
-      <button class='btn green'>🔎 Search now</button></form>
-    <a class='btn gray' href='/profiles/{p.id}/edit'>Edit</a>
-    <form method='post' action='/profiles/{p.id}/delete' style='display:inline'
-      onsubmit="return confirm('Delete this profile and its matches? This cannot be undone.')">
-      <button class='btn' style='background:#c0392b'>Delete</button></form></p>
-    <form method='post' action='/profiles/{p.id}/min_match' class='tuner'>
-      <label style='margin:0'>Show matches ≥</label>
-      <input name='min_match' type='number' min='0' max='100' value='{p.min_match}' style='width:80px'>
-      <span class='small'>%</span><button class='btn gray'>Apply</button></form>
-    <table><tr><th>Match</th><th>Role / Company</th><th>Gaps (missing)</th><th></th></tr>{rows}</table></div>
-    <div class='card'><h3>Add a posting to score</h3>
-    <form method='post' action='/profiles/{p.id}/postings'>
-      <label>Job URL</label><input name='url' placeholder='https://...'>
-      <label>Apply URL (direct, if different)</label><input name='apply_url'>
-      <div class='row2'><div><label>Title</label><input name='title'></div>
-      <div><label>Company</label><input name='company'></div></div>
-      <label>Location</label><input name='location'>
-      <label>Description / requirements (paste the JD)</label><textarea name='description' rows='6'></textarea>
-      <p style='margin-top:12px'><button class='btn'>Score it</button></p></form>
-      <p class='small'>Phase 2 will auto-fetch these from your sources. For now, paste a JD to see the match score.</p>
-    </div>"""
-    return page(body, u)
+    profiles = db.execute(select(Profile).where(Profile.user_id == u.id)
+                          .order_by(Profile.created_at)).scalars().all()
+    return render_app(db, u, p, profiles, fetched=fetched, new=new,
+                      filtered=filtered, found=found, gen_err=gen_err)
 
 
 @router.post("/profiles/{pid}/postings")
