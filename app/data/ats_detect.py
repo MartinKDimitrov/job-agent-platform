@@ -41,12 +41,21 @@ def _probe_workable(slug: str) -> bool:
     return isinstance(j, dict) and "results" in j
 
 
+def _probe_teamtailor(slug_or_url: str) -> bool:
+    # Works for both `<slug>.teamtailor.com` and custom careers domains (the slug is then the
+    # full base URL, produced by the careers-page scan). The tt: namespace is the fingerprint.
+    from .sources.teamtailor import base_url
+    body = fetch_text(f"{base_url(slug_or_url)}/jobs.rss")
+    return bool(body) and "teamtailor.com/locations" in body
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
     "lever": _probe_lever,
     "ashby": _probe_ashby,
     "workable": _probe_workable,
+    "teamtailor": _probe_teamtailor,
 }
 
 _CAREERS_PATTERNS = [
@@ -84,6 +93,13 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
         m = pat.search(html)
         if m:
             return ats, m.group(1)
+    # Teamtailor white-labels on the company's OWN domain (careers.mypos.com) — no external
+    # link to match, but the page code is full of teamtailor fingerprints. The board id is
+    # then the careers site's base URL itself; detect() verifies it via /jobs.rss.
+    if "teamtailor" in html.lower():
+        from urllib.parse import urlparse
+        u = urlparse(careers_url)
+        return "teamtailor", f"{u.scheme}://{u.netloc}"
     return None
 
 

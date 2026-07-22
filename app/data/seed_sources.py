@@ -11,6 +11,7 @@ BUILTIN = [
     ("Lever (ATS)", "ats_api", "https://api.lever.co/v0/postings/{company}"),
     ("Ashby (ATS)", "ats_api", "https://api.ashbyhq.com/posting-api/job-board/{company}"),
     ("Workable (ATS)", "ats_api", "https://apply.workable.com/api/v3/accounts/{company}/jobs"),
+    ("Teamtailor (ATS)", "ats_api", "https://{careers-site}/jobs.rss"),
     ("RemoteOK", "rss", "https://remoteok.com/api"),
     ("We Work Remotely", "rss", "https://weworkremotely.com/remote-jobs.rss"),
     ("dev.bg", "rss", "https://dev.bg/company/jobs/"),

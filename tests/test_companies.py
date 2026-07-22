@@ -37,6 +37,23 @@ def test_detect_workable_by_probe(monkeypatch):
     assert det.detect("TINQIN") == ("workable", "tinqin")
 
 
+def test_detect_teamtailor_from_custom_domain_careers_page(monkeypatch):
+    # careers.mypos.com case: the page HTML is full of teamtailor fingerprints but links to
+    # no external ATS host — the board id becomes the careers site's base URL, verified
+    # via its /jobs.rss (tt: namespace).
+    def fake_text(url, params=None, timeout=15.0):
+        if url == "https://careers.mypos.com/jobs":
+            return "<html><script>window.Teamtailor = {}</script></html>"
+        if url == "https://careers.mypos.com/jobs.rss":
+            return '<rss xmlns:tt="https://teamtailor.com/locations"></rss>'
+        return None
+    monkeypatch.setattr(det, "fetch_text", fake_text)
+    monkeypatch.setattr(det, "fetch_json", lambda *a, **k: None)
+    monkeypatch.setattr(det, "post_json", lambda *a, **k: None)
+    assert det.detect("myPOS", careers_url="https://careers.mypos.com/jobs") == (
+        "teamtailor", "https://careers.mypos.com")
+
+
 def test_detect_none_when_no_board(monkeypatch):
     monkeypatch.setattr(det, "fetch_json", lambda *a, **k: None)
     monkeypatch.setattr(det, "post_json", lambda *a, **k: None)
