@@ -14,18 +14,39 @@ from __future__ import annotations
 import logging
 import re
 
-from .sources.http import fetch_json, fetch_text
+from .sources.http import fetch_json, fetch_text, post_json
 
 log = logging.getLogger(__name__)
 
-# ats name -> (probe URL template, "does this JSON mean the board exists?")
-_PROBES: dict[str, tuple[str, callable]] = {
-    "greenhouse": ("https://boards-api.greenhouse.io/v1/boards/{slug}/jobs",
-                   lambda j: isinstance(j, dict) and "jobs" in j),
-    "lever": ("https://api.lever.co/v0/postings/{slug}?mode=json",
-              lambda j: isinstance(j, list)),
-    "ashby": ("https://api.ashbyhq.com/posting-api/job-board/{slug}",
-              lambda j: isinstance(j, dict) and "jobs" in j),
+
+def _probe_greenhouse(slug: str) -> bool:
+    j = fetch_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs")
+    return isinstance(j, dict) and "jobs" in j
+
+
+def _probe_lever(slug: str) -> bool:
+    j = fetch_json(f"https://api.lever.co/v0/postings/{slug}?mode=json", browser=True)
+    return isinstance(j, list)
+
+
+def _probe_ashby(slug: str) -> bool:
+    j = fetch_json(f"https://api.ashbyhq.com/posting-api/job-board/{slug}", browser=True)
+    return isinstance(j, dict) and "jobs" in j
+
+
+def _probe_workable(slug: str) -> bool:
+    # v3 answers 200 + {"results": [...]} for EXISTING accounts (even with 0 published jobs —
+    # future postings then appear automatically), 404 otherwise. POST-only endpoint.
+    j = post_json(f"https://apply.workable.com/api/v3/accounts/{slug}/jobs", {"query": ""})
+    return isinstance(j, dict) and "results" in j
+
+
+# ats name -> "does this slug host a live board there?"
+_PROBES: dict[str, callable] = {
+    "greenhouse": _probe_greenhouse,
+    "lever": _probe_lever,
+    "ashby": _probe_ashby,
+    "workable": _probe_workable,
 }
 
 _CAREERS_PATTERNS = [
@@ -33,6 +54,7 @@ _CAREERS_PATTERNS = [
     ("greenhouse", re.compile(r"greenhouse\.io/embed/job_board\?[^\"']*for=([\w-]+)", re.I)),
     ("lever", re.compile(r"jobs\.(?:eu\.)?lever\.co/([\w-]+)", re.I)),
     ("ashby", re.compile(r"jobs\.ashbyhq\.com/([\w-]+)", re.I)),
+    ("workable", re.compile(r"apply\.workable\.com/(?!api/)([\w-]+)", re.I)),
 ]
 
 
@@ -50,9 +72,7 @@ def slug_guesses(name: str) -> list[str]:
 
 def probe_slug(ats: str, slug: str) -> bool:
     """True when `slug` is a live board on `ats` (public JSON answers with a jobs payload)."""
-    template, looks_valid = _PROBES[ats]
-    j = fetch_json(template.format(slug=slug), browser=(ats in ("lever", "ashby")))
-    return j is not None and looks_valid(j)
+    return _PROBES[ats](slug)
 
 
 def scan_careers_page(careers_url: str) -> tuple[str, str] | None:

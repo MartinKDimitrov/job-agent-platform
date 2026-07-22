@@ -36,6 +36,20 @@ def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TI
         return None
 
 
+def post_json(url: str, body: dict, timeout: float = DEFAULT_TIMEOUT):
+    """POST JSON and return parsed JSON, or None on any error (same degrade-to-empty contract
+    as fetch_json). Needed for Workable's v3 job-search endpoint, which is POST-only."""
+    try:
+        r = httpx.post(url, json=body, timeout=timeout,
+                       headers={**_BROWSER_HEADERS, "Content-Type": "application/json"},
+                       follow_redirects=True)
+        r.raise_for_status()
+        return r.json()
+    except (httpx.HTTPError, ValueError) as e:
+        log.warning("post_json failed for %s: %s", url, e)
+        return None
+
+
 def fetch_text(url: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT) -> str | None:
     """GET `url` (browser-like headers) and return the body text, or None on any error."""
     try:

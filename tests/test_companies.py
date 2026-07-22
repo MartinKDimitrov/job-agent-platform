@@ -25,11 +25,21 @@ def test_detect_by_probe(monkeypatch):
             return {"jobs": [{"id": 1}]}
         return None                                # everything else 404s
     monkeypatch.setattr(det, "fetch_json", fake_json)
+    monkeypatch.setattr(det, "post_json", lambda *a, **k: None)
     assert det.detect("EGT Digital") == ("greenhouse", "egtdigital")
+
+
+def test_detect_workable_by_probe(monkeypatch):
+    monkeypatch.setattr(det, "fetch_json", lambda *a, **k: None)
+    monkeypatch.setattr(det, "post_json",
+                        lambda url, body, timeout=15.0:
+                        {"total": 0, "results": []} if "/tinqin/" in url else None)
+    assert det.detect("TINQIN") == ("workable", "tinqin")
 
 
 def test_detect_none_when_no_board(monkeypatch):
     monkeypatch.setattr(det, "fetch_json", lambda *a, **k: None)
+    monkeypatch.setattr(det, "post_json", lambda *a, **k: None)
     monkeypatch.setattr(det, "fetch_text", lambda *a, **k: None)
     assert det.detect("Ghost Corp", careers_url="https://ghost.example/careers") is None
 

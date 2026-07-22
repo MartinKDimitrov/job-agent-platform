@@ -23,15 +23,17 @@ from ..data.models import Company
 _RECHECK_AFTER = timedelta(days=30)   # re-probe known misses monthly, not on every run
 
 
-def run(names: list[str], country: str = "BG", delay: float = 1.0) -> dict:
+def run(names: list[str], country: str = "BG", delay: float = 1.0, force: bool = False) -> dict:
+    """`force=True` re-probes recorded misses too — needed right after a NEW ATS adapter
+    lands (companies skipped as 'no supported ATS' may live on the new platform)."""
     found = missed = skipped = 0
     with SessionLocal() as db:
         for name in names:
             existing = db.execute(
                 select(Company).where(Company.name == name)).scalar_one_or_none()
-            if existing and (existing.ats or (
+            if existing and (existing.ats or (not force and (
                     existing.detected_at
-                    and datetime.utcnow() - existing.detected_at < _RECHECK_AFTER)):
+                    and datetime.utcnow() - existing.detected_at < _RECHECK_AFTER))):
                 skipped += 1
                 continue
             res = detect(name)
@@ -57,6 +59,7 @@ if __name__ == "__main__":
     if "--country" in sys.argv:
         country = sys.argv[sys.argv.index("--country") + 1]
         args = [a for a in args if a != country]
+    force = "--force" in sys.argv
     names = args or BG_COMPANIES
-    print(f"probing {len(names)} companies ({country})...")
-    print(run(names, country=country))
+    print(f"probing {len(names)} companies ({country}, force={force})...")
+    print(run(names, country=country, force=force))

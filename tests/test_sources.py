@@ -6,8 +6,9 @@ def test_builtin_sources_listed(auth_client):
     client, _ = auth_client
     body = client.get("/sources").text
     assert "Greenhouse (ATS)" in body and "dev.bg" in body and "JobTiger" in body
+    assert "Workable (ATS)" in body                   # back since the v3 adapter works (16в)
     # only platforms an adapter actually crawls — no aspirational entries (owner rule)
-    assert "LinkedIn" not in body and "jobs.bg" not in body and "Workable" not in body
+    assert "LinkedIn" not in body and "jobs.bg" not in body
 
 
 def test_add_user_source(auth_client):

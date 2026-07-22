@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ...data.models import Posting, Match
-from ...data.sources import greenhouse, dev_bg, remoteok, wwr, lever, ashby
+from ...data.sources import greenhouse, dev_bg, remoteok, wwr, lever, ashby, workable
 from ...domain.entities import RawPosting
 from ...data.ingest import ingest
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
@@ -165,7 +165,8 @@ def _registry_postings(db: Session, stats=None) -> list[RawPosting]:
     """Career pages from the company REGISTRY (ROADMAP 16б): every active company with a
     detected ATS board, fetched through the matching adapter. One adapter serves them all."""
     from ...data.company_repo import boards_for
-    adapters = {"greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch}
+    adapters = {"greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch,
+                "workable": workable.fetch}
     out: list[RawPosting] = []
     for ats, fetch_fn in adapters.items():
         count = 0
