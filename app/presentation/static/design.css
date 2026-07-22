@@ -436,6 +436,7 @@ tr:last-child td { border-bottom: 0; }
 .gaps-detail li { font-size: 13px; line-height: 1.6; color: var(--ink); margin-bottom: 6px; overflow-wrap: break-word; }
 .gaps-detail .col.ok li::marker { color: var(--green); }
 .gaps-detail .col.warn li::marker { color: var(--amber); }
+.match-card .meta .m.source { color: var(--muted); }
 .gaps-detail li.nice { color: var(--muted); }
 .gaps-detail .subhead {
   margin: 12px 0 6px;

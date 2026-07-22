@@ -117,6 +117,32 @@ def test_no_advantage_subheading_without_nice_gaps(auth_client):
     assert "Considered an advantage" not in body
 
 
+def test_match_card_shows_source_host(auth_client):
+    # Owner feedback: 'everything comes from dev.bg' — every card now names its source site.
+    client, _ = auth_client
+    pid = make_profile(client, skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme", "url": "https://dev.bg/company/x/job/1",
+                      "description": "Requirements:\n- Kotlin experience"})
+    body = client.get(f"/profiles/{pid}").text
+    assert "class='m source'" in body and "dev.bg" in body
+
+
+def test_app_ui_switches_to_bulgarian(auth_client):
+    client, _ = auth_client
+    pid = make_profile(client, skills="Kotlin", min_match=0)
+    client.get("/lang/bg")                      # sets the lang cookie
+    body = client.get(f"/profiles/{pid}").text
+    assert "Търси сега" in body                 # control strip
+    assert "Съвпадения ≥" in body
+    assert "Все още няма съвпадения над прага" in body
+    form = client.get(f"/profiles/{pid}/edit").text
+    assert "Умения (разделени със запетая)" in form
+    assert "Изтрий профила" in form
+    client.get("/lang/en")                      # back to English
+    assert "Search now" in client.get(f"/profiles/{pid}").text
+
+
 def test_min_match_clamped(auth_client):
     client, _ = auth_client
     pid = make_profile(client, min_match=0)

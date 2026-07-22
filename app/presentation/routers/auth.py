@@ -50,7 +50,7 @@ def home(request: Request, db: Session = Depends(get_db)):
         return page(body, u, title="Get started — Job Agent")
     # one-page app: first profile active (tabs switch via /profiles/{id})
     from .profiles import render_app
-    return render_app(db, u, profiles[0], profiles)
+    return render_app(db, u, profiles[0], profiles, lang=current_lang(request))
 
 
 @router.get("/bg", response_class=HTMLResponse)
