@@ -50,6 +50,8 @@ def run(names: list[str], country: str = "BG", delay: float = 1.0) -> dict:
 
 
 if __name__ == "__main__":
+    from ..data.db import init_db
+    init_db()          # standalone CLI — make sure new tables exist before we write
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     country = "BG"
     if "--country" in sys.argv:

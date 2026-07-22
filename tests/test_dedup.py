@@ -85,3 +85,17 @@ def test_different_companies_same_title_not_deduped():
         res = ingest(db, [_rp("rss", "https://a/1", company="Acme"),
                           _rp("rss", "https://b/2", company="Globex")])
         assert res["added"] == 2 and res["deduped"] == 0
+
+
+def test_long_fields_clamped_to_column_limits():
+    # Postgres rejects the whole INSERT batch on a >255-char varchar (a long Ashby
+    # multi-location string killed a live ingest); SQLite doesn't enforce, so assert the clamp.
+    from app.data.db import SessionLocal
+    from app.data.models import Posting
+    from sqlalchemy import select
+    rp = RawPosting("ats_api", "long1", "T" * 600, "C" * 300, location="L" * 300,
+                    url="https://x/long", apply_url="https://x/long", description="d")
+    with SessionLocal() as db:
+        ingest(db, [rp])
+        p = db.execute(select(Posting)).scalars().one()
+        assert len(p.title) == 512 and len(p.company) == 255 and len(p.location) == 255

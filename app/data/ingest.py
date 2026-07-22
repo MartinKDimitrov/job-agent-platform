@@ -44,9 +44,12 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             if rp.source_kind == "ats_api" and rp.apply_url and rp.apply_url != dup.apply_url:
                 dup.apply_url = rp.apply_url
             continue
+        # clamp to column limits — Postgres rejects the whole INSERT batch otherwise
+        # (a long Ashby multi-location string killed a live ingest; SQLite doesn't enforce)
         post = Posting(
-            title=rp.title, company=rp.company, url=rp.url, apply_url=rp.apply_url,
-            location=rp.location, description=rp.description, requirements=None,
+            title=(rp.title or "")[:512], company=(rp.company or "")[:255],
+            url=rp.url, apply_url=rp.apply_url,
+            location=(rp.location or "")[:255], description=rp.description, requirements=None,
             content_hash=chash, source_id=source_id,
         )
         db.add(post)
