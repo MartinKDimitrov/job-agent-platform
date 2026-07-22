@@ -14,6 +14,9 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 # inject a fake _oauth explicitly; everything else should see OAuth as unconfigured.
 os.environ["GOOGLE_CLIENT_ID"] = ""
 os.environ["GOOGLE_CLIENT_SECRET"] = ""
+# The in-app background ingester fetches REAL sources — a local .env with INGEST_EVERY_HOURS=6
+# would make TestClient app startup spawn it and hang the suite on live network calls.
+os.environ["INGEST_EVERY_HOURS"] = "0"
 
 import pytest
 from sqlalchemy import event

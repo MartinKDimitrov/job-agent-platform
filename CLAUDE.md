@@ -86,6 +86,12 @@ Open http://127.0.0.1:8001
 - The database (`jobagent`) and role were created via `sudo -u postgres psql` on the VM;
   `ktor_user` is **not** a superuser and cannot create roles/databases.
 - Never commit `.env` or keys. DB credentials live on the server in `/etc/ktor/ktor.env`.
+- `create_all` only creates MISSING TABLES — adding a **column** to an existing model needs a
+  manual `ALTER TABLE` on staging (done so far: `user_activity.lang`, `postings.embedding`).
+- `.env` has `INGEST_EVERY_HOURS=6` → the app spawns a background ingest thread (real network).
+  Tests force it to 0 in conftest; keep it that way or the suite hangs on live fetches.
+- Search now is **DB-first** (`search_db`, no network). The index is filled by the background
+  ingester / `python -m app.jobs ingest`; an empty index means empty results, not a bug.
 
 ---
 

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from ...data.models import User, Profile, Match, Posting, DigestEntry
 from ...data.sources import jobtiger
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS
-from .search import fetch_all, fetch_extra, run_search
+from .search import fetch_all, fetch_extra, ingest_from_sources, search_db
 from ...data.activity_repo import get_activity
 from ...domain.activity_rules import is_active_for_search
 from ...data.mailer import send_email
@@ -79,7 +79,9 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
             stats.source("jobtiger", fetched=len(jt))
         users = db.execute(select(User)).scalars().all()
 
-        notified = emails_sent = new_matches = skipped = 0
+        # gate users first, so the single ingest below runs targeted queries only for them
+        active: list[tuple[User, list[Profile], object]] = []
+        skipped = 0
         for u in users:
             profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
             if not profiles:
@@ -88,6 +90,14 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
             if not is_active_for_search(u, act, now):
                 skipped += 1
                 continue
+            active.append((u, profiles, act))
+
+        # ONE ingest for the whole run (DB-first search: writes here, reads below)
+        ingest_from_sources(db, boards=boards, raw_postings=raw,
+                            profiles=[p for _, ps, _ in active for p in ps], stats=stats)
+
+        notified = emails_sent = new_matches = 0
+        for u, profiles, act in active:
             user_lang = (act.lang if act and act.lang else "en")
 
             already = set(db.execute(
@@ -95,7 +105,7 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
                 .where(DigestEntry.user_id == u.id)).all())
             fresh = []
             for p in profiles:
-                run_search(db, p, boards=boards, raw_postings=raw, stats=stats)
+                search_db(db, p, stats=stats)
                 q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
                      .where(Match.profile_id == p.id, Match.score >= p.min_match)
                      .order_by(Match.score.desc()))

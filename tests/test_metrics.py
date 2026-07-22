@@ -73,9 +73,13 @@ def test_daily_run_records_failure(monkeypatch):
 
 # ---- Search-now records a CrawlRun ----
 def test_search_now_records_crawlrun(auth_client, monkeypatch):
+    # Search now is DB-first (no fetch) — seed the index with one posting, then search.
     _offline(monkeypatch)
     client, _ = auth_client
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Android Engineer", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin"})
     client.post(f"/profiles/{pid}/search", follow_redirects=False)
     with SessionLocal() as db:
         run = db.execute(select(CrawlRun).where(CrawlRun.kind == "search_now")).scalars().one()
@@ -84,7 +88,7 @@ def test_search_now_records_crawlrun(auth_client, monkeypatch):
 
 def test_search_now_records_failure(auth_client, monkeypatch):
     _offline(monkeypatch)
-    monkeypatch.setattr(profiles_router, "run_search",
+    monkeypatch.setattr(profiles_router, "search_db",
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("bad")))
     client, _ = auth_client
     pid = make_profile(client, min_match=0)

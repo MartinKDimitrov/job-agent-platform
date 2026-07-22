@@ -14,6 +14,10 @@ class Settings(BaseSettings):
 
     e5_model: str = "intfloat/multilingual-e5-small"
 
+    # DB-first search: the in-app background ingester refreshes the posting index every
+    # N hours (0 = disabled — tests and environments where cron runs `python -m app.jobs ingest`).
+    ingest_every_hours: int = 0
+
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).
     site_url: str = "http://localhost:8001"

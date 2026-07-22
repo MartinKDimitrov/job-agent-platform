@@ -28,6 +28,11 @@ app.mount("/static", StaticFiles(directory=Path(__file__).parent / "presentation
 @app.on_event("startup")
 def _startup():
     init_db()
+    # DB-first search: the index refreshes in the background (INGEST_EVERY_HOURS, 0=off);
+    # Search now never fetches. Cron-managed deployments run `python -m app.jobs ingest` instead.
+    from .data.db import SessionLocal
+    from .application.usecases.ingest_job import start_background_ingester
+    start_background_ingester(SessionLocal)
 
 
 app.include_router(auth.router)

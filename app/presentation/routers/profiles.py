@@ -12,7 +12,7 @@ from ...data.models import Profile, Posting, Match, Document
 from ...data.activity_repo import get_activity
 from ...domain.scoring import score
 from ...domain.extraction import extract_requirements
-from ...application.usecases.search import run_search
+from ...application.usecases.search import search_db
 from ...application.run_stats import RunStats
 from ...data.metrics_repo import record_run
 from ..web import page, current_user, redirect, escape, icon
@@ -295,8 +295,9 @@ def profile_set_min_match(pid: int, request: Request, min_match: str = Form("65"
 
 @router.post("/profiles/{pid}/search")
 def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
-    """On-demand crawl: fetch from the seed sources, score against this profile, show matches.
-    Synchronous for now; the daily background run is Step 16."""
+    """DB-first search: score this profile against the postings already in our index — no
+    network on the user's path (sub-second). The index itself is refreshed on a schedule
+    (INGEST_EVERY_HOURS) and by the daily job."""
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -307,16 +308,16 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
     stats = RunStats()
     err = ""
     try:
-        res = run_search(db, p, stats=stats)
+        res = search_db(db, p, stats=stats)
     except Exception as e:  # noqa: BLE001 — degrade gracefully, still record the run
         err = str(e)
-        res = {"fetched": 0, "added": 0, "filtered": 0, "matched": 0}
+        res = {"pool": 0, "filtered": 0, "matched": 0}
         db.rollback()   # a failed flush poisons the session; recover before record_run
     try:
         record_run(db, "search_now", stats, started, ok=not err, error=err)
     except Exception:  # noqa: BLE001 — metrics are best-effort, never a 500 for the user
         db.rollback()
-    return redirect(f"/profiles/{p.id}?fetched={res['fetched']}&new={res['added']}"
+    return redirect(f"/profiles/{p.id}?pool={res['pool']}"
                     f"&filtered={res['filtered']}&found={res['matched']}")
 
 
@@ -382,7 +383,7 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
 
 
 def render_app(db: Session, u, active: Profile, profiles: list[Profile],
-               fetched=None, new=None, filtered=None, found=None, gen_err=None,
+               pool=None, filtered=None, found=None, gen_err=None,
                lang: str = "en") -> str:
     """The single logged-in screen: control strip (profile tabs + threshold + Search now) and
     the match feed for the active profile. Used by both / and /profiles/{id}."""
@@ -417,7 +418,7 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
                    f"<b style='color:var(--red)'>{escape(t('app.gen_failed', lang))}</b> {escape(gen_err)}</div>")
     if found is not None:
         filt = t("app.filtered", lang).format(n=filtered) if filtered else ""
-        done = t("app.search_done", lang).format(fetched=fetched or 0, new=new or 0,
+        done = t("app.search_done", lang).format(pool=pool or 0,
                                                  filt=filt, found=found, min=p.min_match)
         banner += (f"<div class='card' style='background:var(--green-soft);border-color:var(--green)'>"
                    f"{done}</div>")
@@ -461,7 +462,7 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
 
 @router.get("/profiles/{pid}", response_class=HTMLResponse)
 def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
-                 fetched: int | None = None, new: int | None = None,
+                 pool: int | None = None,
                  filtered: int | None = None, found: int | None = None,
                  gen_err: str | None = None):
     u = current_user(request, db)
@@ -474,7 +475,7 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
                     lang=lang, switch_urls=SWITCH_URLS)
     profiles = db.execute(select(Profile).where(Profile.user_id == u.id)
                           .order_by(Profile.created_at)).scalars().all()
-    return render_app(db, u, p, profiles, fetched=fetched, new=new,
+    return render_app(db, u, p, profiles, pool=pool,
                       filtered=filtered, found=found, gen_err=gen_err, lang=lang)
 
 

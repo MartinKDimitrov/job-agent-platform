@@ -35,7 +35,7 @@ def _make_profile_row(db, email="c@test.local", **kw):
     return p
 
 
-# ---- unit: run_search ----
+# ---- unit: run_search (ingest + DB-first score) ----
 def test_prefilter_keeps_only_relevant_titles(monkeypatch):
     _mock(monkeypatch)
     with SessionLocal() as db:
@@ -43,8 +43,13 @@ def test_prefilter_keeps_only_relevant_titles(monkeypatch):
         res = run_search(db, p)
         assert res["fetched"] == 2          # both fetched
         assert res["scored"] == 1           # only the Android one passes the pre-filter
-        posts = db.execute(select(Posting)).scalars().all()
-        assert [x.title for x in posts] == ["Senior Android Engineer"]
+        # the shared index keeps EVERYTHING (another user may match the sales role) —
+        # but only the relevant posting gets a Match for this profile
+        titles = {x.title for x in db.execute(select(Posting)).scalars()}
+        assert titles == {"Senior Android Engineer", "Account Executive"}
+        m = db.execute(select(Match).where(Match.profile_id == p.id)).scalars().all()
+        assert len(m) == 1
+        assert db.get(Posting, m[0].posting_id).title == "Senior Android Engineer"
 
 
 def test_matches_created_and_apply_url_kept(monkeypatch):
@@ -78,7 +83,9 @@ def test_rerun_does_not_duplicate(monkeypatch):
         run_search(db, p)
         run_search(db, p)
         posts = db.execute(select(Posting)).scalars().all()
-        assert len(posts) == 1                       # deduped by content_hash
+        assert len(posts) == 2                       # both SAMPLE postings, deduped on rerun
+        matches = db.execute(select(Match).where(Match.profile_id == p.id)).scalars().all()
+        assert len(matches) == 1                     # and no duplicate matches either
 
 
 def test_search_now_includes_remote_boards():
@@ -90,17 +97,20 @@ def test_search_now_includes_remote_boards():
     assert "remoteok" not in extra and "wwr" not in extra   # no double-fetch in the daily job
 
 
-# ---- route: Search now ----
+# ---- route: Search now (DB-first — the route never fetches) ----
 def test_search_now_button_flow(auth_client, monkeypatch):
     _mock(monkeypatch)
     client, _ = auth_client
     pid = make_profile(client, target_roles="Android", skills="Kotlin, Compose", min_match=0)
+    with SessionLocal() as db:                       # the scheduled ingest fills the index
+        crawl.ingest_from_sources(db)
     r = client.post(f"/profiles/{pid}/search", follow_redirects=False)
     assert r.status_code == 303 and "found=" in r.headers["location"]
-    body = client.get(f"/profiles/{pid}?fetched=2&new=1&found=1").text
+    assert "pool=" in r.headers["location"]
+    body = client.get(f"/profiles/{pid}?pool=2&found=1").text
     assert "Search complete" in body
     assert "Senior Android Engineer" in body         # relevant match shown
-    assert "Account Executive" not in body           # irrelevant filtered out
+    assert "Account Executive" not in body           # irrelevant: in the index, but no Match
     assert "https://x/1" in body                     # apply link present
 
 
@@ -212,6 +222,8 @@ def test_profile_edit_clears_stale_matches(auth_client, monkeypatch):
     _mock(monkeypatch)
     client, _ = auth_client
     pid = make_profile(client, target_roles="Android", skills="Kotlin, Compose", min_match=0)
+    with SessionLocal() as db:
+        crawl.ingest_from_sources(db)
     client.post(f"/profiles/{pid}/search", follow_redirects=False)
     assert "Senior Android Engineer" in client.get(f"/profiles/{pid}").text
     # edit the profile (change skills) -> old matches must be cleared until the next search

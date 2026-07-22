@@ -63,13 +63,16 @@ def _norm_reqs(requirements) -> list[dict]:
     return norm
 
 
-def score(profile_text: str, posting_text: str, requirements=None):
+def score(profile_text: str, posting_text: str, requirements=None,
+          profile_vec=None, posting_vec=None):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
     - Weighted keyword coverage (must-have > nice-to-have) gives covered/missing and a
       fallback score when embeddings are unavailable. Each covered/missing entry keeps its
       {'text','kind'} so the UI can show *why* a posting scored the way it did.
+    - `profile_vec` / `posting_vec`: precomputed E5 vectors (DB-cached at ingest time) —
+      passing them skips the per-call embedding, which is what makes DB-first search fast.
     """
     reqs = _norm_reqs(requirements)
     p_tok = _tokens(profile_text)
@@ -88,7 +91,8 @@ def score(profile_text: str, posting_text: str, requirements=None):
     # weighted keyword ratio (fallback / blend)
     kw_ratio = (w_cov / w_tot) if w_tot else None
 
-    pe, se = embed(profile_text), embed(posting_text)
+    pe = profile_vec if profile_vec is not None else embed(profile_text)
+    se = posting_vec if posting_vec is not None else embed(posting_text)
     if pe is not None and se is not None:
         sem = _cosine(pe, se)          # ~0..1 for E5 normalized
         sem_pct = max(0.0, min(1.0, (sem - 0.6) / 0.35))  # rescale typical 0.6..0.95 band

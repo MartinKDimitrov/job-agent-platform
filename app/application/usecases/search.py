@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import re
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ from ...domain.entities import RawPosting
 from ...data.ingest import ingest
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
 from ...domain.extraction import extract_requirements
-from ...domain.scoring import score
+from ...domain.scoring import embed, score
 from ...domain.filters import passes_hard_filters
 
 log = logging.getLogger(__name__)
@@ -138,61 +138,92 @@ def fetch_extra(stats=None) -> list[RawPosting]:
     return out
 
 
-def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
-               raw_postings=None, stats=None) -> dict:
-    """Fetch → pre-filter → ingest → extract → score for one profile. Returns a small summary.
-    Pass `raw_postings` to score an already-fetched batch (used by the daily digest job).
-    Pass `stats` (RunStats) to accumulate metrics across a run."""
-    boards = GREENHOUSE_BOARDS if boards is None else boards
-    keywords = _profile_keywords(profile)
+def _embed_list(text: str):
+    """embed() as a JSON-storable list (numpy array otherwise), or None without a model."""
+    v = embed(text)
+    return None if v is None else [float(x) for x in v]
 
-    # 1. get postings (fetch, or reuse a pre-fetched batch) and keep only relevant ones, capped.
+
+def _enrich_new_postings(db: Session) -> int:
+    """Ingest-time enrichment: extract requirements and compute the E5 vector ONCE per posting,
+    stored on the row — searches then read instead of re-computing (DB-first search).
+    Without an embedding model (tests) requirements still get extracted; embed() fails fast."""
+    enriched = 0
+    q = select(Posting).where(or_(Posting.embedding.is_(None), Posting.requirements.is_(None)))
+    for post in db.execute(q).scalars():
+        if post.requirements is None:
+            post.requirements = extract_requirements(post.description or "")
+        if post.embedding is None:
+            post.embedding = _embed_list(post.description or post.title)
+            if post.embedding is not None:
+                enriched += 1
+    db.commit()
+    return enriched
+
+
+def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=(),
+                        stats=None) -> dict:
+    """The WRITE side of DB-first search: fetch everything, persist (dedup), enrich.
+    Runs on a schedule (every INGEST_EVERY_HOURS) and inside the daily digest — never on the
+    user's Search-now path. `profiles` adds profile-targeted queries (dev.bg search feed) so
+    each user's target roles reach postings the global recency window misses."""
+    boards = GREENHOUSE_BOARDS if boards is None else boards
     if raw_postings is None:
         raw_postings = fetch_all(boards, stats=stats)
-    # profile-aware targeted sources always run (cheap RSS; reaches postings the recency
-    # window misses) — deduplicated against the batch by URL. Their results go FIRST: the
-    # relevance cap below keeps the first N candidates, and targeted hits must never lose
-    # that race to a flood of generically-'developer'-titled batch postings.
+    raw_postings = list(raw_postings)
     seen_urls = {rp.url for rp in raw_postings if rp.url}
-    targeted_all: list[RawPosting] = []
-    for name, src in PROFILE_SOURCES:
-        try:
-            targeted = [rp for rp in src(profile) if rp.url not in seen_urls]
-        except Exception as e:  # noqa: BLE001 — a broken source must not kill the search
-            log.warning("targeted source %s failed: %s", name, e)
+    for profile in profiles:
+        for name, src in PROFILE_SOURCES:
+            try:
+                targeted = [rp for rp in src(profile) if rp.url not in seen_urls]
+            except Exception as e:  # noqa: BLE001 — a broken source must not kill the run
+                log.warning("targeted source %s failed: %s", name, e)
+                if stats is not None:
+                    stats.source(name, error=str(e)[:200])
+                continue
             if stats is not None:
-                stats.source(name, error=str(e)[:200])
-            continue
-        if stats is not None:
-            stats.source(name, fetched=len(targeted))
-        targeted_all.extend(targeted)
-        seen_urls.update(rp.url for rp in targeted if rp.url)
-    raw_postings = targeted_all + list(raw_postings)
-    fetched = len(raw_postings)
-    candidates = [rp for rp in raw_postings if _relevant(rp, keywords)][:limit]
+                stats.source(name, fetched=len(targeted))
+            raw_postings.extend(targeted)
+            seen_urls.update(rp.url for rp in targeted if rp.url)
+    ing = ingest(db, raw_postings)
+    enriched = _enrich_new_postings(db)
+    if stats is not None:
+        stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched)
+    return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched}
 
-    # 2. persist (dedup by content_hash).
-    ing = ingest(db, candidates)
 
-    # 3. hard filters (location/seniority) BEFORE scoring, then extract + score what survives.
+def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dict:
+    """The READ side: score the profile against the postings ALREADY in our index — no network,
+    so Search now answers in well under a second. Vectors come precomputed from the rows.
+
+    Query shape matters: the title pre-filter runs over (id, title) pairs only, and full rows
+    (description + vector JSON) load just for the relevant few — pulling all columns of the
+    whole index measured ~2.5s over the staging tunnel vs ~0.2s this way."""
+    keywords = _profile_keywords(profile)
     ptext = profile.as_text()
+    if profile.embedding is None:            # cached on the row; cleared on profile edit
+        profile.embedding = _embed_list(ptext)
+    id_titles = db.execute(select(Posting.id, Posting.title)
+                           .where(Posting.is_live.is_(True))).all()
+    pool = len(id_titles)
+    relevant_ids = [pid for pid, title in id_titles
+                    if not keywords
+                    or keywords & set(_TOKEN_RE.findall((title or "").lower()))]
+    existing_by_post = {m.posting_id: m for m in db.execute(
+        select(Match).where(Match.profile_id == profile.id)).scalars()}
     scored = filtered = matched = 0
-    seen_posts: set[int] = set()          # a posting can map from several candidates (dedup) —
-    for rp in candidates:                 # score/Match it only once per run
-        post = db.execute(
-            select(Posting).where(Posting.content_hash == rp.content_hash())).scalar_one_or_none()
-        if not post or post.id in seen_posts:
-            continue
-        seen_posts.add(post.id)
+    posts = db.execute(select(Posting).where(Posting.id.in_(relevant_ids))
+                       .order_by(Posting.first_seen.desc())).scalars() if relevant_ids else []
+    for post in posts:
         ok, _reason = passes_hard_filters(profile, post.title, post.location, post.description)
         if not ok:
             filtered += 1
-            continue                       # dropped before any embedding cost
-        if not post.requirements:
+            continue
+        if post.requirements is None:
             post.requirements = extract_requirements(post.description or "")
-        sc, covered, missing = score(ptext, post.description or post.title, post.requirements)
-        existing = db.execute(select(Match).where(
-            Match.profile_id == profile.id, Match.posting_id == post.id)).scalar_one_or_none()
+        sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
+                                     profile_vec=profile.embedding, posting_vec=post.embedding)
+        existing = existing_by_post.get(post.id)
         if existing:
             existing.score, existing.covered, existing.missing = sc, covered, missing
         else:
@@ -201,6 +232,8 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
         scored += 1
         if sc >= profile.min_match:
             matched += 1
+        if limit is not None and scored >= limit:
+            break
     try:
         db.commit()
     except IntegrityError:
@@ -211,7 +244,15 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
         db.rollback()
         log.info("concurrent search for profile %s — matches saved by the other run", profile.id)
     if stats is not None:
-        stats.add(added=ing["added"], deduped=ing["deduped"], filtered=filtered,
-                  scored=scored, matched=matched)
-    return {"fetched": fetched, "candidates": len(candidates), "filtered": filtered,
-            "scored": scored, "added": ing["added"], "matched": matched}
+        stats.add(filtered=filtered, scored=scored, matched=matched)
+    return {"pool": pool, "filtered": filtered, "scored": scored, "matched": matched}
+
+
+def run_search(db: Session, profile, boards=None, limit: int | None = None,
+               raw_postings=None, stats=None) -> dict:
+    """Ingest + score in one call (compatibility path — the daily digest and tests use it).
+    The Search-now route calls `search_db` directly and never fetches."""
+    ing = ingest_from_sources(db, boards=boards, raw_postings=raw_postings,
+                              profiles=[profile], stats=stats)
+    res = search_db(db, profile, limit=limit, stats=stats)
+    return {"fetched": ing["fetched"], "added": ing["added"], **res}

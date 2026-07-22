@@ -63,7 +63,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "app.search_now": "Search now", "app.new_tab": "+ New",
         "app.searching": "⏳ Searching…", "app.generating": "⏳ Generating…",
         "app.gen_failed": "Generation failed:",
-        "app.search_done": ("Search complete — fetched {fetched} postings, {new} new, "
+        "app.search_done": ("Search complete — searched {pool} tracked postings, "
                             "{filt}<b>{found} match(es)</b> above your {min}% threshold."),
         "app.filtered": "{n} filtered out (seniority/location), ",
         "app.empty_head": "No matches above threshold yet",
@@ -196,7 +196,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "app.search_now": "Търси сега", "app.new_tab": "+ Нов",
         "app.searching": "⏳ Търсене…", "app.generating": "⏳ Генериране…",
         "app.gen_failed": "Генерирането се провали:",
-        "app.search_done": ("Търсенето приключи — изтеглени {fetched} обяви, {new} нови, "
+        "app.search_done": ("Търсенето приключи — претърсени {pool} следени обяви, "
                             "{filt}<b>{found} съвпадение(я)</b> над прага ти от {min}%."),
         "app.filtered": "{n} отпаднали (ниво/локация), ",
         "app.empty_head": "Все още няма съвпадения над прага",
