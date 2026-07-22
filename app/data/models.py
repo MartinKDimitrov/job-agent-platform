@@ -42,8 +42,9 @@ class Profile(Base):
 
     def as_text(self) -> str:
         """Concatenated text used to compute the profile embedding."""
+        english = f"English {self.english_level}" if self.english_level else ""
         return " · ".join(x for x in [
-            self.target_roles, self.skills, self.experience, self.languages,
+            self.target_roles, self.skills, self.experience, self.languages, english,
         ] if x)
 
 

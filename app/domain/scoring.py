@@ -46,8 +46,9 @@ def _cosine(a, b) -> float:
 
 
 # Weight of each requirement kind in the keyword-coverage ratio. Must-haves dominate the
-# score; nice-to-haves nudge it; responsibilities are shown for context but not scored as gaps.
-_KIND_WEIGHT = {"must": 1.0, "nice": 0.4, "resp": 0.0}
+# score; nice-to-haves nudge it; responsibilities and soft skills (team player, mindset...)
+# are kept for context but never scored as gaps.
+_KIND_WEIGHT = {"must": 1.0, "nice": 0.4, "resp": 0.0, "soft": 0.0}
 
 
 def _norm_reqs(requirements) -> list[dict]:

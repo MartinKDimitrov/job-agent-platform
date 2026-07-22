@@ -284,6 +284,8 @@ Participate in code reviews, architectural discussions, and hardware-specific op
 We’ll know you can make it if you have:
 2+ years of professional Android development experience (experience with Android TV, Fire OS, or STB platforms is a major plus).
 Strong proficiency in Kotlin is required, alongside a solid understanding of Java for handling core/legacy platform components.
+Team player with strong communication skills who enjoys collaborative problem-solving.
+Performance-oriented mindset—you care about frames-per-second, memory footprints, and network efficiency.
 Fluent in English (written and spoken).
 Our gratitude for the job done will be eternal, but we’ll also offer you:
 Innovative technologies and platforms to “play” with.
@@ -305,6 +307,11 @@ def test_a1_sections_survive_the_join_us_drop():
     assert any("proficiency in kotlin" in t for t in musts)
     assert any("fluent in english" in t for t in musts)
     assert any("xploretv" in t for t in resp)               # duties classified as resp
+    # personality lines are kind="soft" — kept for context, never scored as gaps
+    softs = [r["text"].lower() for r in reqs if r["kind"] == "soft"]
+    assert any("team player" in t for t in softs)
+    assert any("mindset" in t for t in softs)
+    assert not any("team player" in t or "mindset" in t for t in musts)
 
 
 def test_we_are_looking_for_with_signal_survives():

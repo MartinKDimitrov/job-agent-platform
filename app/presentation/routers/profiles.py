@@ -124,7 +124,7 @@ def _gaps_block(covered, missing) -> str:
     with the FULL requirement texts (covered vs missing). Transparency on demand."""
     covered = covered or []
     missing = missing or []
-    cov_items = [r for r in covered if _req_kind(r) != "resp"]
+    cov_items = [r for r in covered if _req_kind(r) not in ("resp", "soft")]
     must_miss = [r for r in missing if _req_kind(r) == "must"]
     nice_miss = [r for r in missing if _req_kind(r) == "nice"]
     n_missing = len(must_miss) + len(nice_miss)

@@ -2,7 +2,7 @@
 
 Rules-based and deterministic — no LLM call, so it costs nothing to run over many postings
 (see LLM_COST_STRATEGY.md). It turns raw JD text into a list of ``{"text", "kind"}`` where
-``kind`` is one of ``must`` / ``nice`` / ``resp``. This is deliberately a cheap first pass;
+``kind`` is one of ``must`` / ``nice`` / ``resp`` / ``soft``. This is deliberately a cheap first pass;
 a BYOK LLM refinement can slot in later behind the exact same return shape without touching
 callers. Works for any profession — it keys off the JD's own section structure, not a fixed
 technology list.
@@ -99,6 +99,16 @@ _STRONG_SIGNAL_RE = re.compile(
     r"опит|познания|владеене|образование)\b"
     r"|\d+\s*\+?\s*(?:years?|години)\s+(?:of|опит|в)\b", re.I)
 
+# Personality / soft-skill lines ("Team player with strong communication skills...",
+# "Performance-oriented mindset—you care about..."). Nobody lists these in a skills profile,
+# so scoring them as gaps is noise — they become kind="soft": extracted for transparency,
+# zero weight, hidden from the gaps panel (owner feedback on the A1 card).
+_SOFT_RE = re.compile(
+    r"\b(team player|communication skills|interpersonal|mindset|attention to detail|"
+    r"self-motivat\w*|proactive|positive attitude|can-do|work ethic|fast learner|"
+    r"eager to learn|passion\w*|curiosity|curious|adaptab\w*|problem[- ]solv\w*|"
+    r"комуникативн\w*|екипен играч|работа в екип|лична мотивация|адаптивн\w*)\b", re.I)
+
 # Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
 # use U+2019 in "What's in It for you:" / "What you'll do:", which silently missed every
 # apostrophe-bearing header above and dumped the whole benefits section into the must bucket.
@@ -176,6 +186,8 @@ def extract_requirements(text: str, cap: int = 40) -> list[dict]:
         if key in seen:
             return
         seen.add(key)
+        if kind in ("must", "nice") and _SOFT_RE.search(phrase):
+            kind = "soft"
         out.append({"text": phrase, "kind": kind})
 
     for raw in text.splitlines():

@@ -32,6 +32,23 @@ def test_responsibilities_not_scored_as_gaps():
     assert score("kotlin", "r", with_resp)[0] == score("kotlin", "r", without)[0]
 
 
+def test_soft_skills_not_scored_as_gaps():
+    # Personality lines (team player, mindset...) must not drag the score down.
+    with_soft = [{"text": "Kotlin", "kind": "must"},
+                 {"text": "Team player with strong communication skills", "kind": "soft"}]
+    without = [{"text": "Kotlin", "kind": "must"}]
+    assert score("kotlin", "r", with_soft)[0] == score("kotlin", "r", without)[0]
+
+
+def test_english_level_covers_language_requirement():
+    # Profile.as_text carries "English B2", so 'Fluent in English' counts as covered.
+    from app.data.models import Profile
+    p = Profile(name="x", skills="Kotlin", english_level="B2")
+    reqs = [{"text": "Fluent in English (written and spoken)", "kind": "must"}]
+    _, covered, missing = score(p.as_text(), "role", reqs)
+    assert [c["text"] for c in covered] == [reqs[0]["text"]] and missing == []
+
+
 def test_legacy_string_requirements_supported():
     # Older rows stored requirements as plain strings — must still work.
     sc, covered, missing = score("kotlin expert", "role", ["Kotlin", "Rust"])
