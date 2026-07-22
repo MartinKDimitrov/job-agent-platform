@@ -342,10 +342,17 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
     """The single logged-in screen: control strip (profile tabs + threshold + Search now) and
     the match feed for the active profile. Used by both / and /profiles/{id}."""
     p = active
+    # loading feedback: tab navigation and Search now both take seconds (live source fetches) —
+    # без индикация изглеждат счупени (owner feedback), so both show a busy state instantly.
+    tab_busy = "onclick=\"this.textContent='⏳ ' + this.textContent;\""
     tabs = "".join(
-        f"<a class='tab{' active' if pr.id == p.id else ''}' href='/profiles/{pr.id}'>{escape(pr.name)}</a>"
+        f"<a class='tab{' active' if pr.id == p.id else ''}' href='/profiles/{pr.id}' "
+        f"{tab_busy if pr.id != p.id else ''}>{escape(pr.name)}</a>"
         for pr in profiles)
-    tabs += "<a class='tab add' href='/onboarding'>+ New</a>"
+    tabs += f"<a class='tab add' href='/onboarding' {tab_busy}>+ New</a>"
+    search_busy = ("onsubmit=\"var b=this.querySelector('button');"
+                   "setTimeout(function(){b.disabled=true;"
+                   "b.textContent='⏳ Searching…';},0);\"")
 
     strip = f"""<div class='control-strip'>
     <div class='profile-tabs'>{tabs}</div>
@@ -355,7 +362,7 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
       <span class='value'>min {p.min_match}%</span>
       <button class='btn gray small'>Apply</button></form>
     <a class='btn gray small' href='/profiles/{p.id}/edit' title='Edit this profile'>{icon('edit')}Edit</a>
-    <form method='post' action='/profiles/{p.id}/search' style='margin:0'>
+    <form method='post' action='/profiles/{p.id}/search' style='margin:0' {search_busy}>
       <button class='btn green search-now'>{icon('search')}Search now</button></form>
     </div>"""
 

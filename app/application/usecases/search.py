@@ -148,8 +148,11 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
     if raw_postings is None:
         raw_postings = fetch_all(boards, stats=stats)
     # profile-aware targeted sources always run (cheap RSS; reaches postings the recency
-    # window misses) — deduplicated against the batch by URL
+    # window misses) — deduplicated against the batch by URL. Their results go FIRST: the
+    # relevance cap below keeps the first N candidates, and targeted hits must never lose
+    # that race to a flood of generically-'developer'-titled batch postings.
     seen_urls = {rp.url for rp in raw_postings if rp.url}
+    targeted_all: list[RawPosting] = []
     for name, src in PROFILE_SOURCES:
         try:
             targeted = [rp for rp in src(profile) if rp.url not in seen_urls]
@@ -160,8 +163,9 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
             continue
         if stats is not None:
             stats.source(name, fetched=len(targeted))
-        raw_postings = list(raw_postings) + targeted
+        targeted_all.extend(targeted)
         seen_urls.update(rp.url for rp in targeted if rp.url)
+    raw_postings = targeted_all + list(raw_postings)
     fetched = len(raw_postings)
     candidates = [rp for rp in raw_postings if _relevant(rp, keywords)][:limit]
 

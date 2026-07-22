@@ -118,6 +118,25 @@ def test_profile_sources_receive_profile_and_merge(monkeypatch):
         assert db.get(Posting, m.posting_id).title == "Business Analyst"
 
 
+def test_targeted_results_survive_the_cap(monkeypatch):
+    # 100 generically-relevant batch postings + 1 targeted hit; with limit=10 the targeted one
+    # must still be scored — targeted results are prepended, never lost to the cap race.
+    big = [RawPosting("ats_api", str(i), f"Android Engineer {i}", "Acme",
+                      url=f"https://x/{i}", apply_url=f"https://x/{i}",
+                      description="Requirements:\n- Kotlin") for i in range(100)]
+    _mock(monkeypatch, sample=big)
+    targeted_hit = RawPosting("rss", "t9", "Android Developer", "A1 Bulgaria", location="Remote",
+                              url="https://dev.bg/j/a1", apply_url="https://dev.bg/j/a1",
+                              description="Requirements:\n- Kotlin and Java")
+    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [("t", lambda profile: [targeted_hit])])
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Android", min_match=0)
+        run_search(db, p, limit=10)
+        titles = {db.get(Posting, m.posting_id).title
+                  for m in db.execute(select(Match).where(Match.profile_id == p.id)).scalars()}
+        assert "Android Developer" in titles          # the targeted hit made it
+
+
 def test_search_terms_from_target_roles():
     class P:
         target_roles = "Android Developer, Team Lead, QA"
