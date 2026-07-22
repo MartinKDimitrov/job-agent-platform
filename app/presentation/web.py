@@ -4,7 +4,9 @@ One-page app design (Lovable project 038dd6c8): styles live in /static/design.cs
 carries the header (brand mark, language switch, user dropdown menu) and the inline SVG icon
 symbols used across pages. Every router imports from here so layout stays in one place.
 """
+import hashlib
 from html import escape  # re-exported so routers import escape from one place
+from pathlib import Path
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
@@ -17,6 +19,15 @@ from .i18n import t, LANGS, DEFAULT_LANG
 from ..data.activity_repo import touch
 
 __all__ = ["escape", "page", "current_user", "redirect", "icon"]
+
+
+# Cache-busting version for the stylesheet: content hash computed at import time, so browsers
+# refetch design.css the moment it changes (a stale cached copy left pages unstyled once).
+_CSS_PATH = Path(__file__).parent / "static" / "design.css"
+try:
+    _CSS_VERSION = hashlib.sha256(_CSS_PATH.read_bytes()).hexdigest()[:10]
+except OSError:
+    _CSS_VERSION = "0"
 
 
 def current_user(request: Request, db: Session) -> User | None:
@@ -127,7 +138,7 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
 {seo}
 {hl}
 {head_extra}
-<link rel="stylesheet" href="/static/design.css">
+<link rel="stylesheet" href="/static/design.css?v={_CSS_VERSION}">
 </head><body>
 {_SVG_DEFS}
 <header><span class="brand"><a href="/">{icon('logo', 'logo')}Job Agent</a></span>
