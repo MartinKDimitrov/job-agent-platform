@@ -39,12 +39,12 @@ def _setup(monkeypatch):
     monkeypatch.setattr(crawl, "PROFILE_SOURCES", [])
 
 
-def _user(db, email, seen_days_ago=0, found_job=False, with_profile=True):
+def _user(db, email, seen_days_ago=0, found_job=False, with_profile=True, lang="en"):
     u = User(email=email, password_hash="x")
     db.add(u); db.commit(); db.refresh(u)
     db.add(UserActivity(user_id=u.id,
                         last_seen_at=datetime.utcnow() - timedelta(days=seen_days_ago),
-                        found_job=found_job))
+                        found_job=found_job, lang=lang))
     if with_profile:
         db.add(Profile(user_id=u.id, name="P", target_roles="Android",
                        skills="Kotlin, Compose", min_match=0))
@@ -64,6 +64,35 @@ def test_active_user_gets_digest_with_only_relevant_ic_role(monkeypatch):
     assert "Engineering Manager" not in html          # filtered by seniority
     assert "Sales Executive" not in html              # filtered by keyword pre-filter
     assert "https://x/1" in html                      # apply link
+
+
+def test_digest_speaks_the_users_language(monkeypatch):
+    # The EN/BG switcher persists to UserActivity; the digest email must follow it.
+    _setup(monkeypatch)
+    send = Sender()
+    with SessionLocal() as db:
+        _user(db, "bg@test.local", lang="bg")
+        _user(db, "en@test.local")
+        run_daily_digest(db, boards=BOARDS, send=send)
+    by_to = {s["to"]: s for s in send.sent}
+    assert "нови съвпадения" in by_to["bg@test.local"]["subject"]
+    assert "Кандидатствай" in by_to["bg@test.local"]["html"]
+    assert "Получаваш този имейл" in by_to["bg@test.local"]["html"]
+    assert "new job match(es)" in by_to["en@test.local"]["subject"]
+    assert "Apply" in by_to["en@test.local"]["html"]
+
+
+def test_lang_switch_persists_for_digest(auth_client):
+    client, email = auth_client
+    client.get("/lang/bg")
+    with SessionLocal() as db:
+        u = db.execute(select(User).where(User.email == email)).scalar_one()
+        act = db.get(UserActivity, u.id)
+        assert act and act.lang == "bg"
+    client.get("/lang/en")
+    with SessionLocal() as db:
+        u = db.execute(select(User).where(User.email == email)).scalar_one()
+        assert db.get(UserActivity, u.id).lang == "en"
 
 
 def test_second_run_does_not_renotify(monkeypatch):

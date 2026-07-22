@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ...data.db import get_db
 from ...data.models import User, Profile
 from ...data.security import hash_password, verify_password, make_token
+from ...data.activity_repo import set_lang as set_user_lang
 from ...core.config import settings
 from ..web import page, current_user, redirect, escape
 from ..seo import site_jsonld, abs_url
@@ -62,14 +63,19 @@ def home_bg(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/lang/{code}")
-def set_lang(code: str, request: Request):
-    """Set the UI language cookie and return to where the user was (same-site only)."""
+def set_lang(code: str, request: Request, db: Session = Depends(get_db)):
+    """Set the UI language cookie and return to where the user was (same-site only).
+    For logged-in users the choice also persists to UserActivity, so the daily digest
+    email (cron — no cookies) speaks the same language."""
     base = settings.site_url.rstrip("/")
     ref = request.headers.get("referer") or "/"
     target = ref if (ref.startswith(base) or ref.startswith("/")) else "/"
     resp = redirect(target)
     if code in LANGS:
         resp.set_cookie("lang", code, max_age=60 * 60 * 24 * 365, samesite="lax")
+        u = current_user(request, db)
+        if u:
+            set_user_lang(db, u.id, code)
     return resp
 
 

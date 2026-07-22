@@ -33,3 +33,14 @@ def set_found_job(db: Session, user_id: int, value: bool) -> None:
         db.add(act)
     act.found_job = value
     db.commit()
+
+
+def set_lang(db: Session, user_id: int, lang: str) -> None:
+    """Persist the user's UI language so server-initiated email (the daily digest) can speak
+    it too — the cron job has no request cookie to read."""
+    act = db.get(UserActivity, user_id)
+    if act is None:
+        act = UserActivity(user_id=user_id, last_seen_at=datetime.utcnow())
+        db.add(act)
+    act.lang = lang
+    db.commit()

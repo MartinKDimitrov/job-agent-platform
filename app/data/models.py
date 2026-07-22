@@ -98,6 +98,7 @@ class UserActivity(Base):
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     found_job: Mapped[bool] = mapped_column(Boolean, default=False)
+    lang: Mapped[str] = mapped_column(String(8), default="en")  # digest email language
 
 
 class DigestEntry(Base):

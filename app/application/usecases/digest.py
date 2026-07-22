@@ -25,23 +25,40 @@ from ..run_stats import RunStats
 from ...data.metrics_repo import record_run
 
 
-def _compose(user: User, items) -> tuple[str, str]:
-    """items: list of (profile, match, posting). Returns (subject, html)."""
+# Email copy lives here (not presentation.i18n) so the application layer stays free of
+# presentation imports. The user's language comes from UserActivity (set by the EN/BG
+# switcher) — the cron job has no request cookie to read.
+_EMAIL_COPY = {
+    "en": {"hi": "Hi", "intro": "{n} new job match(es) for your profiles:",
+           "match": "match", "profile": "profile", "apply": "Apply",
+           "footer": ("You get this because your searches are active. "
+                      "Mark “I found a job” in your account to pause."),
+           "subject": "{n} new job match(es) for you"},
+    "bg": {"hi": "Здравей", "intro": "{n} нови съвпадения за профилите ти:",
+           "match": "съвпадение", "profile": "профил", "apply": "Кандидатствай",
+           "footer": ("Получаваш този имейл, защото търсенето ти е активно. "
+                      "Отбележи „Намерих работа“ в акаунта си, за да го спреш."),
+           "subject": "{n} нови съвпадения с работа за теб"},
+}
+
+
+def _compose(user: User, items, lang: str = "en") -> tuple[str, str]:
+    """items: list of (profile, match, posting). Returns (subject, html) in `lang`."""
+    c = _EMAIL_COPY.get(lang, _EMAIL_COPY["en"])
     lis = []
     for p, m, post in items:
         apply_url = post.apply_url or post.url or "#"
         lis.append(
             f"<li><b>{escape(post.title)}</b> — {escape(post.company)} "
-            f"({int(m.score)}% match · {escape(post.location or 'n/a')}) "
-            f"· profile <i>{escape(p.name)}</i> — "
-            f"<a href='{escape(apply_url)}'>Apply</a></li>")
+            f"({int(m.score)}% {c['match']} · {escape(post.location or 'n/a')}) "
+            f"· {c['profile']} <i>{escape(p.name)}</i> — "
+            f"<a href='{escape(apply_url)}'>{c['apply']}</a></li>")
     hi = f" {escape(user.name)}" if user.name else ""
-    html = (f"<p>Hi{hi},</p>"
-            f"<p>{len(items)} new job match(es) for your profiles:</p>"
+    html = (f"<p>{c['hi']}{hi},</p>"
+            f"<p>{c['intro'].format(n=len(items))}</p>"
             f"<ul>{''.join(lis)}</ul>"
-            f"<p style='color:#777;font-size:12px'>You get this because your searches are active. "
-            f"Mark “I found a job” in your account to pause.</p>")
-    return f"{len(items)} new job match(es) for you", html
+            f"<p style='color:#777;font-size:12px'>{c['footer']}</p>")
+    return c["subject"].format(n=len(items)), html
 
 
 def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
@@ -67,9 +84,11 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
             profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
             if not profiles:
                 continue
-            if not is_active_for_search(u, get_activity(db, u.id), now):
+            act = get_activity(db, u.id)
+            if not is_active_for_search(u, act, now):
                 skipped += 1
                 continue
+            user_lang = (act.lang if act and act.lang else "en")
 
             already = set(db.execute(
                 select(DigestEntry.profile_id, DigestEntry.posting_id)
@@ -87,7 +106,7 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
                     fresh.append((p, m, post))
 
             if fresh:
-                subject, html = _compose(u, fresh)
+                subject, html = _compose(u, fresh, user_lang)
                 if send(u.email, subject, html):
                     emails_sent += 1
                 for p, m, post in fresh:
