@@ -62,7 +62,9 @@ so a **SSH tunnel is required**.
 
 ```bash
 # 1. Tunnel (background). Local port 5433 — 5432 is taken by a local Postgres.
-ssh -i /Users/mdimitrov/Desktop/key/hetznerKey -f -N -L 5433:localhost:5432 root@88.99.175.26
+ssh -i /Users/mdimitrov/Desktop/key/hetznerKey -f -N \
+    -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes \
+    -L 5433:localhost:5432 root@88.99.175.26
 nc -zv localhost 5433          # must say "succeeded"
 
 # 2. Run (from the project root, so .env is found)
@@ -76,7 +78,7 @@ Open http://127.0.0.1:8001
 **Traps, all of which cost us time already:**
 - `.env` must point at **5433**, not 5432 — otherwise it hits the local Postgres and you get
   `role "jobagent" does not exist`.
-- If the tunnel dies you get `server closed the connection unexpectedly`. Check with `nc`.
+- If the tunnel dies you get `server closed the connection unexpectedly` (or 500s with `Connection refused` on 5433). Check with `nc`; the keepalive flags above make silent deaths much rarer — it has died mid-session three times without them.
 - Use **`python -m uvicorn`**, not bare `uvicorn` — the bare binary resolved to the system
   Python 3.14 and failed with `No module named 'pydantic_settings'`.
 - Port **8000 is used by `../job-tracker`** — this app runs on **8001**.
