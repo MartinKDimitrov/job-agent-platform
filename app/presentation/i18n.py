@@ -77,6 +77,54 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "app.title": "Title", "app.company": "Company", "app.location": "Location",
         "app.description": "Description / requirements (paste the JD)",
         "app.score_it": "Score it", "app.not_found": "Not found.",
+        # ---- documents ----
+        "docs.kind_cv": "CV", "docs.kind_letter": "Cover letter",
+        "docs.my": "My documents", "docs.document": "Document", "docs.job": "Job",
+        "docs.created": "Created", "docs.removed": "(posting removed)",
+        "docs.none": "No documents yet — generate one from a match.",
+        "docs.for": "For:",
+        "docs.review_word": "Review and edit before using",
+        "docs.review_rest": ("AI output is a draft, you own the final text. Edit below and "
+                             "save; the PDF always uses your latest text."),
+        "docs.saved_word": "Saved.", "docs.saved_rest": "The PDF uses your edited text.",
+        "docs.save": "Save changes", "docs.download": "⬇ Download PDF",
+        "docs.regen_in": "Regenerate in {lang}", "docs.other_for": "{kind} for this job",
+        # ---- account / settings ----
+        "acct.heading": "Account", "acct.joined": "joined",
+        "acct.profiles": "{n} search profile(s).",
+        "acct.export": "Export my data (JSON)",
+        "acct.status_head": "Job search status",
+        "acct.paused_word": "Paused",
+        "acct.paused_rest": ("you marked that you found a job, so we're not searching "
+                             "for you."),
+        "acct.active_word": "Active",
+        "acct.active_rest": ("we search daily and email you new matches (if you're active "
+                             "in the last 5 days)."),
+        "acct.resume": "Resume my searches",
+        "acct.pause": "🎉 I found a job — pause searches",
+        "acct.llm_ok": "Connection test passed — your key is saved (encrypted).",
+        "acct.llm_removed": "Key removed.",
+        "acct.delete_head": "Delete account",
+        "acct.delete_note": ("Permanently deletes your account, profiles, matches and "
+                             "applications. This cannot be undone. Type your email address "
+                             "to confirm."),
+        "acct.delete_confirm": "Permanently delete your account and all your data?",
+        "acct.delete_btn": "Delete my account",
+        "acct.email_mismatch": "The email you typed does not match.",
+        "acct.not_deleted": "Your account was not deleted.",
+        "acct.back": "Back to account",
+        "llm.head": "AI generation (bring your own key)",
+        "llm.note": ("CV and cover-letter generation runs on your LLM account. Recommended "
+                     "free options: Google Gemini (aistudio.google.com) or Groq "
+                     "(console.groq.com). Your key is stored encrypted, never shown back, "
+                     "and you can remove it any time."),
+        "llm.configured": "Configured:", "llm.default_model": "default model",
+        "llm.remove": "Remove key", "llm.provider": "Provider",
+        "llm.model": "Model (optional)", "llm.key": "API key",
+        "llm.key_ph": "paste your API key (not needed for Ollama)",
+        "llm.no_key": " — no key needed", "llm.test_save": "Test &amp; save",
+        "llm.err_unknown": "Unknown provider.",
+        "llm.err_key_required": "This provider requires an API key.",
     },
     "bg": {
         "nav.dashboard": "Табло", "nav.documents": "Документи", "nav.sources": "Източници",
@@ -146,6 +194,53 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "app.title": "Заглавие", "app.company": "Компания", "app.location": "Локация",
         "app.description": "Описание / изисквания (постави обявата)",
         "app.score_it": "Оцени я", "app.not_found": "Не е намерено.",
+        # ---- documents ----
+        "docs.kind_cv": "CV", "docs.kind_letter": "Мотивационно писмо",
+        "docs.my": "Моите документи", "docs.document": "Документ", "docs.job": "Обява",
+        "docs.created": "Създаден", "docs.removed": "(обявата е премахната)",
+        "docs.none": "Все още няма документи — генерирай от някое съвпадение.",
+        "docs.for": "За:",
+        "docs.review_word": "Прегледай и редактирай преди употреба",
+        "docs.review_rest": ("AI резултатът е чернова — финалният текст е твой. Редактирай "
+                             "долу и запази; PDF-ът винаги използва последния ти текст."),
+        "docs.saved_word": "Запазено.", "docs.saved_rest": "PDF-ът използва редактирания ти текст.",
+        "docs.save": "Запази промените", "docs.download": "⬇ Свали PDF",
+        "docs.regen_in": "Генерирай отново на {lang}", "docs.other_for": "{kind} за тази обява",
+        # ---- account / settings ----
+        "acct.heading": "Акаунт", "acct.joined": "регистриран на",
+        "acct.profiles": "{n} профил(а) за търсене.",
+        "acct.export": "Изтегли данните ми (JSON)",
+        "acct.status_head": "Статус на търсенето",
+        "acct.paused_word": "Пауза",
+        "acct.paused_rest": "отбеляза, че си намерил работа, затова не търсим за теб.",
+        "acct.active_word": "Активно",
+        "acct.active_rest": ("търсим ежедневно и ти пращаме нови съвпадения по имейл "
+                             "(ако си бил активен през последните 5 дни)."),
+        "acct.resume": "Продължи търсенето",
+        "acct.pause": "🎉 Намерих работа — спри търсенето",
+        "acct.llm_ok": "Тестът мина успешно — ключът е запазен (криптиран).",
+        "acct.llm_removed": "Ключът е премахнат.",
+        "acct.delete_head": "Изтриване на акаунта",
+        "acct.delete_note": ("Изтрива завинаги акаунта, профилите, съвпаденията и "
+                             "кандидатурите ти. Действието е необратимо. Въведи имейл "
+                             "адреса си за потвърждение."),
+        "acct.delete_confirm": "Да изтрия ли завинаги акаунта и всичките ти данни?",
+        "acct.delete_btn": "Изтрий акаунта ми",
+        "acct.email_mismatch": "Въведеният имейл не съвпада.",
+        "acct.not_deleted": "Акаунтът ти не е изтрит.",
+        "acct.back": "Обратно към акаунта",
+        "llm.head": "AI генериране (със собствен ключ)",
+        "llm.note": ("Генерирането на CV и мотивационни писма върви през твоя LLM акаунт. "
+                     "Препоръчани безплатни опции: Google Gemini (aistudio.google.com) или "
+                     "Groq (console.groq.com). Ключът ти се съхранява криптиран, никога не "
+                     "се показва обратно и можеш да го премахнеш по всяко време."),
+        "llm.configured": "Настроен:", "llm.default_model": "модел по подразбиране",
+        "llm.remove": "Премахни ключа", "llm.provider": "Доставчик",
+        "llm.model": "Модел (по избор)", "llm.key": "API ключ",
+        "llm.key_ph": "постави API ключа си (не е нужен за Ollama)",
+        "llm.no_key": " — не изисква ключ", "llm.test_save": "Тествай и запази",
+        "llm.err_unknown": "Непознат доставчик.",
+        "llm.err_key_required": "Този доставчик изисква API ключ.",
     },
 }
 

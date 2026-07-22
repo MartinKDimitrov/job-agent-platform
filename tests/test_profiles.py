@@ -143,6 +143,21 @@ def test_app_ui_switches_to_bulgarian(auth_client):
     assert "Search now" in client.get(f"/profiles/{pid}").text
 
 
+def test_documents_and_account_pages_in_bulgarian(auth_client):
+    client, _ = auth_client
+    client.get("/lang/bg")
+    docs = client.get("/documents").text
+    assert "Моите документи" in docs
+    assert "Все още няма документи" in docs
+    acct = client.get("/account").text
+    assert "AI генериране (със собствен ключ)" in acct
+    assert "Статус на търсенето" in acct
+    assert "Изтрий акаунта ми" in acct
+    client.get("/lang/en")
+    assert "My documents" in client.get("/documents").text
+    assert "Delete my account" in client.get("/account").text
+
+
 def test_min_match_clamped(auth_client):
     client, _ = auth_client
     pid = make_profile(client, min_match=0)

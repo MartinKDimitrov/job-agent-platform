@@ -8,12 +8,21 @@ from ...data.db import get_db
 from ...data.models import Document, Posting, Match, Profile
 from ...application.usecases.generate_document import generate_document, GenerationError
 from ..web import page, current_user, redirect, escape
+from ..i18n import t, current_lang
 from ..doc_template import render_document_html
 
 router = APIRouter()
 
-_KIND_LABEL = {"cv": "CV", "cover_letter": "Cover letter"}
-_KIND_TITLE = {"cv": "Curriculum Vitae", "cover_letter": "Cover Letter"}
+SWITCH_URLS = {"en": "/lang/en", "bg": "/lang/bg"}
+
+# Print titles follow the DOCUMENT's language (what the recipient reads), not the UI language.
+_KIND_TITLE = {"en": {"cv": "Curriculum Vitae", "cover_letter": "Cover Letter"},
+               "bg": {"cv": "Автобиография", "cover_letter": "Мотивационно писмо"}}
+
+
+def _kind_label(kind: str, ui: str) -> str:
+    return t("docs.kind_cv", ui) if kind == "cv" else (
+        t("docs.kind_letter", ui) if kind == "cover_letter" else kind)
 
 
 def _profile_for(db: Session, user_id: int, posting_id: int | None) -> Profile | None:
@@ -46,21 +55,25 @@ def documents_list(request: Request, db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
+    ui = current_lang(request)
     docs = db.execute(select(Document, Posting)
                       .outerjoin(Posting, Document.posting_id == Posting.id)
                       .where(Document.user_id == u.id)
                       .order_by(Document.created_at.desc())).all()
     rows = "".join(
-        f"<tr><td><a href='/documents/{d.id}'>{_KIND_LABEL.get(d.kind, d.kind)} "
+        f"<tr><td><a href='/documents/{d.id}'>{escape(_kind_label(d.kind, ui))} "
         f"({escape(d.lang.upper())})</a></td>"
-        f"<td>{escape(p.title if p else '(posting removed)')}"
+        f"<td>{escape(p.title if p else t('docs.removed', ui))}"
         f"<br><span class='small'>{escape(p.company if p else '')}</span></td>"
         f"<td class='small'>{d.created_at:%Y-%m-%d %H:%M}</td></tr>"
         for d, p in docs
-    ) or "<tr><td colspan='3' class='small'>No documents yet — generate one from a match.</td></tr>"
-    body = (f"<div class='card'><h2>My documents</h2>"
-            f"<table><tr><th>Document</th><th>Job</th><th>Created</th></tr>{rows}</table></div>")
-    return page(body, u, title="My documents — Job Agent")
+    ) or f"<tr><td colspan='3' class='small'>{escape(t('docs.none', ui))}</td></tr>"
+    body = (f"<div class='card'><h2>{escape(t('docs.my', ui))}</h2>"
+            f"<table><tr><th>{escape(t('docs.document', ui))}</th>"
+            f"<th>{escape(t('docs.job', ui))}</th>"
+            f"<th>{escape(t('docs.created', ui))}</th></tr>{rows}</table></div>")
+    return page(body, u, title=f"{t('docs.my', ui)} — Job Agent",
+                lang=ui, switch_urls=SWITCH_URLS)
 
 
 @router.get("/documents/{doc_id}", response_class=HTMLResponse)
@@ -68,13 +81,17 @@ def document_view(doc_id: int, request: Request, db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
+    ui = current_lang(request)
     d = db.get(Document, doc_id)
     if d is None or d.user_id != u.id:
-        return page("<div class='card'>Not found.</div>", u)
+        return page(f"<div class='card'>{escape(t('app.not_found', ui))}</div>", u,
+                    lang=ui, switch_urls=SWITCH_URLS)
     post = db.get(Posting, d.posting_id) if d.posting_id else None
-    job = (f"{escape(post.title)} — {escape(post.company)}" if post else "(posting removed)")
+    job = (f"{escape(post.title)} — {escape(post.company)}" if post
+           else escape(t("docs.removed", ui)))
     apply_btn = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' "
-                 f"target='_blank'>Apply</a>" if post and (post.apply_url or post.url) else "")
+                 f"target='_blank'>{escape(t('app.apply', ui))}</a>"
+                 if post and (post.apply_url or post.url) else "")
     # regenerate controls: resolve the profile via the Match table (documents don't store it)
     regen = ""
     prof = _profile_for(db, u.id, d.posting_id)
@@ -82,34 +99,35 @@ def document_view(doc_id: int, request: Request, db: Session = Depends(get_db)):
         other_lang = "bg" if d.lang == "en" else "en"
         other_kind = "cover_letter" if d.kind == "cv" else "cv"
         busy = ("onsubmit=\"var b=this.querySelector('button');"
-                "setTimeout(function(){b.disabled=true;b.textContent='⏳ Generating…';},0);\"")
+                f"setTimeout(function(){{b.disabled=true;b.textContent='{t('app.generating', ui)}';}},0);\"")
         regen = (
             f"<form method='post' action='/profiles/{prof.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
             f"<input type='hidden' name='kind' value='{escape(d.kind)}'>"
             f"<input type='hidden' name='lang' value='{other_lang}'>"
-            f"<button class='btn gray'>Regenerate in {other_lang.upper()}</button></form> "
+            f"<button class='btn gray'>{escape(t('docs.regen_in', ui).format(lang=other_lang.upper()))}</button></form> "
             f"<form method='post' action='/profiles/{prof.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
             f"<input type='hidden' name='kind' value='{other_kind}'>"
             f"<input type='hidden' name='lang' value='{escape(d.lang)}'>"
-            f"<button class='btn gray'>{_KIND_LABEL[other_kind]} for this job</button></form>")
-    saved_note = ("<p class='small' style='color:var(--green)'><b>Saved.</b> The PDF uses "
-                  "your edited text.</p>" if request.query_params.get("saved") else "")
+            f"<button class='btn gray'>{escape(t('docs.other_for', ui).format(kind=_kind_label(other_kind, ui)))}</button></form>")
+    saved_note = (f"<p class='small' style='color:var(--green)'><b>{escape(t('docs.saved_word', ui))}</b> "
+                  f"{escape(t('docs.saved_rest', ui))}</p>"
+                  if request.query_params.get("saved") else "")
     body = f"""<div class='card'>
-    <h2>{_KIND_LABEL.get(d.kind, d.kind)} <span class='small'>· {escape(d.lang.upper())} ·
+    <h2>{escape(_kind_label(d.kind, ui))} <span class='small'>· {escape(d.lang.upper())} ·
     {escape(d.provider)}/{escape(d.model)} · prompt {escape(d.prompt_version)}</span></h2>
-    <p class='small'>For: {job}</p>
-    <p class='small'><b>Review and edit before using</b> — AI output is a draft, you own the
-    final text. Edit below and save; the PDF always uses your latest text.</p>
+    <p class='small'>{escape(t('docs.for', ui))} {job}</p>
+    <p class='small'><b>{escape(t('docs.review_word', ui))}</b> — {escape(t('docs.review_rest', ui))}</p>
     {saved_note}
     <form method='post' action='/documents/{d.id}/save'>
     <textarea name='content' rows='24' style='font-family:Georgia,serif'>{escape(d.content)}</textarea>
     <p style='margin-top:12px'>
-    <button class='btn green'>Save changes</button>
-    <a class='btn' href='/documents/{d.id}/print' target='_blank'>⬇ Download PDF</a>
+    <button class='btn green'>{escape(t('docs.save', ui))}</button>
+    <a class='btn' href='/documents/{d.id}/print' target='_blank'>{escape(t('docs.download', ui))}</a>
     {apply_btn}</p></form>
     <p style='margin-top:12px'>{regen}
-    <a class='btn gray small' href='/documents'>My documents</a></p></div>"""
-    return page(body, u, title=f"{_KIND_LABEL.get(d.kind, d.kind)} — Job Agent")
+    <a class='btn gray small' href='/documents'>{escape(t('docs.my', ui))}</a></p></div>"""
+    return page(body, u, title=f"{_kind_label(d.kind, ui)} — Job Agent",
+                lang=ui, switch_urls=SWITCH_URLS)
 
 
 @router.post("/documents/{doc_id}/save")
@@ -121,7 +139,9 @@ def document_save(doc_id: int, request: Request, content: str = Form(""),
         return redirect("/login")
     d = db.get(Document, doc_id)
     if d is None or d.user_id != u.id:
-        return page("<div class='card'>Not found.</div>", u)
+        ui = current_lang(request)
+        return page(f"<div class='card'>{escape(t('app.not_found', ui))}</div>", u,
+                    lang=ui, switch_urls=SWITCH_URLS)
     d.content = content
     db.commit()
     return redirect(f"/documents/{d.id}?saved=1")
@@ -136,11 +156,15 @@ def document_print(doc_id: int, request: Request, db: Session = Depends(get_db))
         return redirect("/login")
     d = db.get(Document, doc_id)
     if d is None or d.user_id != u.id:
-        return page("<div class='card'>Not found.</div>", u)
+        ui = current_lang(request)
+        return page(f"<div class='card'>{escape(t('app.not_found', ui))}</div>", u,
+                    lang=ui, switch_urls=SWITCH_URLS)
     post = db.get(Posting, d.posting_id) if d.posting_id else None
     role = f"{post.title} — {post.company}" if post else ""
     name = u.name or u.email.split("@")[0]
+    titles = _KIND_TITLE.get(d.lang, _KIND_TITLE["en"])
+    footer_word = "Генерирано с" if d.lang == "bg" else "Generated with"
     return render_document_html(
-        title=_KIND_TITLE.get(d.kind, d.kind), name=name, role=role,
+        title=titles.get(d.kind, d.kind), name=name, role=role,
         content=d.content, lang=d.lang,
-        footer=f"Generated with Job Agent — {d.created_at:%d %B %Y}")
+        footer=f"{footer_word} Job Agent — {d.created_at:%d %B %Y}")

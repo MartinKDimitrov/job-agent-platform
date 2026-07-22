@@ -7,14 +7,18 @@ from sqlalchemy.orm import Session
 from ...data.db import get_db
 from ...data.models import Profile, Application
 from ..web import page, current_user, redirect, escape
+from ..i18n import t, current_lang
 from ...data.activity_repo import get_activity, set_found_job
 from ...data.keystore import save_config, get_config, delete_config
 from ...data.llm import LLMError, get_provider, list_providers
 
 router = APIRouter()
 
+SWITCH_URLS = {"en": "/lang/en", "bg": "/lang/bg"}
 
-def _llm_card(db: Session, user_id: int, llm_msg: str = "", llm_ok: bool = True) -> str:
+
+def _llm_card(db: Session, user_id: int, llm_msg: str = "", llm_ok: bool = True,
+              ui: str = "en") -> str:
     """BYOK settings card: provider select + key + Test & save. The key is never rendered back
     — only a 'Configured: <provider>' line proves one is stored."""
     cfg = get_config(db, user_id)
@@ -22,32 +26,30 @@ def _llm_card(db: Session, user_id: int, llm_msg: str = "", llm_ok: bool = True)
     if cfg:
         p = get_provider(cfg["provider"])
         label = p.label if p else cfg["provider"]
-        model = cfg["model"] or "default model"
-        configured = (f"<p>Configured: <b>{escape(label)}</b> "
+        model = cfg["model"] or t("llm.default_model", ui)
+        configured = (f"<p>{escape(t('llm.configured', ui))} <b>{escape(label)}</b> "
                       f"<span class='small'>({escape(model)})</span></p>"
                       "<form method='post' action='/account/llm/delete' style='display:inline'>"
-                      "<button class='btn gray'>Remove key</button></form>")
+                      f"<button class='btn gray'>{escape(t('llm.remove', ui))}</button></form>")
     msg = ""
     if llm_msg:
         color = "#2e7d32" if llm_ok else "#c0392b"
         msg = f"<p style='color:{color}'><b>{escape(llm_msg)}</b></p>"
     options = "".join(
         f"<option value='{escape(p.name)}'>{escape(p.label)}"
-        f"{'' if p.needs_key else ' — no key needed'}</option>" for p in list_providers())
-    return f"""<div class='card'><h3>AI generation (bring your own key)</h3>
-    <p class='small'>CV and cover-letter generation runs on <b>your</b> LLM account. Recommended
-    free options: Google Gemini (aistudio.google.com) or Groq (console.groq.com). Your key is
-    stored encrypted, never shown back, and you can remove it any time.</p>
+        f"{'' if p.needs_key else escape(t('llm.no_key', ui))}</option>" for p in list_providers())
+    return f"""<div class='card'><h3>{escape(t('llm.head', ui))}</h3>
+    <p class='small'>{escape(t('llm.note', ui))}</p>
     {configured}{msg}
     <form method='post' action='/account/llm'>
       <div class='row2'>
-        <div><label>Provider</label><select name='provider'>{options}</select></div>
-        <div><label>Model (optional)</label><input name='model' placeholder='provider default'></div>
+        <div><label>{escape(t('llm.provider', ui))}</label><select name='provider'>{options}</select></div>
+        <div><label>{escape(t('llm.model', ui))}</label><input name='model' placeholder='provider default'></div>
       </div>
-      <label>API key</label>
+      <label>{escape(t('llm.key', ui))}</label>
       <input name='api_key' type='password' autocomplete='off'
-             placeholder='paste your API key (not needed for Ollama)'>
-      <p style='margin-top:10px'><button class='btn'>Test &amp; save</button></p>
+             placeholder="{escape(t('llm.key_ph', ui))}">
+      <p style='margin-top:10px'><button class='btn'>{t('llm.test_save', ui)}</button></p>
     </form></div>"""
 
 
@@ -57,44 +59,45 @@ def account_view(request: Request, db: Session = Depends(get_db),
     u = current_user(request, db)
     if not u:
         return redirect("/login")
+    ui = current_lang(request)
     profiles = db.execute(select(Profile).where(Profile.user_id == u.id)).scalars().all()
     act = get_activity(db, u.id)
     paused = bool(act and act.found_job)
     if paused:
-        status = ("<b style='color:#2e7d32'>Paused</b> — you marked that you found a job, "
-                  "so we're not searching for you.")
+        status = (f"<b style='color:#2e7d32'>{escape(t('acct.paused_word', ui))}</b> — "
+                  f"{escape(t('acct.paused_rest', ui))}")
         btn = ("<input type='hidden' name='value' value='0'>"
-               "<button class='btn'>Resume my searches</button>")
+               f"<button class='btn'>{escape(t('acct.resume', ui))}</button>")
     else:
-        status = ("<b>Active</b> — we search daily and email you new matches "
-                  "(if you're active in the last 5 days).")
+        status = (f"<b>{escape(t('acct.active_word', ui))}</b> — "
+                  f"{escape(t('acct.active_rest', ui))}")
         btn = ("<input type='hidden' name='value' value='1'>"
-               "<button class='btn green'>🎉 I found a job — pause searches</button>")
+               f"<button class='btn green'>{escape(t('acct.pause', ui))}</button>")
     llm_msg, llm_ok = "", True
     if llm == "ok":
-        llm_msg = "Connection test passed — your key is saved (encrypted)."
+        llm_msg = t("acct.llm_ok", ui)
     elif llm == "removed":
-        llm_msg = "Key removed."
+        llm_msg = t("acct.llm_removed", ui)
     elif llm_err:
         llm_msg, llm_ok = llm_err, False
-    body = f"""<div class='card'><h2>Account</h2>
-    <p class='small'>{escape(u.email)} · joined {u.created_at:%Y-%m-%d}</p>
-    <p>{len(profiles)} search profile(s).</p>
-    <p><a class='btn gray' href='/account/export'>Export my data (JSON)</a></p></div>
-    <div class='card'><h3>Job search status</h3><p class='small'>{status}</p>
+    body = f"""<div class='card'><h2>{escape(t('acct.heading', ui))}</h2>
+    <p class='small'>{escape(u.email)} · {escape(t('acct.joined', ui))} {u.created_at:%Y-%m-%d}</p>
+    <p>{escape(t('acct.profiles', ui).format(n=len(profiles)))}</p>
+    <p><a class='btn gray' href='/account/export'>{escape(t('acct.export', ui))}</a></p></div>
+    <div class='card'><h3>{escape(t('acct.status_head', ui))}</h3><p class='small'>{status}</p>
     <form method='post' action='/account/found-job'>{btn}</form></div>
-    {_llm_card(db, u.id, llm_msg, llm_ok)}
+    {_llm_card(db, u.id, llm_msg, llm_ok, ui)}
     <div class='card' style='border-color:#c0392b'>
-    <h3 style='color:#c0392b'>Delete account</h3>
-    <p class='small'>Permanently deletes your account, profiles, matches and applications.
-    This cannot be undone. Type your email address to confirm.</p>
+    <h3 style='color:#c0392b'>{escape(t('acct.delete_head', ui))}</h3>
+    <p class='small'>{escape(t('acct.delete_note', ui))}</p>
     <form method='post' action='/account/delete'
-      onsubmit="return confirm('Permanently delete your account and all your data?')">
+      onsubmit="return confirm('{t('acct.delete_confirm', ui)}')">
       <input name='confirm_email' placeholder="{escape(u.email)}" autocomplete='off'>
       <p style='margin-top:12px'>
-        <button class='btn' style='background:#c0392b'>Delete my account</button></p>
+        <button class='btn' style='background:#c0392b'>{escape(t('acct.delete_btn', ui))}</button></p>
     </form></div>"""
-    return page(body, u)
+    return page(body, u, title=f"{t('acct.heading', ui)} — Job Agent",
+                lang=ui, switch_urls=SWITCH_URLS)
 
 
 @router.post("/account/llm")
@@ -105,12 +108,13 @@ def account_llm_save(request: Request, provider: str = Form(""), api_key: str = 
     u = current_user(request, db)
     if not u:
         return redirect("/login")
+    ui = current_lang(request)
     p = get_provider(provider)
     if p is None:
-        return redirect("/account?llm_err=Unknown provider.")
+        return redirect(f"/account?llm_err={t('llm.err_unknown', ui)}")
     api_key = api_key.strip()
     if p.needs_key and not api_key:
-        return redirect("/account?llm_err=This provider requires an API key.")
+        return redirect(f"/account?llm_err={t('llm.err_key_required', ui)}")
     try:
         p.generate("You are a health check.", "Reply with the single word: OK",
                    api_key=api_key, model=model.strip())
@@ -174,10 +178,12 @@ def account_delete(request: Request, confirm_email: str = Form(""),
     if not u:
         return redirect("/login")
     if (confirm_email or "").strip().lower() != u.email.lower():
+        ui = current_lang(request)
         body = ("<div class='card' style='border-color:#c0392b'>"
-                "<b style='color:#c0392b'>The email you typed does not match.</b> "
-                "Your account was not deleted. <a href='/account'>Back to account</a></div>")
-        return page(body, u)
+                f"<b style='color:#c0392b'>{escape(t('acct.email_mismatch', ui))}</b> "
+                f"{escape(t('acct.not_deleted', ui))} "
+                f"<a href='/account'>{escape(t('acct.back', ui))}</a></div>")
+        return page(body, u, lang=ui, switch_urls=SWITCH_URLS)
     db.delete(u); db.commit()  # cascades profiles → matches, plus applications/sources via FKs
     resp = redirect("/")
     resp.delete_cookie("token")
