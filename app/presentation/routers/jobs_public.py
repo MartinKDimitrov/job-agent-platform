@@ -77,14 +77,14 @@ _COPY = {
                      "openings we track meanwhile.",
     },
     "bg": {
-        "jobs_title": "Работа — България и remote | Job Agent",
-        "jobs_h1": "Работа — България и remote",
+        "jobs_title": "Работа — България и дистанционно | Job Agent",
+        "jobs_h1": "Работа — България и дистанционно",
         "jobs_sub": "Следим отворените позиции в обявните платформи и кариерните сайтове и "
                     "оценяваме всяка спрямо твоите умения.",
         "jobs_tracked": "отворени позиции в момента",
         "recent": "Скорошни обяви",
         "byprof": "Разгледай по професия",
-        "h1": "Работа като {occ} — България и remote",
+        "h1": "Работа като {occ} — България и дистанционно",
         "meta": "Отворени позиции за {occ} в България и дистанционно, оценени спрямо твоите умения.",
         "tracked": "отворени позиции в момента",
         "sample": "Скорошни обяви",
@@ -160,7 +160,8 @@ def _occupation_page(request: Request, db: Session, occupation_id: str, lang: st
     'работа като X' queries); the general showcase lives at /jobs."""
     occ = by_id(occupation_id)
     if occ is None:
-        return page("<div class='card'>Not found.</div>", None)
+        msg = "Не е намерено." if lang == "bg" else "Not found."
+        return page(f"<div class='card'>{msg}</div>", None, lang=lang)
     c = _COPY[lang]
     occ_name = occ["bg"] if lang == "bg" else occ["en"]
     count, sample = _matching_postings(db, occ)

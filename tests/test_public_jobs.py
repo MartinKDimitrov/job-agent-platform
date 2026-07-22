@@ -38,9 +38,15 @@ def test_profession_page_en(client):
 def test_profession_page_bg(client):
     b = client.get("/bg/jobs/android-dev").text
     assert '<html lang="bg">' in b
-    assert "Работа като Android разработчик" in b
+    assert "Работа като Android разработчик — България и дистанционно" in b
+    assert "и remote" not in b                    # fully Bulgarian headline (owner request)
     assert 'content="index, follow"' in b
     assert 'hreflang="en"' in b
+
+
+def test_unknown_occupation_bg_localised(client):
+    b = client.get("/bg/jobs/space-wizard").text
+    assert "Не е намерено." in b and "noindex" in b
 
 
 def test_public_page_never_leaks_posting_internals(client):
@@ -78,7 +84,7 @@ def test_general_jobs_index_diverse_and_bilingual(client):
     assert "Junior Accountant" in b and "Senior Android Engineer" in b   # diverse recents
     assert "How does Job Agent work?" in b
     bg = client.get("/bg/jobs").text
-    assert "Работа — България и remote" in bg
+    assert "Работа — България и дистанционно" in bg
     sm = client.get("/sitemap.xml").text
     assert "/bg/jobs</loc>" in sm
 
