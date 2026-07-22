@@ -145,6 +145,22 @@ class UserLLMConfig(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class Company(Base):
+    """The company registry (ROADMAP 16б): employers whose career pages we crawl through an
+    ATS adapter. Filled by the ATS auto-detection tool; one adapter covers every company on
+    the same platform. New table -> no migration."""
+    __tablename__ = "companies"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True)
+    country: Mapped[str] = mapped_column(String(8), default="BG")     # BG / EU / ...
+    careers_url: Mapped[str] = mapped_column(Text, default="")
+    ats: Mapped[str] = mapped_column(String(32), default="")          # greenhouse/lever/ashby
+    ats_slug: Mapped[str] = mapped_column(String(255), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)       # crawled when True
+    detected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class CrawlRun(Base):
     """One crawl run (a daily job or a Search-now), with per-source and total metrics in `stats`
     — so we can see how each source is performing over time. New table -> no migration."""

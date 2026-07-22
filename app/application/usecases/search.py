@@ -161,6 +161,27 @@ def _enrich_new_postings(db: Session) -> int:
     return enriched
 
 
+def _registry_postings(db: Session, stats=None) -> list[RawPosting]:
+    """Career pages from the company REGISTRY (ROADMAP 16б): every active company with a
+    detected ATS board, fetched through the matching adapter. One adapter serves them all."""
+    from ...data.company_repo import boards_for
+    adapters = {"greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch}
+    out: list[RawPosting] = []
+    for ats, fetch_fn in adapters.items():
+        count = 0
+        for slug, name in boards_for(db, ats):
+            try:
+                posts = fetch_fn(slug, company_name=name)
+            except Exception as e:  # noqa: BLE001 — one dead board must not kill the run
+                log.warning("registry %s/%s failed: %s", ats, slug, e)
+                continue
+            out.extend(posts)
+            count += len(posts)
+        if stats is not None and count:
+            stats.source(f"registry_{ats}", fetched=count)
+    return out
+
+
 def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=(),
                         stats=None) -> dict:
     """The WRITE side of DB-first search: fetch everything, persist (dedup), enrich.
@@ -170,7 +191,7 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
     boards = GREENHOUSE_BOARDS if boards is None else boards
     if raw_postings is None:
         raw_postings = fetch_all(boards, stats=stats)
-    raw_postings = list(raw_postings)
+    raw_postings = list(raw_postings) + _registry_postings(db, stats=stats)
     seen_urls = {rp.url for rp in raw_postings if rp.url}
     for profile in profiles:
         for name, src in PROFILE_SOURCES:
