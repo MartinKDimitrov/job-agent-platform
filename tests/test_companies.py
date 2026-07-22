@@ -54,6 +54,17 @@ def test_detect_teamtailor_from_custom_domain_careers_page(monkeypatch):
         "teamtailor", "https://careers.mypos.com")
 
 
+def test_smartrecruiters_probe_requires_live_postings(monkeypatch):
+    # The SR API 200s with totalFound:0 for ANY slug (even gibberish) — an existence-style
+    # probe registered 105 phantom boards live. Only totalFound > 0 is a hit.
+    monkeypatch.setattr(det, "fetch_json",
+                        lambda url, params=None, **k: {"totalFound": 0, "content": []})
+    assert det._probe_smartrecruiters("anything") is False
+    monkeypatch.setattr(det, "fetch_json",
+                        lambda url, params=None, **k: {"totalFound": 3, "content": [{}]})
+    assert det._probe_smartrecruiters("real") is True
+
+
 def test_detect_none_when_no_board(monkeypatch):
     monkeypatch.setattr(det, "fetch_json", lambda *a, **k: None)
     monkeypatch.setattr(det, "post_json", lambda *a, **k: None)

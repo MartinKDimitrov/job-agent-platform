@@ -50,9 +50,12 @@ def _probe_teamtailor(slug_or_url: str) -> bool:
 
 
 def _probe_smartrecruiters(slug: str) -> bool:
+    # DANGER: this API answers 200 + {"totalFound": 0} for ANY slug, including gibberish
+    # (verified live — a naive existence check registered 105 phantom boards). Only a slug
+    # with actual live postings counts as a hit; dormant ones re-probe monthly anyway.
     j = fetch_json(f"https://api.smartrecruiters.com/v1/companies/{slug}/postings",
                    params={"limit": 1})
-    return isinstance(j, dict) and "totalFound" in j
+    return isinstance(j, dict) and int(j.get("totalFound") or 0) > 0
 
 
 def _probe_recruitee(slug: str) -> bool:
