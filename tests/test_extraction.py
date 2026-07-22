@@ -141,6 +141,40 @@ def test_monzo_marketing_salary_and_interview_dropped():
     assert any("kubernetes" in t for t in musts)
 
 
+# benefits observed live on a dev.bg posting — they arrived bulleted WITHOUT a recognizable
+# section header and polluted the requirements ("45% with 1 of 26 covered" incident)
+DEVBG_BENEFITS = """Requirements:
+- Around 3–5 years of experience in software development with Java or .NET
+- Good understanding of multi-threaded software applications
+- Performance evaluation & salary review twice a year
+- 25 days paid annual leave
+- Work from home option -2 days weekly
+- Additional health insurance – premium package
+- Fully paid annual transportation card
+- Fully paid Sports card
+- Free company shuttle to the office
+- Team building events and office parties
+- Referral Program
+- Free snacks, soft drinks, coffee, and fruit are always available
+- Birthday, newborn baby, and first-grader bonuses
+- Corporate discounts in various shops and restaurants
+- State-of-the-art modern office
+- Positive working environment and chill-out zone (PS4, foosball-table, and lazy chairs)
+All applications will be treated strictly confidentially and only the approved candidates will be invited to an interview."""
+
+
+def test_headerless_benefit_bullets_dropped():
+    reqs = extract_requirements(DEVBG_BENEFITS)
+    texts = " ".join(r["text"].lower() for r in reqs)
+    for bad in ("annual leave", "sports card", "snacks", "shuttle", "referral",
+                "team building", "salary review", "health insurance", "chill-out",
+                "modern office", "confidential", "birthday"):
+        assert bad not in texts, f"benefit leaked: {bad}"
+    musts = [r["text"].lower() for r in reqs if r["kind"] == "must"]
+    assert any("java or .net" in t for t in musts)          # real requirements survive
+    assert any("multi-threaded" in t for t in musts)
+
+
 def test_we_are_looking_for_with_signal_survives():
     # marketing-shaped opener that actually states a qualification must survive
     reqs = extract_requirements("We are looking for someone with 5+ years of Kotlin experience.")

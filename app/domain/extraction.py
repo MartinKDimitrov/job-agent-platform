@@ -33,11 +33,12 @@ _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what
 # Whole sections that never contain a requirement — switch into "drop" and skip until the
 # next recognised header.
 _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits", "perks",
-                 "what we offer", "we offer", "why join", "why work", "our mission",
-                 "diversity", "compensation", "salary", "join us", "our team",
-                 "interview process", "hiring process", "application process",
-                 "what's in it for you", "why you'll love",
+                 "what we offer", "we offer", "our offer", "the company offers", "why join",
+                 "why work", "our mission", "diversity", "compensation", "salary", "join us",
+                 "our team", "interview process", "hiring process", "application process",
+                 "what's in it for you", "why you'll love", "what you get", "you will get",
                  "за нас", "за компанията", "ползи", "защо да", "предлагаме", "нашата мисия",
+                 "ние предлагаме", "ще получиш", "придобивки",
                  "процес на интервю", "процес на подбор")
 
 # Stray boilerplate dropped even inside a kept section (real-world lines: trademark footers,
@@ -52,6 +53,18 @@ _HEADERISH = re.compile(r"^[^.!?]{1,45}:?\s*$")
 
 # Salary / location-pipe lines ("📍 London / UK Remote | £85,000-£110,000 + Benefits").
 _MONEY_RE = re.compile(r"[£$€]\s*\d|\d\s*(?:лв|BGN|EUR|USD|GBP)\b", re.I)
+# Perk/benefit lines — they routinely appear WITHOUT a recognizable section header (observed
+# live on dev.bg postings: bulleted straight after the requirements) and are never candidate
+# requirements, whatever bucket they land in.
+_BENEFIT_RE = re.compile(
+    r"\b(annual leave|paid leave|days off|health insurance|dental|sports? card|multisport|"
+    r"transportation card|travel allowance|company shuttle|snacks|soft drinks|"
+    r"team building|office parties|chill-?out|foosball|referral program|"
+    r"salary review|performance evaluation|vouchers|corporate discounts|"
+    r"newborn|birthday|first-grader|modern office|working environment|sabbatical|"
+    r"only shortlisted|approved candidates|treated (?:strictly )?confidential|"
+    r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
+    r"карта за транспорт|бонус за)\b", re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...").
 _MARKETING_RE = re.compile(
     r"^(?:we['’]?re\b|we\s+are\b|we['’]?ve\b|we\s+want\b|we\s+build\b|our\s|join\s+us\b)"
@@ -107,6 +120,8 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
       signal-bearing lines are kept — bare pasted requirement lists still work, prose intros
       don't pollute the must-bucket."""
     if _MONEY_RE.search(cleaned):
+        return False
+    if _BENEFIT_RE.search(cleaned):
         return False
     has_signal = bool(_REQ_SIGNAL_RE.search(cleaned))
     if _MARKETING_RE.match(cleaned) and not has_signal:

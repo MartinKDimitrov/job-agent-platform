@@ -91,7 +91,10 @@ def score(profile_text: str, posting_text: str, requirements=None):
     if pe is not None and se is not None:
         sem = _cosine(pe, se)          # ~0..1 for E5 normalized
         sem_pct = max(0.0, min(1.0, (sem - 0.6) / 0.35))  # rescale typical 0.6..0.95 band
-        base = sem_pct if kw_ratio is None else 0.6 * sem_pct + 0.4 * kw_ratio
+        # Coverage dominates the blend: E5 similarity gives a high baseline for ANY tech text,
+        # which inflated scores like "45% with 1 of 26 requirements covered" (owner report).
+        # Semantic similarity refines; requirement coverage decides.
+        base = sem_pct if kw_ratio is None else 0.35 * sem_pct + 0.65 * kw_ratio
     else:
         base = kw_ratio if kw_ratio is not None else 0.0
 
