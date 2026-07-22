@@ -23,6 +23,7 @@ def _offline(monkeypatch):
     monkeypatch.setattr(gh, "fetch", lambda token, company_name=None: list(SAMPLE))
     monkeypatch.setattr(crawl, "FAST_SOURCES", [])
     monkeypatch.setattr(crawl, "EXTRA_SOURCES", [])
+    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [])
 
 
 # ---- RunStats unit ----

@@ -36,6 +36,7 @@ def _setup(monkeypatch):
     monkeypatch.setattr(gh, "fetch", lambda token, company_name=None: list(SAMPLE))
     monkeypatch.setattr(crawl, "FAST_SOURCES", [])     # keep tests fully offline
     monkeypatch.setattr(crawl, "EXTRA_SOURCES", [])
+    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [])
 
 
 def _user(db, email, seen_days_ago=0, found_job=False, with_profile=True):

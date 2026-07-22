@@ -1,9 +1,16 @@
-"""dev.bg adapter — the Bulgarian IT job board, via its official WordPress RSS job feed.
+"""dev.bg adapter — the Bulgarian IT job board, via its WordPress RSS feeds.
 
-Verified live: `https://dev.bg/?feed=job_feed` (updated hourly) plus per-category variants
-(`&job_category=<slug>`). Each item carries the full JD HTML in <content:encoded>. robots.txt
-is open (blocks only one aggregator bot). The site times out plain bot UAs, so requests go
-through fetch_text's browser-like headers. Isolated per the one-adapter-per-source rule.
+Two complementary feeds (both verified live, 2026-07):
+- GLOBAL recency: `/?feed=job_feed&paged=N` — the newest postings site-wide, ~10 per page,
+  ~50 postings/day. The category parameter is IGNORED by the server (verified: identical items
+  for every category), so per-category feeds are useless — pagination is the coverage.
+- TARGETED search: `/?s=<term>&post_type=job_listing&feed=rss2&paged=N` — real search results
+  (e.g. 'android' returns exactly the 45 postings the site UI shows), full JD in
+  content:encoded. This reaches profile-relevant postings posted weeks ago, far beyond the
+  global-feed window.
+
+The site times out plain bot UAs, so requests go through fetch_text's browser-like headers.
+Isolated per the one-adapter-per-source rule.
 """
 from __future__ import annotations
 
@@ -19,12 +26,8 @@ from .http import fetch_text
 FEED_URL = "https://dev.bg/"
 _NS = {"content": "http://purl.org/rss/1.0/modules/content/"}
 
-# Category slugs on dev.bg (job_category query param). Configurable per call; this default set
-# covers the broad engineering areas. Extend freely — each category is one extra feed request.
-DEFAULT_CATEGORIES = [
-    "back-end-development", "front-end-development", "full-stack-development",
-    "mobile", "devops", "quality-assurance", "python",
-]
+DEFAULT_PAGES = 3          # global feed: 3 pages ≈ the ~30 newest postings
+DEFAULT_SEARCH_PAGES = 5   # per search term: up to ~50 matching postings
 
 
 def _slug(url: str) -> str:
@@ -70,22 +73,37 @@ def _parse_feed(xml_text: str) -> list[RawPosting]:
     return out
 
 
-def fetch(categories: list[str] | None = None) -> list[RawPosting]:
-    """Fetch the dev.bg job feed for each category (deduplicated by link across feeds)."""
-    cats = DEFAULT_CATEGORIES if categories is None else categories
-    seen: set[str] = set()
+def _fetch_pages(base_params: dict, pages: int) -> list[RawPosting]:
     out: list[RawPosting] = []
-    for cat in cats or [None]:
-        params = {"feed": "job_feed"}
-        if cat:
-            params["job_category"] = cat
+    for page in range(1, pages + 1):
+        params = dict(base_params)
+        if page > 1:
+            params["paged"] = page
         body = fetch_text(FEED_URL, params=params)
         if not body:
-            continue
-        for rp in _parse_feed(body):
+            break
+        batch = _parse_feed(body)
+        if not batch:
+            break
+        out.extend(batch)
+    return out
+
+
+def fetch(search_terms: list[str] | None = None, pages: int = DEFAULT_PAGES,
+          search_pages: int = DEFAULT_SEARCH_PAGES) -> list[RawPosting]:
+    """Global newest postings + (optionally) targeted search per term, deduplicated by link."""
+    seen: set[str] = set()
+    out: list[RawPosting] = []
+
+    def add(batch: list[RawPosting]) -> None:
+        for rp in batch:
             if rp.url not in seen:
                 seen.add(rp.url)
                 out.append(rp)
+
+    add(_fetch_pages({"feed": "job_feed"}, pages))
+    for term in search_terms or []:
+        add(_fetch_pages({"s": term, "post_type": "job_listing", "feed": "rss2"}, search_pages))
     return out
 
 

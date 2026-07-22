@@ -42,6 +42,31 @@ EXTRA_SOURCES = [("remoteok", remoteok.fetch), ("wwr", wwr.fetch),
                  ("lever", _lever_all), ("ashby", _ashby_all)]
 
 
+def _profile_search_terms(profile) -> list[str]:
+    """Search phrases for targeted source queries, from the profile's target roles — e.g.
+    'Android Developer, Team Lead' -> ['android developer', 'team lead']. Phrases (not single
+    tokens) keep the search precise; capped to keep request counts polite."""
+    terms = []
+    for part in (profile.target_roles or "").split(","):
+        t = part.strip().lower()
+        if len(t) >= 4:
+            terms.append(t)
+    return terms[:3]
+
+
+def _dev_bg_targeted(profile) -> list[RawPosting]:
+    """dev.bg's global feed only covers ~6 recent days; its search feed reaches everything.
+    Query it with the profile's own target roles so a Business Analyst gets BA postings and an
+    Android dev gets the Android ones (this was the 'always the same offers' bug)."""
+    terms = _profile_search_terms(profile)
+    if not terms:
+        return []
+    return dev_bg.fetch(search_terms=terms, pages=0)   # pages=0: skip the global feed here
+
+# Profile-aware targeted sources, run per Search-now (and per profile in the daily digest).
+PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted)]
+
+
 def _safe(name: str, fn, stats=None) -> list[RawPosting]:
     """Run a source, isolating its failure — one broken source must not kill the whole run.
     Records the fetch count (or error) into `stats` when given (see app/metrics.RunStats)."""
@@ -122,6 +147,21 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
     # 1. get postings (fetch, or reuse a pre-fetched batch) and keep only relevant ones, capped.
     if raw_postings is None:
         raw_postings = fetch_all(boards, stats=stats)
+    # profile-aware targeted sources always run (cheap RSS; reaches postings the recency
+    # window misses) — deduplicated against the batch by URL
+    seen_urls = {rp.url for rp in raw_postings if rp.url}
+    for name, src in PROFILE_SOURCES:
+        try:
+            targeted = [rp for rp in src(profile) if rp.url not in seen_urls]
+        except Exception as e:  # noqa: BLE001 — a broken source must not kill the search
+            log.warning("targeted source %s failed: %s", name, e)
+            if stats is not None:
+                stats.source(name, error=str(e)[:200])
+            continue
+        if stats is not None:
+            stats.source(name, fetched=len(targeted))
+        raw_postings = list(raw_postings) + targeted
+        seen_urls.update(rp.url for rp in targeted if rp.url)
     fetched = len(raw_postings)
     candidates = [rp for rp in raw_postings if _relevant(rp, keywords)][:limit]
 

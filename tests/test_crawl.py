@@ -22,6 +22,7 @@ def _mock(monkeypatch, sample=SAMPLE, boards=(("acme", "Acme"),)):
     monkeypatch.setattr(gh, "fetch", lambda token, company_name=None: list(sample))
     monkeypatch.setattr(crawl, "FAST_SOURCES", [])     # keep tests fully offline
     monkeypatch.setattr(crawl, "EXTRA_SOURCES", [])
+    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [])
     monkeypatch.setattr(crawl, "GREENHOUSE_BOARDS", list(boards))
 
 
@@ -92,6 +93,38 @@ def test_search_now_button_flow(auth_client, monkeypatch):
     assert "Senior Android Engineer" in body         # relevant match shown
     assert "Account Executive" not in body           # irrelevant filtered out
     assert "https://x/1" in body                     # apply link present
+
+
+def test_profile_sources_receive_profile_and_merge(monkeypatch):
+    # Targeted sources get the PROFILE (so dev.bg search uses the user's target roles) and
+    # their results merge into the batch — this fixed 'a Business Analyst sees Android offers'.
+    _mock(monkeypatch, sample=[])
+    seen_profiles = []
+
+    def fake_targeted(profile):
+        seen_profiles.append(profile.target_roles)
+        return [RawPosting("rss", "t1", "Business Analyst", "BulBank", location="Remote",
+                           url="https://dev.bg/j/ba", apply_url="https://dev.bg/j/ba",
+                           description="Requirements:\n- Requirements analysis experience")]
+
+    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [("fake_targeted", fake_targeted)])
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Business Analyst",
+                              skills="Requirements Analysis, SQL", min_match=0)
+        res = run_search(db, p)
+        assert seen_profiles == ["Business Analyst"]
+        assert res["scored"] == 1
+        m = db.execute(select(Match).where(Match.profile_id == p.id)).scalars().one()
+        assert db.get(Posting, m.posting_id).title == "Business Analyst"
+
+
+def test_search_terms_from_target_roles():
+    class P:
+        target_roles = "Android Developer, Team Lead, QA"
+    assert crawl._profile_search_terms(P()) == ["android developer", "team lead"]  # 'QA' <4 chars
+    class Empty:
+        target_roles = ""
+    assert crawl._profile_search_terms(Empty()) == []
 
 
 def test_generic_tool_tokens_do_not_match_titles(monkeypatch):
