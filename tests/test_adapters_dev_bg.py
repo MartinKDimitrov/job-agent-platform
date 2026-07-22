@@ -89,6 +89,28 @@ def test_company_heuristic_and_content(monkeypatch):
     assert posts[0].posted_at is not None and posts[1].posted_at is None
 
 
+def test_company_from_title_when_guid_has_no_slug():
+    # The SEARCH feed's guid is a WordPress '?p=N' permalink — the company must come from
+    # stripping the TITLE's words off the link slug (this filled the empty-company cards).
+    link = "https://dev.bg/company/jobads/recruit-experts-senior-android-developer/"
+    guid = "https://dev.bg/?post_type=job_listing&p=12345"
+    assert dv._company_from(link, guid, "Senior Android Developer") == "Recruit Experts"
+    # punctuation in the title must not break the match
+    link2 = "https://dev.bg/company/jobads/egt-digital-software-developer-professional-services/"
+    assert dv._company_from(link2, guid, "Software Developer, Professional Services") == "Egt Digital"
+    # reposted ads carry a numeric slug suffix — it must not break the match
+    link3 = "https://dev.bg/company/jobads/accedia-kotlin-multiplatform-developer-2/"
+    assert dv._company_from(link3, guid, "Kotlin Multiplatform Developer") == "Accedia"
+    # ...and the suffix STACKS on every repost ('-1-1-1-1', observed live)
+    link3b = "https://dev.bg/company/jobads/nemetschek-bulgaria-senior-golang-developer-1-1-1-1/"
+    assert dv._company_from(link3b, guid, "Senior Golang developer") == "Nemetschek Bulgaria"
+    # C/C++ style titles slugify with collapsed symbols
+    link4 = "https://dev.bg/company/jobads/ict-strypes-senior-c-c-developer-5/"
+    assert dv._company_from(link4, guid, "Senior C/C++ Developer") == "Ict Strypes"
+    # no overlap at all -> honest empty, never a wrong guess
+    assert dv._company_from("https://dev.bg/company/jobads/something/", guid, "Unrelated") == ""
+
+
 def test_network_error_and_bad_xml(monkeypatch):
     monkeypatch.setattr(dv, "fetch_text", lambda url, params=None, timeout=15.0: None)
     assert dv.fetch(pages=2) == []

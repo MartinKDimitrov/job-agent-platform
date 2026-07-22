@@ -34,12 +34,32 @@ def _slug(url: str) -> str:
     return url.rstrip("/").rsplit("/", 1)[-1]
 
 
-def _company_from(link: str, guid: str) -> str:
+def _slugify(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
+
+
+def _company_from(link: str, guid: str, title: str = "") -> str:
     """dev.bg job links are /company/jobads/<company>-<role-slug>/ while the guid repeats only
-    the role slug — the link slug's extra prefix is the company (verified on live items)."""
-    ls, gs = _slug(link), _slug(guid)
-    if gs and ls.endswith(gs) and len(ls) > len(gs):
-        return ls[: -len(gs)].strip("-").replace("-", " ").title()
+    the role slug — the link slug's extra prefix is the company (verified on live items).
+    The SEARCH feed's guid is a WordPress `?p=N` permalink (no slug), so fall back to the
+    TITLE: strip the title's words off the link slug's tail; what remains is the company
+    (this filled the empty-company cards from targeted dev.bg results). Reposted ads get a
+    numeric slug suffix, stacking on each repost ('...-developer-1-1-1') — both variants
+    are tried."""
+    gs, ts = _slug(guid), _slugify(title)
+    raw = _slug(link)
+    for ls in dict.fromkeys((raw, re.sub(r"(-\d+)+$", "", raw))):
+        if gs and ls.endswith(gs) and len(ls) > len(gs):
+            return ls[: -len(gs)].strip("-").replace("-", " ").title()
+        if ts and ls.endswith(ts) and len(ls) > len(ts):
+            return ls[: -len(ts)].strip("-").replace("-", " ").title()
+        title_words = set(ts.split("-")) if ts else set()
+        toks = ls.split("-")
+        i = len(toks)
+        while i > 0 and toks[i - 1] in title_words:
+            i -= 1
+        if 0 < i < len(toks):
+            return " ".join(toks[:i]).title()
     return ""
 
 
@@ -66,7 +86,7 @@ def _parse_feed(xml_text: str) -> list[RawPosting]:
                 posted = None
         out.append(RawPosting(
             source_kind="rss", external_id=guid or link, title=title,
-            company=_company_from(link, guid), location="",  # feed carries no location field
+            company=_company_from(link, guid, title), location="",  # feed has no location field
             url=link, apply_url=link, description=desc, posted_at=posted,
             raw={"guid": guid},
         ))
