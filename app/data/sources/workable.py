@@ -14,6 +14,7 @@ Isolated per the one-adapter-per-source rule.
 """
 from __future__ import annotations
 
+import time
 from datetime import datetime
 
 from ...domain.entities import RawPosting
@@ -24,6 +25,7 @@ from .http import fetch_json, post_json
 _LIST_URL = "https://apply.workable.com/api/v3/accounts/{slug}/jobs"
 _DETAIL_URL = "https://apply.workable.com/api/v2/accounts/{slug}/jobs/{shortcode}"
 _JOB_URL = "https://apply.workable.com/{slug}/j/{shortcode}/"
+_DETAIL_DELAY = 0.3   # s between per-job detail GETs — Workable 429s bursty clients (seen live)
 
 
 def _location(item: dict) -> str:
@@ -56,7 +58,8 @@ def _description(slug: str, shortcode: str) -> str:
     return "\n".join(p for p in parts if p)
 
 
-def fetch(slug: str, company_name: str | None = None, max_jobs: int = 100) -> list[RawPosting]:
+def fetch(slug: str, company_name: str | None = None, max_jobs: int = 100,
+          detail_delay: float = _DETAIL_DELAY) -> list[RawPosting]:
     out: list[RawPosting] = []
     token = None
     while len(out) < max_jobs:
@@ -70,6 +73,8 @@ def fetch(slug: str, company_name: str | None = None, max_jobs: int = 100) -> li
             if not (shortcode and title):
                 continue
             url = _JOB_URL.format(slug=slug, shortcode=shortcode)
+            if detail_delay and out:
+                time.sleep(detail_delay)
             out.append(RawPosting(
                 source_kind="ats_api", external_id=shortcode, title=title,
                 company=company_name or slug, location=_location(item),
