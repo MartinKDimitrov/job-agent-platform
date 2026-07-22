@@ -10,7 +10,6 @@ the interactive "Search now" (the crawl delay makes it slow by design).
 """
 from __future__ import annotations
 
-import json
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -20,12 +19,12 @@ from ...domain.entities import RawPosting
 from ...domain.text import html_to_text
 from .base import register
 from .http import fetch_text
+from .jsonld import jobposting_ld as _jobposting_ld_shared, location_of as _location_of_shared
 
 SITEMAP_URL = "https://www.jobtiger.bg/sitemaps/sitemap_jobs_0.xml"
 CRAWL_DELAY = 30.0  # per robots.txt ClaudeBot Crawl-Delay
 
 _SM_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-_LDJSON_RE = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.S)
 _OG_RE = r'property="{tag}" content="([^"]*)"'
 
 
@@ -47,33 +46,9 @@ def fetch_sitemap() -> list[tuple[str, str]]:
     return out
 
 
-def _jobposting_ld(html: str) -> dict | None:
-    for m in _LDJSON_RE.finditer(html):
-        try:
-            data = json.loads(m.group(1))
-        except ValueError:
-            continue
-        items = data.get("@graph", [data]) if isinstance(data, dict) else data
-        for it in items if isinstance(items, list) else [items]:
-            if isinstance(it, dict) and it.get("@type") == "JobPosting":
-                return it
-    return None
-
-
-def _location_of(ld: dict) -> str:
-    loc = ld.get("jobLocation")
-    if isinstance(loc, list):
-        loc = loc[0] if loc else None
-    if isinstance(loc, dict):
-        addr = loc.get("address")
-        if isinstance(addr, dict):
-            locality = str(addr.get("addressLocality") or "")
-            country = str(addr.get("addressCountry") or "")
-            # some pages already end the locality with the country ("Plovdiv, Bulgaria")
-            if country and country.lower() not in locality.lower():
-                return ", ".join(p for p in (locality, country) if p)
-            return locality
-    return ""
+# JSON-LD parsing moved to the shared .jsonld module (also used by jsonld_careers)
+_jobposting_ld = _jobposting_ld_shared
+_location_of = _location_of_shared
 
 
 def _parse_job_page(url: str, html: str) -> RawPosting | None:
