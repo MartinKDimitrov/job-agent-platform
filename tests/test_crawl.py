@@ -81,6 +81,15 @@ def test_rerun_does_not_duplicate(monkeypatch):
         assert len(posts) == 1                       # deduped by content_hash
 
 
+def test_search_now_includes_remote_boards():
+    # Owner report: 'everything comes from dev.bg' with a remote profile — the one-request
+    # remote boards (RemoteOK, WWR) must run on every Search now, not just the daily job.
+    names = [n for n, _ in crawl.FAST_SOURCES]
+    assert "remoteok" in names and "wwr" in names and "dev_bg" in names
+    extra = [n for n, _ in crawl.EXTRA_SOURCES]
+    assert "remoteok" not in extra and "wwr" not in extra   # no double-fetch in the daily job
+
+
 # ---- route: Search now ----
 def test_search_now_button_flow(auth_client, monkeypatch):
     _mock(monkeypatch)

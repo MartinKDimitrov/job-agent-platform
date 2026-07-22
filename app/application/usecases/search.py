@@ -36,11 +36,12 @@ def _ashby_all() -> list[RawPosting]:
 
 
 # (name, callable) so per-source metrics are unambiguous — the adapters are all module-level
-# `fetch`, so we can't rely on __name__. Fast sources run on every "Search now" (kept snappy);
-# heavier aggregators/ATS run in the daily background job only.
-FAST_SOURCES = [("dev_bg", dev_bg.fetch)]
-EXTRA_SOURCES = [("remoteok", remoteok.fetch), ("wwr", wwr.fetch),
-                 ("lever", _lever_all), ("ashby", _ashby_all)]
+# `fetch`, so we can't rely on __name__. Fast sources run on every "Search now" (kept snappy):
+# remoteok/wwr are one HTTP request each and remote-only boards — exactly what a remote-pref
+# profile needs live (owner report: 'everything comes from dev.bg'). Lever/Ashby iterate a
+# company list (dozens of requests), so they stay in the daily background job.
+FAST_SOURCES = [("dev_bg", dev_bg.fetch), ("remoteok", remoteok.fetch), ("wwr", wwr.fetch)]
+EXTRA_SOURCES = [("lever", _lever_all), ("ashby", _ashby_all)]
 
 
 def _profile_search_terms(profile) -> list[str]:
@@ -107,9 +108,9 @@ def _relevant(rp: RawPosting, keywords: set[str]) -> bool:
 
 
 def fetch_all(boards=None, stats=None) -> list[RawPosting]:
-    """Fetch the fast sources once (Greenhouse boards + dev.bg RSS) — used by both "Search now"
-    and the daily job. Each source is error-isolated. Heavier aggregators (RemoteOK/WWR/Lever/
-    Ashby via fetch_extra) and crawl-delayed sources (JobTiger) are added by the daily job only."""
+    """Fetch the fast sources once (Greenhouse boards + dev.bg + RemoteOK + WWR) — used by both
+    "Search now" and the daily job. Each source is error-isolated. Company-list ATS crawls
+    (Lever/Ashby via fetch_extra) and crawl-delayed sources (JobTiger) are daily-job only."""
     boards = GREENHOUSE_BOARDS if boards is None else boards
     out: list[RawPosting] = []
     gh_count = 0
