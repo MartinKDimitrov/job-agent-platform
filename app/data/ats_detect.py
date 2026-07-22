@@ -49,6 +49,25 @@ def _probe_teamtailor(slug_or_url: str) -> bool:
     return bool(body) and "teamtailor.com/locations" in body
 
 
+def _probe_smartrecruiters(slug: str) -> bool:
+    j = fetch_json(f"https://api.smartrecruiters.com/v1/companies/{slug}/postings",
+                   params={"limit": 1})
+    return isinstance(j, dict) and "totalFound" in j
+
+
+def _probe_recruitee(slug: str) -> bool:
+    j = fetch_json(f"https://{slug}.recruitee.com/api/offers/", browser=True)
+    return isinstance(j, dict) and "offers" in j
+
+
+def _probe_personio(slug: str) -> bool:
+    for tld in ("de", "com"):
+        body = fetch_text(f"https://{slug}.jobs.personio.{tld}/xml")
+        if body and "<workzag-jobs" in body:
+            return True
+    return False
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
@@ -56,6 +75,9 @@ _PROBES: dict[str, callable] = {
     "ashby": _probe_ashby,
     "workable": _probe_workable,
     "teamtailor": _probe_teamtailor,
+    "smartrecruiters": _probe_smartrecruiters,
+    "recruitee": _probe_recruitee,
+    "personio": _probe_personio,
 }
 
 _CAREERS_PATTERNS = [
@@ -64,6 +86,9 @@ _CAREERS_PATTERNS = [
     ("lever", re.compile(r"jobs\.(?:eu\.)?lever\.co/([\w-]+)", re.I)),
     ("ashby", re.compile(r"jobs\.ashbyhq\.com/([\w-]+)", re.I)),
     ("workable", re.compile(r"apply\.workable\.com/(?!api/)([\w-]+)", re.I)),
+    ("smartrecruiters", re.compile(r"(?:jobs|careers)\.smartrecruiters\.com/([\w-]+)", re.I)),
+    ("recruitee", re.compile(r"([\w-]+)\.recruitee\.com", re.I)),
+    ("personio", re.compile(r"([\w-]+)\.jobs\.personio\.(?:de|com)", re.I)),
 ]
 
 
@@ -123,9 +148,13 @@ def find_careers_url(website: str) -> str:
         return ""
     html = fetch_text(website) or ""
     candidates = []
-    m = _CAREERS_HREF_RE.search(html)
-    if m:
-        candidates.append(urljoin(website + "/", m.group(1)))
+    for m in _CAREERS_HREF_RE.finditer(html):
+        href = m.group(1)
+        # static assets can contain 'career' in their bundle names (Kaufland's CSS did)
+        if re.search(r"\.(css|js|png|jpe?g|svg|woff2?|ico|pdf)(\?|$)", href, re.I):
+            continue
+        candidates.append(urljoin(website + "/", href))
+        break
     candidates += [website + p for p in _CAREERS_PATHS]
     for url in dict.fromkeys(candidates):
         page = fetch_text(url)

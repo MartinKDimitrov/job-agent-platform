@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from ...data.models import Posting, Match
 from ...data.sources import (greenhouse, dev_bg, remoteok, wwr, lever, ashby, workable,
-                             teamtailor, jsonld_careers)
+                             teamtailor, jsonld_careers, smartrecruiters, recruitee, personio)
 from ...domain.entities import RawPosting
 from ...data.ingest import ingest
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
@@ -168,7 +168,8 @@ def _registry_postings(db: Session, stats=None) -> list[RawPosting]:
     from ...data.company_repo import boards_for
     adapters = {"greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch,
                 "workable": workable.fetch, "teamtailor": teamtailor.fetch,
-                "jsonld": jsonld_careers.fetch}
+                "jsonld": jsonld_careers.fetch, "smartrecruiters": smartrecruiters.fetch,
+                "recruitee": recruitee.fetch, "personio": personio.fetch}
     out: list[RawPosting] = []
     for ats, fetch_fn in adapters.items():
         count = 0
