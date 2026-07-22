@@ -137,6 +137,32 @@ def test_targeted_results_survive_the_cap(monkeypatch):
         assert "Android Developer" in titles          # the targeted hit made it
 
 
+def test_concurrent_search_integrity_error_is_survived(monkeypatch):
+    # Two overlapping searches can collide on uq_profile_posting at commit time; the loser
+    # must roll back quietly (the winner already saved the matches), never a 500.
+    from sqlalchemy.exc import IntegrityError
+    _mock(monkeypatch)
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Android", min_match=0)
+        real_commit = db.commit
+        calls = {"n": 0}
+
+        def flaky_commit():
+            calls["n"] += 1
+            # the FINAL commit in run_search is the one that flushes pending matches — fail it
+            # once, mimicking the concurrent duplicate-key collision
+            if calls["n"] == 3:
+                db.rollback()
+                raise IntegrityError("stmt", {}, Exception("duplicate key uq_profile_posting"))
+            return real_commit()
+
+        monkeypatch.setattr(db, "commit", flaky_commit)
+        res = run_search(db, p)          # must not raise
+        assert res["fetched"] >= 1
+        # session remains usable afterwards
+        assert db.execute(select(Posting)).scalars().all() is not None
+
+
 def test_search_terms_from_target_roles():
     class P:
         target_roles = "Android Developer, Team Lead, QA"

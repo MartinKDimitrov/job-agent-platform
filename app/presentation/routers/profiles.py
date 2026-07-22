@@ -288,7 +288,11 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
     except Exception as e:  # noqa: BLE001 — degrade gracefully, still record the run
         err = str(e)
         res = {"fetched": 0, "added": 0, "filtered": 0, "matched": 0}
-    record_run(db, "search_now", stats, started, ok=not err, error=err)
+        db.rollback()   # a failed flush poisons the session; recover before record_run
+    try:
+        record_run(db, "search_now", stats, started, ok=not err, error=err)
+    except Exception:  # noqa: BLE001 — metrics are best-effort, never a 500 for the user
+        db.rollback()
     return redirect(f"/profiles/{p.id}?fetched={res['fetched']}&new={res['added']}"
                     f"&filtered={res['filtered']}&found={res['matched']}")
 

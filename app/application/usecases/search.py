@@ -12,6 +12,7 @@ import logging
 import re
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ...data.models import Posting, Match
@@ -199,7 +200,15 @@ def run_search(db: Session, profile, boards=None, limit: int = DEFAULT_LIMIT,
         scored += 1
         if sc >= profile.min_match:
             matched += 1
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # two overlapping searches for the same profile (double-click) can both pass the
+        # existing-Match check and collide on uq_profile_posting — the other run already saved
+        # equivalent matches, so losing this commit is harmless. Roll back so the session stays
+        # usable for the caller (record_run etc.).
+        db.rollback()
+        log.info("concurrent search for profile %s — matches saved by the other run", profile.id)
     if stats is not None:
         stats.add(added=ing["added"], deduped=ing["deduped"], filtered=filtered,
                   scored=scored, matched=matched)
