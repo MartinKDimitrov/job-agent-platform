@@ -153,6 +153,8 @@ class Company(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), unique=True)
     country: Mapped[str] = mapped_column(String(8), default="BG")     # BG / EU / ...
+    industry: Mapped[str] = mapped_column(String(64), default="")
+    website: Mapped[str] = mapped_column(Text, default="")
     careers_url: Mapped[str] = mapped_column(Text, default="")
     ats: Mapped[str] = mapped_column(String(32), default="")          # greenhouse/lever/ashby
     ats_slug: Mapped[str] = mapped_column(String(255), default="")

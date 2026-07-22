@@ -103,6 +103,37 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
     return None
 
 
+# hrefs that smell like a careers page, in both languages of our market
+_CAREERS_HREF_RE = re.compile(
+    r"""href=["']([^"']*(?:career|karier|kariera|jobs|rabota|jobads|vacanc|join-us|
+    работа|кариер)[^"']*)["']""", re.I | re.X)
+# fallback paths tried directly on the site when the homepage names no careers link
+_CAREERS_PATHS = ("/careers", "/career", "/kariera", "/karieri", "/jobs", "/en/careers",
+                  "/bg/kariera", "/rabota-pri-nas", "/za-nas/karieri")
+_CAREERS_SIGNAL_RE = re.compile(r"карие|career|jobs|работ|позици|vacanc|apply", re.I)
+
+
+def find_careers_url(website: str) -> str:
+    """Find a company's careers page starting from its main site: follow the first
+    careers-looking link on the homepage, else try the common paths. Returns '' when
+    nothing answers with a careers-looking page."""
+    from urllib.parse import urljoin
+    website = (website or "").strip().rstrip("/")
+    if not website:
+        return ""
+    html = fetch_text(website) or ""
+    candidates = []
+    m = _CAREERS_HREF_RE.search(html)
+    if m:
+        candidates.append(urljoin(website + "/", m.group(1)))
+    candidates += [website + p for p in _CAREERS_PATHS]
+    for url in dict.fromkeys(candidates):
+        page = fetch_text(url)
+        if page and _CAREERS_SIGNAL_RE.search(page):
+            return url
+    return ""
+
+
 def detect(name: str, careers_url: str = "") -> tuple[str, str] | None:
     """Return (ats, slug) for `name`, or None when no supported ATS is found.
     The careers page (when given) wins — it's authoritative; slug probing is the fallback."""

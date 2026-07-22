@@ -82,6 +82,43 @@ def test_careers_page_dead_board_falls_back_to_probing(monkeypatch):
     assert det.detect("Acme Corp", careers_url="https://acme.example/jobs") == ("greenhouse", "acmecorp")
 
 
+# ---- careers-page discovery ----
+def test_find_careers_url_from_homepage_link(monkeypatch):
+    def fake_text(url, params=None, timeout=15.0):
+        if url == "https://acme.example":
+            return '<nav><a href="/za-nas/karieri">Кариери</a></nav>'
+        if url == "https://acme.example/za-nas/karieri":
+            return "<h1>Кариери в Acme</h1><div>Отворени позиции</div>"
+        return None
+    monkeypatch.setattr(det, "fetch_text", fake_text)
+    assert det.find_careers_url("https://acme.example/") == "https://acme.example/za-nas/karieri"
+
+
+def test_find_careers_url_falls_back_to_common_paths(monkeypatch):
+    def fake_text(url, params=None, timeout=15.0):
+        if url == "https://acme.example/careers":
+            return "<h1>Careers at Acme</h1><p>Open jobs</p>"
+        if url == "https://acme.example":
+            return "<html>no nav link here</html>"
+        return None
+    monkeypatch.setattr(det, "fetch_text", fake_text)
+    assert det.find_careers_url("https://acme.example") == "https://acme.example/careers"
+
+
+def test_find_careers_url_none(monkeypatch):
+    monkeypatch.setattr(det, "fetch_text", lambda *a, **k: None)
+    assert det.find_careers_url("https://ghost.example") == ""
+    assert det.find_careers_url("") == ""
+
+
+def test_seed_list_shape():
+    from app.data.companies_bg import BG_COMPANIES, BG_COMPANY_NAMES
+    assert len(BG_COMPANIES) == len(BG_COMPANY_NAMES) == len({c["name"] for c in BG_COMPANIES})
+    assert all(c["industry"] for c in BG_COMPANIES)
+    assert all(c["website"].startswith("http") for c in BG_COMPANIES if c["website"])
+    assert len({c["industry"] for c in BG_COMPANIES}) >= 10   # genuinely multi-industry
+
+
 # ---- persistence ----
 def test_upsert_and_boards_for():
     with SessionLocal() as db:

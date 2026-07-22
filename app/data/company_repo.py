@@ -8,12 +8,15 @@ from .models import Company
 
 
 def upsert_company(db: Session, name: str, *, country: str = "BG", careers_url: str = "",
+                   industry: str = "", website: str = "",
                    ats: str = "", ats_slug: str = "", active: bool | None = None) -> Company:
     c = db.execute(select(Company).where(Company.name == name)).scalar_one_or_none()
     if c is None:
         c = Company(name=name)
         db.add(c)
     c.country = country or c.country
+    c.industry = industry or c.industry
+    c.website = website or c.website
     c.careers_url = careers_url or c.careers_url
     if ats:
         c.ats, c.ats_slug, c.detected_at = ats, ats_slug, datetime.utcnow()

@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from ..data.ats_detect import detect
 from ..data.company_repo import upsert_company
-from ..data.companies_bg import BG_COMPANIES
+from ..data.companies_bg import BG_COMPANY_NAMES
 from ..data.db import SessionLocal
 from ..data.models import Company
 
@@ -60,6 +60,6 @@ if __name__ == "__main__":
         country = sys.argv[sys.argv.index("--country") + 1]
         args = [a for a in args if a != country]
     force = "--force" in sys.argv
-    names = args or BG_COMPANIES
+    names = args or BG_COMPANY_NAMES
     print(f"probing {len(names)} companies ({country}, force={force})...")
     print(run(names, country=country, force=force))
