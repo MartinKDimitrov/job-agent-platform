@@ -73,6 +73,8 @@ _COPY = {
                 "against your profile, and email you only the new matches.",
         "q2_h": "Is it free?",
         "q2_p": "Yes — creating a profile and seeing your matches is free.",
+        "expanding": "We're expanding our sources for this profession — here are the latest "
+                     "openings we track meanwhile.",
     },
     "bg": {
         "jobs_title": "Работа — България и remote | Job Agent",
@@ -96,6 +98,8 @@ _COPY = {
                 "всяка обява спрямо профила ти и ти пращаме само новите съвпадения.",
         "q2_h": "Безплатно ли е?",
         "q2_p": "Да — създаването на профил и виждането на съвпаденията е безплатно.",
+        "expanding": "Разширяваме източниците си за тази професия — междувременно ето "
+                     "последните позиции, които следим.",
     },
 }
 
@@ -161,7 +165,17 @@ def _occupation_page(request: Request, db: Session, occupation_id: str, lang: st
     occ_name = occ["bg"] if lang == "bg" else occ["en"]
     count, sample = _matching_postings(db, occ)
 
-    sample_html = (f"<h2>{escape(c['sample'])}</h2>{_sample_rows(sample, c['cta_btn'])}"
+    # A public page saying "0 open positions" reads as broken (owner feedback). When the
+    # occupation-filtered set is empty, fall back to the latest openings across all professions
+    # with an honest "expanding sources" note — and lead with the TOTAL tracked count instead.
+    note = ""
+    if count == 0:
+        sample = db.execute(
+            select(Posting).order_by(Posting.first_seen.desc()).limit(6)).scalars().all()
+        count = len(db.execute(select(Posting.id)).all())
+        note = f"<p class='small'>{escape(c['expanding'])}</p>"
+
+    sample_html = (f"<h2>{escape(c['sample'])}</h2>{note}{_sample_rows(sample, c['cta_btn'])}"
                    if sample else "")
     # typical-skills card is for signed-in visitors only (owner decision)
     u = current_user(request, db)

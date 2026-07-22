@@ -83,8 +83,12 @@ def test_general_jobs_index_diverse_and_bilingual(client):
     assert "/bg/jobs</loc>" in sm
 
 
-def test_generic_role_word_does_not_match_everything(client):
-    # "QA Engineer" must not count a "Backend Engineer" posting via the generic word "engineer"
+def test_empty_profession_falls_back_to_recent_openings(client):
+    # "QA Engineer" must not count a "Backend Engineer" posting via the generic word "engineer",
+    # BUT a public page must never read "0 open positions" — it falls back to the latest
+    # openings across all professions with an honest "expanding sources" note.
     _seed_posting(title="Backend Engineer", company="Globex")
     b = client.get("/jobs/qa-manual").text
-    assert ">0</b>" in b
+    assert ">0</b>" not in b                            # never a bold zero on a public page
+    assert "expanding our sources" in b                 # honest note
+    assert "Backend Engineer" in b                      # recent openings shown as fallback
