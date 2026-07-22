@@ -133,6 +133,7 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
         f'<link rel="alternate" hreflang="{escape(code)}" href="{escape(url)}">'
         for code, url in (hreflang or []))
     content = body if full_bleed else f'<main class="wrap">{body}</main>'
+    loading_msg = "Зареждане…" if lang == "bg" else "Loading…"
     return f"""<!doctype html><html lang="{escape(lang)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)}</title>
 {seo}
@@ -144,4 +145,41 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
 <header><span class="brand"><a href="/">{icon('logo', 'logo')}Job Agent</a></span>
 <span class="right">{right}</span></header>
 {content}
-<footer class="site">Job Agent</footer></body></html>"""
+<footer class="site">Job Agent</footer>
+<div id="loading-overlay" role="status" aria-live="polite">
+<div class="spinner"></div><div class="msg">{loading_msg}</div></div>
+<script>
+(function () {{
+  // Ripple on buttons/tabs — pure visual, never blocks the click.
+  document.addEventListener("pointerdown", function (e) {{
+    var el = e.target.closest(".btn, .profile-tabs .tab");
+    if (!el) return;
+    var rect = el.getBoundingClientRect();
+    var d = Math.max(rect.width, rect.height);
+    var r = document.createElement("span");
+    r.className = "ripple";
+    r.style.width = r.style.height = d + "px";
+    r.style.left = (e.clientX - rect.left - d / 2) + "px";
+    r.style.top = (e.clientY - rect.top - d / 2) + "px";
+    el.appendChild(r);
+    setTimeout(function () {{ r.remove(); }}, 500);
+  }});
+
+  // Full-screen loading overlay for server round-trips: every same-tab form submit,
+  // plus profile-tab navigation (they trigger a fresh server fetch).
+  var overlay = document.getElementById("loading-overlay");
+  function show() {{ overlay.classList.add("show"); }}
+  document.addEventListener("submit", function (e) {{
+    var f = e.target;
+    if (f.target === "_blank" || f.hasAttribute("data-no-overlay")) return;
+    if (e.defaultPrevented) return;
+    show();
+  }}, true);
+  document.addEventListener("click", function (e) {{
+    var a = e.target.closest(".profile-tabs .tab[href]");
+    if (a && a.target !== "_blank" && !e.metaKey && !e.ctrlKey) show();
+  }});
+  // Back/forward restores from bfcache with the overlay still up — always hide on show.
+  window.addEventListener("pageshow", function () {{ overlay.classList.remove("show"); }});
+}})();
+</script></body></html>"""
