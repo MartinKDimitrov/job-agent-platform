@@ -444,9 +444,9 @@ tr:last-child td { border-bottom: 0; }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--muted);
+  color: var(--teal-ink);   /* third accent — matches the ✓/⚠ section-header treatment */
 }
-.gaps-detail .col.warn .subhead + ul li::marker { color: var(--muted); }
+.gaps-detail .col.warn .subhead + ul li::marker { color: var(--teal); }
 .gaps-detail .small { margin: 8px 0 0; }
 
 /* Match card: existing docs mini-row */
