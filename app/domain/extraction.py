@@ -24,11 +24,13 @@ _NICE_HEADERS = ("nice to have", "nice-to-have", "bonus", "would be a plus", "a 
                  "предимство", "ще бъде предимство", "бонус")
 _RESP_HEADERS = ("responsibilit", "what you'll do", "what you will do", "the role",
                  "role description", "duties", "day to day", "day-to-day",
+                 "the impact you", "your impact",
                  "отговорности", "какво ще правиш", "задължения")
 _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what you'll need",
                  "what you need", "what you'll bring", "what you bring", "your background",
                  "who you are", "we're looking for", "we are looking for",
-                 "looking for", "skills", "изисквания", "необходими", "какво очакваме",
+                 "looking for", "you'll need", "you will need", "to thrive",
+                 "skills", "изисквания", "необходими", "какво очакваме",
                  "търсим", "умения")
 # Whole sections that never contain a requirement — switch into "drop" and skip until the
 # next recognised header.
@@ -37,6 +39,8 @@ _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits",
                  "why work", "our mission", "diversity", "compensation", "salary", "join us",
                  "our team", "interview process", "hiring process", "application process",
                  "what's in it for you", "why you'll love", "what you get", "you will get",
+                 "tip from us", "goodies", "wellbeing", "health &", "growth &",
+                 "purpose & culture", "our culture", "time-off perks",
                  "за нас", "за компанията", "ползи", "защо да", "предлагаме", "нашата мисия",
                  "ние предлагаме", "ще получиш", "придобивки",
                  "процес на интервю", "процес на подбор")
@@ -57,12 +61,15 @@ _MONEY_RE = re.compile(r"[£$€]\s*\d|\d\s*(?:лв|BGN|EUR|USD|GBP)\b", re.I)
 # live on dev.bg postings: bulleted straight after the requirements) and are never candidate
 # requirements, whatever bucket they land in.
 _BENEFIT_RE = re.compile(
-    r"\b(annual leave|paid leave|days off|health insurance|dental|sports? card|multisport|"
-    r"transportation card|travel allowance|company shuttle|snacks|soft drinks|"
-    r"team building|office parties|chill-?out|foosball|referral program|"
-    r"salary review|performance evaluation|vouchers|corporate discounts|"
+    r"\b(annual leave|paid leave|days off|bonus days|health insurance|dental|sports? card|"
+    r"multisport|coolfit|transportation card|travel allowance|company shuttle|snacks|"
+    r"soft drinks|team building|office parties|chill-?out|foosball|referral program|"
+    r"salary review|performance evaluation|vouchers|corporate discounts|discounts on|"
     r"newborn|birthday|first-grader|modern office|working environment|sabbatical|"
-    r"only shortlisted|approved candidates|treated (?:strictly )?confidential|"
+    r"unlimited mobile|goodies|psychologist|learning platform|supportive team|"
+    r"tick every box|sending us your|up-to-date cv|annual bonus|"
+    r"only shortlisted|approved candidates|treated (?:strictly |with strict )?confidential|"
+    r"data protection legislation|"
     r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
     r"карта за транспорт|бонус за)\b", re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...").
@@ -77,6 +84,11 @@ _REQ_SIGNAL_RE = re.compile(
     r"\b(experience|proficien\w*|knowledge|familiar\w*|degree|fluen\w*|skills?|"
     r"ability|expertise|hands-on|track record|understanding|качеств|опит|познания|"
     r"умения|владеене|образование)\b|\d+\s*\+?\s*(?:years?|години)\s+(?:of|опит|в)\b", re.I)
+
+# Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
+# use U+2019 in "What's in It for you:" / "What you'll do:", which silently missed every
+# apostrophe-bearing header above and dumped the whole benefits section into the must bucket.
+_TYPOGRAPHY = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"', " ": " "})
 
 _MIN_LEN = 8      # shorter than this is a fragment, not a requirement
 _MAX_LEN = 180    # longer than this is prose; we try to split it into sentences
@@ -135,6 +147,7 @@ def extract_requirements(text: str, cap: int = 40) -> list[dict]:
     """Return a de-duplicated list of ``{"text", "kind"}`` requirement entries, capped."""
     if not text:
         return []
+    text = text.translate(_TYPOGRAPHY)
     current = "must"  # bucket for content seen before any recognised header
     seen_header = False
     out: list[dict] = []

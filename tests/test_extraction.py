@@ -175,6 +175,60 @@ def test_headerless_benefit_bullets_dropped():
     assert any("multi-threaded" in t for t in musts)
 
 
+# observed live: Yettel (via dev.bg) uses TYPOGRAPHIC apostrophes (U+2019) in its headers,
+# which missed every "what you'll..." pattern and dumped the whole perks section into musts
+YETTEL = """Whether you’re just starting out or bringing years of experience, at Yettel we believe the right role isn’t just about responsibilities — it’s about growth, impact, and being part of something meaningful.
+The impact you’ll make:
+The Android Software Developer will be responsible for designing, developing, and maintaining high-quality mobile applications for the Android platform.
+What you’ll do:
+Develop and maintain Android applications focused on quality and performance
+Write tests to ensure app stability and quality
+To thrive in this role, you’ll need:
+Mobile Development Expertise: Proven experience designing and building high-quality Android apps with Kotlin and Java.
+API Integration: Experience connecting mobile apps with backend services via RESTful APIs.
+What’s in It for you:
+Financial & Time-Off Perks
+21 days of paid leave (birthday included!)
+1-month sabbatical every 5 years
+Food & gift vouchers every month
+Mobile & Tech Goodies
+Unlimited mobile & internet
+Exclusive discounts on devices and accessories
+Health & Wellbeing
+Wellbeing support: in-house psychologist, sports at the office, expert talks
+Growth & Learning
+Top online learning platform access
+Supportive team and manager
+Purpose & Culture
+Do work that matters — we create real impact
+A Tip from Us:
+AI is great, but this part is all you! We encourage AI at work, but for your application, we’d love to hear your own thoughts, experiences, and motivation.
+You don’t need to tick every box! If this role excites you, go for it! We value potential over perfection.
+Join Yettel now by sending us your up-to-date CV.
+Only shortlisted applicants will be contacted with information about next steps of our selection process.
+Applicants are treated with strict confidentiality following the applicable personal data protection legislation."""
+
+
+def test_typographic_apostrophe_headers_recognised():
+    reqs = extract_requirements(YETTEL)
+    texts = " ".join(r["text"].lower() for r in reqs)
+    # nothing from the benefits/outreach tail may leak
+    for bad in ("goodies", "unlimited mobile", "discounts", "wellbeing", "psychologist",
+                "learning platform", "supportive team", "tip from us", "tick every box",
+                "sending us your", "shortlisted", "confidential", "vouchers", "sabbatical",
+                "paid leave", "real impact"):
+        assert bad not in texts, f"leaked: {bad}"
+    # requirements land in must, duties in resp — the sections were actually recognised
+    musts = [r["text"].lower() for r in reqs if r["kind"] == "must"]
+    resp = [r["text"].lower() for r in reqs if r["kind"] == "resp"]
+    assert any("kotlin and java" in t for t in musts)
+    assert any("restful apis" in t for t in musts)
+    assert any("develop and maintain android applications" in t for t in resp)
+    assert not any("marketing" in r["kind"] for r in reqs)  # sanity on kinds
+    # the opening marketing paragraph is gone too
+    assert "something meaningful" not in texts
+
+
 def test_we_are_looking_for_with_signal_survives():
     # marketing-shaped opener that actually states a qualification must survive
     reqs = extract_requirements("We are looking for someone with 5+ years of Kotlin experience.")
