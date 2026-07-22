@@ -57,6 +57,26 @@ def test_search_db_is_network_free(monkeypatch):
         assert res["pool"] == 1 and res["matched"] == 1
 
 
+def test_urlless_postings_never_create_new_matches():
+    # Staging grew demo rows without links ('Senior Android Engineer @ Acme', example.com) —
+    # a match card with no Apply button is noise, so link-less postings are skipped unless the
+    # profile ALREADY has a match (the owner pasted that JD via the manual form).
+    with SessionLocal() as db:
+        db.add(Posting(title="Android Engineer", company="Ghost", url="",
+                       description="Requirements:\n- Kotlin experience", content_hash="ghost1"))
+        db.commit()
+        p = _make_profile_row(db, target_roles="Android", skills="Kotlin")
+        res = crawl.search_db(db, p)
+        assert res["matched"] == 0
+        assert db.execute(select(Match)).first() is None
+        # but an existing match (manual paste flow) keeps refreshing
+        post = db.execute(select(Posting)).scalars().one()
+        db.add(Match(profile_id=p.id, posting_id=post.id, score=1)); db.commit()
+        res = crawl.search_db(db, p)
+        assert res["scored"] == 1
+        assert db.execute(select(Match)).scalars().one().score > 1
+
+
 def test_ingest_due_staleness():
     with SessionLocal() as db:
         assert ingest_due(db, 6)                              # never ran -> due

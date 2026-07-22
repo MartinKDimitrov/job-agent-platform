@@ -215,6 +215,11 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     posts = db.execute(select(Posting).where(Posting.id.in_(relevant_ids))
                        .order_by(Posting.first_seen.desc())).scalars() if relevant_ids else []
     for post in posts:
+        # A match the user can't act on is noise: postings without ANY link never create NEW
+        # matches (junk/manually-scaffolded rows). Existing matches (the owner pasted the JD
+        # via the manual form) still refresh their score.
+        if not (post.apply_url or post.url) and post.id not in existing_by_post:
+            continue
         ok, _reason = passes_hard_filters(profile, post.title, post.location, post.description)
         if not ok:
             filtered += 1
