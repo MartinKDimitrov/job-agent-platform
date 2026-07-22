@@ -2,6 +2,7 @@
 title+company samples only — never full postings or apply links publicly."""
 from app.data.db import SessionLocal
 from app.data.models import Posting
+from tests.conftest import register, make_profile  # noqa: F401 (auth_client fixture deps)
 
 
 def _seed_posting(title="Senior Android Engineer", company="Acme",
@@ -21,13 +22,15 @@ def test_jobs_index_is_public_and_lists_occupations(client):
 
 def test_profession_page_en(client):
     _seed_posting()
+    client.cookies.clear()
     b = client.get("/jobs/android-dev").text
     assert 'content="index, follow"' in b               # indexable
     assert "Android Developer jobs" in b                # localized H1
     assert ">1</b>" in b                                # live count
     assert "Senior Android Engineer" in b               # sample title
     assert "Acme" in b                                  # sample company
-    assert "Kotlin" in b                                # typical skills from the taxonomy
+    assert "Kotlin" not in b                            # skills card hidden for anonymous
+    assert "How does Job Agent work?" in b              # Q&A copy is general, not per-occupation
     assert 'hreflang="bg"' in b and 'hreflang="x-default"' in b
     assert "/register" in b                             # CTA
 
@@ -58,6 +61,26 @@ def test_sitemap_and_robots_cover_profession_pages(client):
     assert "/bg/jobs/android-dev</loc>" in sm
     robots = client.get("/robots.txt").text
     assert "Disallow: /jobs" not in robots              # public — crawling allowed
+
+
+def test_skills_card_visible_when_logged_in(auth_client):
+    client, _ = auth_client
+    b = client.get("/jobs/android-dev").text
+    assert "Kotlin" in b                                # typical skills shown to signed-in users
+
+
+def test_general_jobs_index_diverse_and_bilingual(client):
+    _seed_posting(title="Junior Accountant", company="FinCo")
+    _seed_posting(title="Senior Android Engineer", company="Acme")
+    client.cookies.clear()
+    b = client.get("/jobs").text
+    assert "Jobs — Bulgaria &amp; remote" in b          # general headline, not per-profession
+    assert "Junior Accountant" in b and "Senior Android Engineer" in b   # diverse recents
+    assert "How does Job Agent work?" in b
+    bg = client.get("/bg/jobs").text
+    assert "Работа — България и remote" in bg
+    sm = client.get("/sitemap.xml").text
+    assert "/bg/jobs</loc>" in sm
 
 
 def test_generic_role_word_does_not_match_everything(client):

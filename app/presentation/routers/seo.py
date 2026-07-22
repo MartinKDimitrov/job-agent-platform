@@ -16,7 +16,7 @@ PRIVATE_PREFIXES = ["/profiles", "/account", "/sources", "/documents", "/onboard
 from ...domain.taxonomy import OCCUPATIONS
 
 # Public, indexable URLs: both landing languages + the profession pages (EN + BG variants).
-PUBLIC_PATHS = (["/", "/bg", "/jobs"]
+PUBLIC_PATHS = (["/", "/bg", "/jobs", "/bg/jobs"]
                 + [f"/jobs/{o['id']}" for o in OCCUPATIONS]
                 + [f"/bg/jobs/{o['id']}" for o in OCCUPATIONS])
 
