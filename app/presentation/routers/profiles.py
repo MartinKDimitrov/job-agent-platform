@@ -144,11 +144,15 @@ def _gaps_block(covered, missing) -> str:
     nice_list = "".join(f"<li class='nice'>{escape(_req_text(r))}</li>" for r in nice_miss)
     cov_col = (f"<div class='col ok'><h5>✓ You cover</h5><ul>{cov_list}</ul></div>"
                if cov_list else "")
+    must_block = f"<ul>{miss_list}</ul>" if miss_list else ""
+    # nice-to-haves get their own subheading so the dimmer bullets are self-explanatory
+    nice_block = (f"<h6 class='subhead'>Considered an advantage</h6><ul>{nice_list}</ul>"
+                  if nice_list else "")
     return f"""<details class='gaps'>
     <summary><span class='chips'>{chips}</span>
     <span class='small'>tap for details</span></summary>
     <div class='gaps-detail'>{cov_col}
-    <div class='col warn'><h5>⚠ Not in your profile</h5><ul>{miss_list}{nice_list}</ul>
+    <div class='col warn'><h5>⚠ Not in your profile</h5>{must_block}{nice_block}
     <p class='small'>Be honest about these when applying — or add them to your profile if you
     have them.</p></div></div></details>"""
 

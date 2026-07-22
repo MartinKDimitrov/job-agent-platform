@@ -90,6 +90,33 @@ def test_gaps_collapsed_with_full_text_in_panel(auth_client):
     assert "Not in your profile" in body
 
 
+def test_nice_to_haves_get_advantage_subheading(auth_client):
+    # Dimmer nice-to-have bullets confused the owner — they now sit under their own
+    # "Considered an advantage" subheading, below the must-have gaps.
+    client, _ = auth_client
+    pid = make_profile(client, skills="Kotlin", min_match=0)
+    jd = ("Requirements:\n- Kotlin experience\n- Rust experience\n"
+          "Nice to have:\n- GraphQL experience")
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme", "description": jd})
+    body = client.get(f"/profiles/{pid}").text
+    assert "Considered an advantage" in body
+    assert "<li class='nice'>GraphQL experience</li>" in body
+    # musts stay in the main list, before the subheading
+    assert body.index("Rust experience") < body.index("Considered an advantage")
+
+
+def test_no_advantage_subheading_without_nice_gaps(auth_client):
+    client, _ = auth_client
+    pid = make_profile(client, skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin experience\n- Rust experience"})
+    body = client.get(f"/profiles/{pid}").text
+    assert "Not in your profile" in body
+    assert "Considered an advantage" not in body
+
+
 def test_min_match_clamped(auth_client):
     client, _ = auth_client
     pid = make_profile(client, min_match=0)
