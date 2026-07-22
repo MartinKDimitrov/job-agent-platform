@@ -229,6 +229,84 @@ def test_typographic_apostrophe_headers_recognised():
     assert "something meaningful" not in texts
 
 
+# observed live: Accedia (via dev.bg) — question-mark header, 46-char resp header, unrecognized
+# label lines ("The perfect candidate meets the following:"), "advantage" nice-section, and a
+# marketing opener whose only signal word is the weak "skills"
+ACCEDIA = """What are we looking for?
+We are expanding our team of Mobile software developers and we are looking for bright people who enjoy dynamics and are eager to learn and develop their professional skills. You will have the opportunity for fully remote or hybrid work (remote and in the office in Sofia)
+As a Kotlin Multiplatform Developer, you’ll be:
+Work in a supportive environment on projects for international clients.
+Continuously learn new technologies, take part in knowledge-sharing initiatives (e.g. internal trainings), and pursue professional certifications.
+Requirements
+The perfect candidate meets the following:
+Solid understanding of Swift or Kotlin.
+Experience building native UI for iOS (SwiftUI, UIKit) or Android (Jetpack Compose, XML).
+Fluency in English.
+The following will be considered an advantage:
+Experience with Kotlin Multiplatform (KMP).
+Familiarity with Objective-C and/or Java.
+What we offer:
+Career growth – We do 4 performance and salary reviews a year for every team member.
+About us
+Accedia is a premier European IT services company, specializing in technology consulting."""
+
+
+def test_accedia_sections_classified_correctly():
+    reqs = extract_requirements(ACCEDIA)
+    texts = " ".join(r["text"].lower() for r in reqs)
+    # marketing / labels / offer / about never leak
+    for bad in ("expanding our team", "bright people", "opportunity for fully remote",
+                "meets the following", "considered an advantage", "career growth",
+                "premier european", "salary review"):
+        assert bad not in texts, f"leaked: {bad}"
+    musts = [r["text"].lower() for r in reqs if r["kind"] == "must"]
+    nices = [r["text"].lower() for r in reqs if r["kind"] == "nice"]
+    resp = [r["text"].lower() for r in reqs if r["kind"] == "resp"]
+    assert any("swift or kotlin" in t for t in musts)
+    assert any("fluency in english" in t for t in musts)
+    assert any("multiplatform" in t for t in nices)        # advantage section -> nice
+    assert any("objective-c" in t for t in nices)
+    assert any("supportive environment" in t for t in resp)  # "you'll be:" -> resp
+    assert any("knowledge-sharing" in t for t in resp)
+
+
+# observed live: A1 Bulgaria — "Would you like to join us?" hits the join-us drop header, so
+# the FOLLOWING sections must be recognised or the whole JD is swallowed (0 requirements ->
+# pure-semantic 86% ring). Long colon lines ("...we'll also offer you:") are drop headers too.
+A1 = """Strength. Care. Growth
+Our wide portfolio has long past the telecom services, and we are now offering digital solutions to millions of corporate, public, and private customers.
+Would you like to join us?
+Metodi Mladenov is looking for a new team member.
+Join our team as an Android Developer and help build the next generation of the A1 XploreTV platform.
+Your daily routine would include:
+Build and maintain high-performance features for the A1 XploreTV Android TV application and custom STB launcher using Kotlin and Java.
+Participate in code reviews, architectural discussions, and hardware-specific optimizations.
+We’ll know you can make it if you have:
+2+ years of professional Android development experience (experience with Android TV, Fire OS, or STB platforms is a major plus).
+Strong proficiency in Kotlin is required, alongside a solid understanding of Java for handling core/legacy platform components.
+Fluent in English (written and spoken).
+Our gratitude for the job done will be eternal, but we’ll also offer you:
+Innovative technologies and platforms to “play” with.
+Attractive remuneration package.
+Numerous additional goodies, including, but not limited to free A1 services, discounts, health insurance and services, sports center, childcare, team and family events, etc.
+Sounds good? Apply now!
+Only shortlisted candidates will be contacted."""
+
+
+def test_a1_sections_survive_the_join_us_drop():
+    reqs = extract_requirements(A1)
+    texts = " ".join(r["text"].lower() for r in reqs)
+    for bad in ("innovative technologies", "remuneration", "goodies", "shortlisted",
+                "metodi", "join our team", "telecom"):
+        assert bad not in texts, f"leaked: {bad}"
+    musts = [r["text"].lower() for r in reqs if r["kind"] == "must"]
+    resp = [r["text"].lower() for r in reqs if r["kind"] == "resp"]
+    assert any("2+ years" in t for t in musts)              # requirements recovered
+    assert any("proficiency in kotlin" in t for t in musts)
+    assert any("fluent in english" in t for t in musts)
+    assert any("xploretv" in t for t in resp)               # duties classified as resp
+
+
 def test_we_are_looking_for_with_signal_survives():
     # marketing-shaped opener that actually states a qualification must survive
     reqs = extract_requirements("We are looking for someone with 5+ years of Kotlin experience.")

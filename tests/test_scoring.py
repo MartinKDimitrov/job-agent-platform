@@ -45,6 +45,20 @@ def test_no_requirements_keyword_only():
     assert sc == 0 and covered == [] and missing == []
 
 
+def test_no_requirements_semantic_only_is_capped():
+    # If the extractor found nothing, similarity alone must never claim above 60% —
+    # an "86% with 0 covered" ring destroys score credibility (observed on staging).
+    import app.domain.scoring as scoring
+    orig = scoring.embed
+    scoring.embed = lambda text: [1.0, 0.0]      # perfect similarity
+    try:
+        sc, covered, missing = score("kotlin", "kotlin role", [])
+        assert covered == [] and missing == []
+        assert sc <= 60
+    finally:
+        scoring.embed = orig
+
+
 def test_full_coverage_scores_high():
     reqs = [{"text": "Kotlin", "kind": "must"}, {"text": "Compose", "kind": "must"}]
     sc, _, missing = score("kotlin and compose", "role", reqs)

@@ -20,22 +20,25 @@ import re
 # (a phrase like "experience with X" is a requirement, not a header) — and header detection
 # only runs on non-bulleted lines anyway.
 _NICE_HEADERS = ("nice to have", "nice-to-have", "bonus", "would be a plus", "a plus",
-                 "preferred", "desirable", "advantageous",
+                 "preferred", "desirable", "advantage",
                  "предимство", "ще бъде предимство", "бонус")
 _RESP_HEADERS = ("responsibilit", "what you'll do", "what you will do", "the role",
                  "role description", "duties", "day to day", "day-to-day",
-                 "the impact you", "your impact",
+                 "the impact you", "your impact", "you'll be", "you will be",
+                 "daily routine",
                  "отговорности", "какво ще правиш", "задължения")
 _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what you'll need",
                  "what you need", "what you'll bring", "what you bring", "your background",
                  "who you are", "we're looking for", "we are looking for",
                  "looking for", "you'll need", "you will need", "to thrive",
+                 "the ideal candidate", "the perfect candidate", "if you have",
                  "skills", "изисквания", "необходими", "какво очакваме",
                  "търсим", "умения")
 # Whole sections that never contain a requirement — switch into "drop" and skip until the
 # next recognised header.
 _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits", "perks",
-                 "what we offer", "we offer", "our offer", "the company offers", "why join",
+                 "what we offer", "we offer", "our offer", "offer you", "the company offers",
+                 "why join",
                  "why work", "our mission", "diversity", "compensation", "salary", "join us",
                  "our team", "interview process", "hiring process", "application process",
                  "what's in it for you", "why you'll love", "what you get", "you will get",
@@ -52,8 +55,10 @@ _NOISE = ("equal opportunity", "eeo", "we are an equal", "apply now", "how to ap
           "fortune 100", "fortune 500", "кандидатствай")
 
 _BULLET = re.compile(r"^\s*(?:[-*•·▪●○◦→–—]|\d+[.)])\s+")
-# A header line is short-ish and label-like: no sentence punctuation, optional trailing colon.
-_HEADERISH = re.compile(r"^[^.!?]{1,45}:?\s*$")
+# A header line is short-ish and label-like: no sentence punctuation, optional trailing colon
+# or question mark ("What are we looking for?" is a header too). 60 chars fits real headers
+# like "As a Kotlin Multiplatform Developer, you'll be:" (observed on dev.bg).
+_HEADERISH = re.compile(r"^[^.!?]{1,60}[:?]?\s*$")
 
 # Salary / location-pipe lines ("📍 London / UK Remote | £85,000-£110,000 + Benefits").
 _MONEY_RE = re.compile(r"[£$€]\s*\d|\d\s*(?:лв|BGN|EUR|USD|GBP)\b", re.I)
@@ -72,9 +77,11 @@ _BENEFIT_RE = re.compile(
     r"data protection legislation|"
     r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
     r"карта за транспорт|бонус за)\b", re.I)
-# Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...").
+# Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...")
+# plus what-the-company-gives-you sentences ("You will have the opportunity for fully remote...").
 _MARKETING_RE = re.compile(
-    r"^(?:we['’]?re\b|we\s+are\b|we['’]?ve\b|we\s+want\b|we\s+build\b|our\s|join\s+us\b)"
+    r"^(?:we['’]?re\b|we\s+are\b|we['’]?ve\b|we\s+want\b|we\s+build\b|our\s|join\s+us\b"
+    r"|you(?:['’]ll|\s+will)?\s+(?:have|get|enjoy)\b)"
     r"|^[A-Z][\w.&-]*\s+is\s+(?:the|a|an|where)\b", re.I)
 # Signals that a sentence is genuinely about the candidate's qualifications — overrides the
 # marketing filter ("We are looking for someone with 5+ years..." must survive). Bare "years"
@@ -84,6 +91,13 @@ _REQ_SIGNAL_RE = re.compile(
     r"\b(experience|proficien\w*|knowledge|familiar\w*|degree|fluen\w*|skills?|"
     r"ability|expertise|hands-on|track record|understanding|качеств|опит|познания|"
     r"умения|владеене|образование)\b|\d+\s*\+?\s*(?:years?|години)\s+(?:of|опит|в)\b", re.I)
+# Overriding the marketing filter takes a STRONG qualification signal — bare "skills"/"ability"
+# is not enough ("...bright people eager to develop their professional skills" is narrative,
+# "We are looking for someone with 5+ years of Kotlin experience" is a requirement).
+_STRONG_SIGNAL_RE = re.compile(
+    r"\b(experience|proficien\w*|knowledge|degree|fluen\w*|expertise|track record|"
+    r"опит|познания|владеене|образование)\b"
+    r"|\d+\s*\+?\s*(?:years?|години)\s+(?:of|опит|в)\b", re.I)
 
 # Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
 # use U+2019 in "What's in It for you:" / "What you'll do:", which silently missed every
@@ -135,10 +149,9 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
         return False
     if _BENEFIT_RE.search(cleaned):
         return False
-    has_signal = bool(_REQ_SIGNAL_RE.search(cleaned))
-    if _MARKETING_RE.match(cleaned) and not has_signal:
+    if _MARKETING_RE.match(cleaned) and not _STRONG_SIGNAL_RE.search(cleaned):
         return False
-    if not seen_header and not is_bullet and not has_signal:
+    if not seen_header and not is_bullet and not _REQ_SIGNAL_RE.search(cleaned):
         return False
     return True
 
@@ -170,12 +183,19 @@ def extract_requirements(text: str, cap: int = 40) -> list[dict]:
         if not line:
             continue
         is_bullet = bool(_BULLET.match(line))
-        # Only unbulleted, label-like lines can be section headers.
-        if not is_bullet and _HEADERISH.match(line):
+        # Only unbulleted, label-like lines can be section headers. A colon-terminated line is
+        # label-like at any reasonable length ("Our gratitude for the job done will be eternal,
+        # but we'll also offer you:" is 74 chars and MUST hit the drop headers).
+        if not is_bullet and (_HEADERISH.match(line)
+                              or (line.endswith(":") and len(line) <= 100)):
             hdr = _match_header(line)
             if hdr:
                 current = hdr
                 seen_header = True
+                continue
+            # An UNRECOGNISED label line ending in ':' is still a label, never a requirement
+            # ("The perfect candidate meets the following:") — skip it, keep the bucket.
+            if line.endswith(":"):
                 continue
         if current == _DROP or _is_noise(line):
             continue

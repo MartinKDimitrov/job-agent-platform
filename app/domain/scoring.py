@@ -94,7 +94,12 @@ def score(profile_text: str, posting_text: str, requirements=None):
         # Coverage dominates the blend: E5 similarity gives a high baseline for ANY tech text,
         # which inflated scores like "45% with 1 of 26 requirements covered" (owner report).
         # Semantic similarity refines; requirement coverage decides.
-        base = sem_pct if kw_ratio is None else 0.35 * sem_pct + 0.65 * kw_ratio
+        if kw_ratio is None:
+            # No requirement evidence at all (extractor found nothing) — similarity alone
+            # never claims above 60%, else a "0 covered" card can show an 86% ring.
+            base = min(sem_pct, 0.60)
+        else:
+            base = 0.35 * sem_pct + 0.65 * kw_ratio
     else:
         base = kw_ratio if kw_ratio is not None else 0.0
 
