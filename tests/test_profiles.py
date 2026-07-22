@@ -158,6 +158,19 @@ def test_documents_and_account_pages_in_bulgarian(auth_client):
     assert "Delete my account" in client.get("/account").text
 
 
+def test_onboarding_page_in_bulgarian(auth_client):
+    client, _ = auth_client
+    client.get("/lang/bg")
+    body = client.get("/onboarding").text
+    assert "Бърз старт — създай профила си" in body
+    assert "Професия" in body and "Създай профил" in body
+    assert "Ние намираме подходящи обяви" in body      # mini-steps
+    client.get("/lang/en")
+    body = client.get("/onboarding").text
+    assert "Quick start — build your profile" in body
+    assert "Create profile" in body
+
+
 def test_min_match_clamped(auth_client):
     client, _ = auth_client
     pid = make_profile(client, min_match=0)

@@ -18,11 +18,15 @@ def test_taxonomy_shape():
 
 # ---- GET /onboarding ----
 def test_onboarding_page_lists_occupations_and_skills(auth_client):
+    # occupation labels follow the UI language: EN by default, BG with the lang cookie
     client, _ = auth_client
     body = client.get("/onboarding").text
-    assert "Android разработчик" in body        # occupation label (BG)
+    assert "Android Developer" in body            # occupation label (EN default)
     assert "Kotlin" in body                       # embedded skill (JS) / datalist
     assert "occupation" in body                   # the select
+    client.get("/lang/bg")
+    assert "Android разработчик" in client.get("/onboarding").text
+    client.get("/lang/en")
 
 def test_onboarding_requires_login(client):
     client.cookies.clear()

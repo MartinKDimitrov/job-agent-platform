@@ -125,6 +125,22 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "llm.no_key": " — no key needed", "llm.test_save": "Test &amp; save",
         "llm.err_unknown": "Unknown provider.",
         "llm.err_key_required": "This provider requires an API key.",
+        # ---- onboarding ----
+        "ob.head": "Quick start — build your profile",
+        "ob.sub": "Pick your profession and we'll suggest the typical skills.",
+        "ob.step1": "Tell us your skills", "ob.step2": "We find matching jobs",
+        "ob.step3": "You apply with one click", "ob.how": "How it works",
+        "ob.profession": "Profession", "ob.choose": "Choose…",
+        "ob.skills": "Skills", "ob.tap": "(tap to toggle)",
+        "ob.select_first": "Select a profession to see suggested skills.",
+        "ob.more": "Add more skills (comma-separated)",
+        "ob.create": "Create profile",
+        "ob.full_form": "Use the full form instead",
+        "ob.change_later": "you can change everything later.",
+        "ob.welcome": "Welcome 👋",
+        "ob.welcome_sub": ("No profiles yet — create your first search profile in about "
+                           "30 seconds."),
+        "ob.title": "Quick start — Job Agent",
     },
     "bg": {
         "nav.dashboard": "Табло", "nav.documents": "Документи", "nav.sources": "Източници",
@@ -241,6 +257,22 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "llm.no_key": " — не изисква ключ", "llm.test_save": "Тествай и запази",
         "llm.err_unknown": "Непознат доставчик.",
         "llm.err_key_required": "Този доставчик изисква API ключ.",
+        # ---- onboarding ----
+        "ob.head": "Бърз старт — създай профила си",
+        "ob.sub": "Избери професията си и ще ти предложим типичните умения.",
+        "ob.step1": "Опиши уменията си", "ob.step2": "Ние намираме подходящи обяви",
+        "ob.step3": "Кандидатстваш с един клик", "ob.how": "Как работи",
+        "ob.profession": "Професия", "ob.choose": "Избери…",
+        "ob.skills": "Умения", "ob.tap": "(докосни за избор)",
+        "ob.select_first": "Избери професия, за да видиш предложени умения.",
+        "ob.more": "Добави още умения (разделени със запетая)",
+        "ob.create": "Създай профил",
+        "ob.full_form": "Използвай пълната форма",
+        "ob.change_later": "можеш да промениш всичко по-късно.",
+        "ob.welcome": "Добре дошъл 👋",
+        "ob.welcome_sub": ("Все още нямаш профили — създай първия си профил за търсене "
+                           "за около 30 секунди."),
+        "ob.title": "Бърз старт — Job Agent",
     },
 }
 

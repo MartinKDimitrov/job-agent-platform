@@ -43,11 +43,12 @@ def home(request: Request, db: Session = Depends(get_db)):
                           .order_by(Profile.created_at)).scalars().all()
     if not profiles:
         # brand-new user: the empty state IS the onboarding — no navigation (one-page design)
-        from .onboarding import onboarding_card
-        body = ("<div class='page-head'><div class='title-block'><h1>Welcome 👋</h1>"
-                "<p class='sub'>No profiles yet — create your first search profile in about "
-                "30 seconds.</p></div></div>" + onboarding_card())
-        return page(body, u, title="Get started — Job Agent")
+        from .onboarding import onboarding_card, SWITCH_URLS
+        lang = current_lang(request)
+        body = (f"<div class='page-head'><div class='title-block'><h1>{escape(t('ob.welcome', lang))}</h1>"
+                f"<p class='sub'>{escape(t('ob.welcome_sub', lang))}</p></div></div>"
+                + onboarding_card(lang=lang))
+        return page(body, u, title=t("ob.title", lang), lang=lang, switch_urls=SWITCH_URLS)
     # one-page app: first profile active (tabs switch via /profiles/{id})
     from .profiles import render_app
     return render_app(db, u, profiles[0], profiles, lang=current_lang(request))
