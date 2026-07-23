@@ -32,6 +32,7 @@ _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what
                  "who you are", "we're looking for", "we are looking for",
                  "looking for", "you'll need", "you will need", "to thrive",
                  "the ideal candidate", "the perfect candidate", "if you have",
+                 "love to hear from you", "you should apply", "great fit", "about you",
                  "skills", "изисквания", "необходими", "какво очакваме",
                  "търсим", "умения")
 # Whole sections that never contain a requirement — switch into "drop" and skip until the
@@ -197,10 +198,15 @@ def extract_requirements(text: str, cap: int = 40) -> list[dict]:
         is_bullet = bool(_BULLET.match(line))
         # Only unbulleted, label-like lines can be section headers. A colon-terminated line is
         # label-like at any reasonable length ("Our gratitude for the job done will be eternal,
-        # but we'll also offer you:" is 74 chars and MUST hit the drop headers).
-        if not is_bullet and (_HEADERISH.match(line)
-                              or (line.endswith(":") and len(line) <= 100)):
-            hdr = _match_header(line)
+        # but we'll also offer you:" is 74 chars and MUST hit the drop headers). A trailing
+        # ellipsis is header punctuation too — "We'd love to hear from you if…" (Monzo) is
+        # the must header that classified an entire JD as responsibilities when missed.
+        # Only a true ELLIPSIS ('…'/'...') is header punctuation; a single trailing period
+        # stays sentence punctuation ("Metodi is looking for..." must not become a header).
+        hline = re.sub(r"(?:\.{3}|…)+\s*$", "", line).strip()
+        if not is_bullet and hline and (_HEADERISH.match(hline)
+                                        or (line.endswith(":") and len(line) <= 100)):
+            hdr = _match_header(hline)
             if hdr:
                 current = hdr
                 seen_header = True

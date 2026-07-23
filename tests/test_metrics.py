@@ -16,7 +16,7 @@ from tests.conftest import register, make_profile
 
 SAMPLE = [RawPosting("ats_api", "1", "Senior Android Engineer", "Acme", location="Remote",
                      url="https://x/1", apply_url="https://x/1",
-                     description="Requirements:\n- Kotlin")]
+                     description="Requirements:\n- Kotlin experience")]
 
 
 def _offline(monkeypatch):
@@ -79,7 +79,7 @@ def test_search_now_records_crawlrun(auth_client, monkeypatch):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Android Engineer", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post(f"/profiles/{pid}/search", follow_redirects=False)
     with SessionLocal() as db:
         run = db.execute(select(CrawlRun).where(CrawlRun.kind == "search_now")).scalars().one()

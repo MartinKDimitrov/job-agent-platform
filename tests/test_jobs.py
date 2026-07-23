@@ -17,7 +17,7 @@ SAMPLE = [
                url="https://x/1", apply_url="https://x/1",
                description="Requirements:\n- Kotlin and Compose"),
     RawPosting("ats_api", "2", "Android Engineering Manager", "Acme", location="Remote",
-               url="https://x/2", apply_url="https://x/2", description="Requirements:\n- Kotlin"),
+               url="https://x/2", apply_url="https://x/2", description="Requirements:\n- Kotlin experience"),
     RawPosting("ats_api", "3", "Sales Executive", "Acme", location="Remote",
                url="https://x/3", apply_url="https://x/3", description="Sales role"),
 ]

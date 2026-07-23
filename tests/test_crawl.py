@@ -68,7 +68,7 @@ def test_matches_created_and_apply_url_kept(monkeypatch):
 def test_cap_limits_scored(monkeypatch):
     big = [RawPosting("ats_api", str(i), f"Android Engineer {i}", "Acme",
                       url=f"https://x/{i}", apply_url=f"https://x/{i}",
-                      description="Requirements:\n- Kotlin") for i in range(100)]
+                      description="Requirements:\n- Kotlin experience") for i in range(100)]
     _mock(monkeypatch, sample=big)
     with SessionLocal() as db:
         p = _make_profile_row(db, target_roles="Android")
@@ -142,7 +142,7 @@ def test_targeted_results_survive_the_cap(monkeypatch):
     # must still be scored — targeted results are prepended, never lost to the cap race.
     big = [RawPosting("ats_api", str(i), f"Android Engineer {i}", "Acme",
                       url=f"https://x/{i}", apply_url=f"https://x/{i}",
-                      description="Requirements:\n- Kotlin") for i in range(100)]
+                      description="Requirements:\n- Kotlin experience") for i in range(100)]
     _mock(monkeypatch, sample=big)
     targeted_hit = RawPosting("rss", "t9", "Android Developer", "A1 Bulgaria", location="Remote",
                               url="https://dev.bg/j/a1", apply_url="https://dev.bg/j/a1",
@@ -241,7 +241,7 @@ def test_hard_filter_drops_management_role(monkeypatch):
     sample = [
         RawPosting("ats_api", "1", "Senior Android Engineer", "Acme", location="Remote",
                    url="https://x/1", apply_url="https://x/1",
-                   description="Requirements:\n- Kotlin"),
+                   description="Requirements:\n- Kotlin experience"),
         RawPosting("ats_api", "2", "Android Engineering Manager", "Acme", location="Remote",
                    url="https://x/2", apply_url="https://x/2",
                    description="Requirements:\n- Kotlin\n- Lead a team"),
@@ -268,3 +268,21 @@ def test_cannot_search_another_users_profile(client, monkeypatch):
     assert r.status_code == 303 and r.headers["location"].endswith("/")
     with SessionLocal() as db:
         assert db.execute(select(Match).where(Match.profile_id == pid)).first() is None
+
+
+def test_postings_without_must_or_nice_requirements_never_match(monkeypatch):
+    # Owner rule: no extracted requirements -> scoring is blind (sem-only, capped 60%) ->
+    # such postings stay out of the feed, and pre-existing matches for them get cleaned.
+    sample = [RawPosting("ats_api", "1", "Android Platform Engineer", "Acme", location="Remote",
+                         url="https://x/blind", apply_url="https://x/blind",
+                         description="The role:\nYou will maintain our Android platform.")]
+    _mock(monkeypatch, sample=sample)
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Android", min_match=0)
+        res = run_search(db, p)
+        assert res["matched"] == 0
+        post = db.execute(select(Posting)).scalars().one()
+        db.add(Match(profile_id=p.id, posting_id=post.id, score=60))   # pre-rule stale match
+        db.commit()
+        crawl.search_db(db, p)
+        assert db.execute(select(Match).where(Match.profile_id == p.id)).first() is None

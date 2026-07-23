@@ -45,7 +45,7 @@ def test_is_duplicate_requires_same_company():
 # ---- ingest integration ----
 def _rp(kind, url, title="Senior Android Engineer", company="Acme", apply_url=None):
     return RawPosting(kind, url, title, company, url=url, apply_url=apply_url or url,
-                      description="Requirements:\n- Kotlin")
+                      description="Requirements:\n- Kotlin experience")
 
 
 def test_cross_source_duplicate_lands_once():

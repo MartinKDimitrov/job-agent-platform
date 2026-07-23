@@ -50,7 +50,7 @@ def test_search_db_is_network_free(monkeypatch):
     monkeypatch.setattr(crawl, "PROFILE_SOURCES", [("boom", boom)])
     with SessionLocal() as db:
         db.add(Posting(title="Android Engineer", company="Acme", url="https://x/9",
-                       description="Requirements:\n- Kotlin", content_hash="h9"))
+                       description="Requirements:\n- Kotlin experience", content_hash="h9"))
         db.commit()
         p = _make_profile_row(db, target_roles="Android", skills="Kotlin")
         res = crawl.search_db(db, p)

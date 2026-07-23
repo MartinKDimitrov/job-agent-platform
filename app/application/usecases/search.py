@@ -351,6 +351,15 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             continue
         if post.requirements is None:
             post.requirements = extract_requirements(post.description or "")
+        # Owner rule: without a single must/nice requirement we'd be scoring blind (pure
+        # similarity, capped 60%) — such postings never enter the feed, and matches created
+        # before this rule (or before an extractor fix) get cleaned up like stale filters.
+        if not any(r.get("kind") in ("must", "nice") for r in post.requirements or []):
+            filtered += 1
+            stale = existing_by_post.pop(post.id, None)
+            if stale is not None:
+                db.delete(stale)
+            continue
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding)
         existing = existing_by_post.get(post.id)

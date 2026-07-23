@@ -80,7 +80,7 @@ def _setup_db(db, provider="genprov", with_config=True):
     db.add(u); db.commit(); db.refresh(u)
     p = Profile(user_id=u.id, name="P", target_roles="Android", skills="Kotlin",
                 english_level="B2", min_match=0)
-    post = Posting(title="Role", company="Acme", description="Requirements:\n- Kotlin",
+    post = Posting(title="Role", company="Acme", description="Requirements:\n- Kotlin experience",
                    requirements=[{"text": "Kotlin", "kind": "must"}],
                    apply_url="https://x/1", content_hash="h1")
     db.add_all([p, post]); db.commit(); db.refresh(p); db.refresh(post)
@@ -196,7 +196,7 @@ def test_generate_route_flow(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "routeprov", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -212,7 +212,7 @@ def test_generate_route_without_key_shows_error(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
     r = client.post(f"/profiles/{pid}/postings/{post_id}/generate",
@@ -228,7 +228,7 @@ def test_print_view_renders_a4_template(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "printprov", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -253,7 +253,7 @@ def test_print_view_is_owner_only(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "printown", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -270,7 +270,7 @@ def test_print_view_escapes_content(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "<script>alert(1)</script>", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "escprov", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -287,7 +287,7 @@ def test_docs_row_shows_only_latest_per_kind_lang(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "dedupprov", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -304,7 +304,7 @@ def test_document_edit_and_save(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "editprov", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -325,7 +325,7 @@ def test_document_save_is_owner_only(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "editown", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()
@@ -347,7 +347,7 @@ def test_document_view_is_owner_only(auth_client):
     pid = make_profile(client, target_roles="Android", skills="Kotlin", min_match=0)
     client.post(f"/profiles/{pid}/postings",
                 data={"title": "Role", "company": "Acme",
-                      "description": "Requirements:\n- Kotlin"})
+                      "description": "Requirements:\n- Kotlin experience"})
     client.post("/account/llm", data={"provider": "ownprov", "api_key": "sk-x"})
     with SessionLocal() as db:
         post_id = db.execute(select(Posting.id)).scalar_one()

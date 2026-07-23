@@ -314,6 +314,28 @@ def test_a1_sections_survive_the_join_us_drop():
     assert not any("team player" in t or "mindset" in t for t in musts)
 
 
+# observed live: Monzo Platform JD — the must header is "We'd love to hear from you if…"
+# (trailing ELLIPSIS + a phrasing missing from the dictionary), so ALL 20 items landed as
+# resp -> zero scoring weight -> blind 60% card (owner report)
+MONZO_PLATFORM = """The role:
+Working hands-on with our Kubernetes clusters, AWS infrastructure, and configuration.
+Designing and implementing backend services (APIs, controllers, etc.) that make our platform tick.
+We’d love to hear from you if…
+You have experience with Kubernetes and AWS in production.
+You have strong Go or similar backend language experience.
+You care deeply about reliability and observability."""
+
+
+def test_ellipsis_must_header_recognised():
+    reqs = extract_requirements(MONZO_PLATFORM)
+    musts = [r["text"].lower() for r in reqs if r["kind"] == "must"]
+    resp = [r["text"].lower() for r in reqs if r["kind"] == "resp"]
+    assert any("kubernetes and aws in production" in t for t in musts)
+    assert any("go or similar" in t for t in musts)
+    assert any("kubernetes clusters" in t for t in resp)     # duties stay resp
+    assert len(musts) == 3
+
+
 def test_we_are_looking_for_with_signal_survives():
     # marketing-shaped opener that actually states a qualification must survive
     reqs = extract_requirements("We are looking for someone with 5+ years of Kotlin experience.")
