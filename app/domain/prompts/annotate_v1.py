@@ -54,11 +54,13 @@ def build_annotate_prompt(title: str, requirements: list[dict]) -> tuple[str, st
 def parse_annotate_response(text: str, n_requirements: int) -> dict[int, tuple[list[str], int]] | None:
     """{0-based index: (skills, weight)} or None when unusable. Partial answers are fine —
     unlisted requirements simply stay un-annotated."""
-    m = re.search(r"\{.*\}", text or "", re.S)
+    cleaned = re.sub(r"```(?:json)?", "", text or "")          # small models love code fences
+    m = re.search(r"\{.*\}", cleaned, re.S)
     if not m:
         return None
+    raw = re.sub(r",\s*([}\]])", r"\1", m.group(0))            # ...and trailing commas
     try:
-        data = json.loads(m.group(0))
+        data = json.loads(raw)
     except ValueError:
         return None
     items = data.get("annotations")

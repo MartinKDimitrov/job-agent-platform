@@ -84,7 +84,7 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 0.3
     llm = _platform_llm()
     if not budget or llm is None:
         return {"annotated": 0, "failed": 0}
-    annotated = failed = 0
+    annotated = failed = rate_limited = 0
     rows = db.execute(select(Posting).where(Posting.is_live.is_(True))
                       .order_by(Posting.first_seen.desc())).scalars()
     for post in rows:
@@ -104,11 +104,21 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 0.3
             annotate_posting(db, post, llm)
             annotated += 1
         except _RateLimited:
+            rate_limited += 1
             failed += 1
-            if failed > 3:               # persistent limiting — yield, the next cycle continues
+            if rate_limited > 3:         # persistent limiting — yield, the next cycle continues
                 break
             sleep(rate_limit_wait)       # one-off burst: wait out the window and keep going
         except _Failed:
+            # the fast model sometimes mangles JSON — one retry on the bigger default model
+            big = (llm[0], llm[1], settings.server_llm_model)
+            if big[2] and big[2] != llm[2]:
+                try:
+                    annotate_posting(db, post, big)
+                    annotated += 1
+                    continue
+                except _Failed:
+                    pass
             failed += 1
     db.commit()
     return {"annotated": annotated, "failed": failed}

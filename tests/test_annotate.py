@@ -151,3 +151,8 @@ def test_score_with_annotated_requirements():
     sc_xml, _, _ = score("Android · XML", "role", reqs)
     assert [c["text"] for c in cov] == ["Kotlin experience"]
     assert sc_kotlin > sc_xml                                  # ★★★★★ beats ★
+
+
+def test_parse_tolerates_fences_and_trailing_commas():
+    fenced = '```json\n{"annotations": [{"n": 1, "skills": ["kotlin"], "weight": 4},]}\n```'
+    assert parse_annotate_response(fenced, 1) == {0: (["kotlin"], 4)}
