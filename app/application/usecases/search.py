@@ -104,10 +104,20 @@ def _arbeitsagentur_targeted(terms: list[str]) -> list[RawPosting]:
     return arbeitsagentur.fetch(search_terms=terms)
 
 
+def _francetravail_targeted(terms: list[str]) -> list[RawPosting]:
+    """France Travail via the free OAuth API — third EU board adapter. Silent no-op until
+    FRANCETRAVAIL_CLIENT_ID/SECRET land in .env (register at francetravail.io)."""
+    if not terms:
+        return []
+    from ...data.sources import francetravail
+    return francetravail.fetch(search_terms=terms)
+
+
 # Role-term-targeted sources: each receives the DEDUPLICATED term list for the whole run.
 PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted),
                    ("jobtech_targeted", _jobtech_targeted),
-                   ("arbeitsagentur_targeted", _arbeitsagentur_targeted)]
+                   ("arbeitsagentur_targeted", _arbeitsagentur_targeted),
+                   ("francetravail_targeted", _francetravail_targeted)]
 
 
 def _safe(name: str, fn, stats=None) -> list[RawPosting]:

@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     # beats the big default (groq: llama-3.1-8b-instant). Empty = the server default model.
     annotate_model: str = ""
 
+    # France Travail (Pôle Emploi) Offres d'emploi API — free OAuth2 client credentials
+    # from francetravail.io. Empty = the adapter is a silent no-op.
+    francetravail_client_id: str = ""
+    francetravail_client_secret: str = ""
+
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).
     site_url: str = "http://localhost:8001"

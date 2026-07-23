@@ -19,7 +19,8 @@ another (hard rule). Live platforms:
 | `jobtiger.py` | sitemap+HTML | `ClaudeBot Crawl-Delay: 30` honoured; daily job only |
 | `remoteok.py` / `wwr.py` | JSON / RSS | global remote boards; run on every ingest |
 | `jobtech.py` | open API | Platsbanken (Sweden, Arbetsförmedlingen) — fully open JobSearch API, no key; TARGETED like dev.bg: one search per unique profile role term per cycle (full dump ≈100k postings). First adapter of the EU-boards plan |
-| `arbeitsagentur.py` | public API | Bundesagentur für Arbeit (Germany) Jobsuche API — public client key `jobboerse-jobsuche` (what the official app sends, not a secret); search (v4/jobs) + PACED per-posting details (v4/jobdetails, the v2 of older writeups is 403 now); `externeUrl` wins as apply link; description-less postings skipped (can't score). Second EU-boards adapter (next: France Travail, EURES) |
+| `arbeitsagentur.py` | public API | Bundesagentur für Arbeit (Germany) Jobsuche API — public client key `jobboerse-jobsuche` (what the official app sends, not a secret); search (v4/jobs) + PACED per-posting details (v4/jobdetails, the v2 of older writeups is 403 now); `externeUrl` wins as apply link; description-less postings skipped (can't score). Second EU-boards adapter |
+| `francetravail.py` | OAuth API | France Travail (ex Pôle Emploi) Offres d'emploi v2 — free but OAuth client credentials from francetravail.io required (FRANCETRAVAIL_CLIENT_ID/SECRET in .env; silent no-op without). In-process token cache (~25 min expiry); `origineOffre.urlOrigine` wins as apply link. Third EU-boards adapter (next: EURES) |
 
 **Company registry** (`companies` table: name, industry, website, careers_url, ats/slug,
 active — 165+ real BG employers over 19 industries): one adapter serves every company on the
