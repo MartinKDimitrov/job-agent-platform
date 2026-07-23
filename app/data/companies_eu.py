@@ -260,6 +260,15 @@ EU_COMPANIES: list[dict] = [
     {"name": "Gebr. Heinemann", "country": "DE", "industry": "Retail", "website": "https://www.gebr-heinemann.de"},
     {"name": "Plansee Group", "country": "AT", "industry": "Manufacturing", "website": "https://www.plansee-group.com"},
     {"name": "BSB", "country": "GR", "industry": "Retail", "website": "https://www.bsbfashion.com"},
+    # --- batch 9 groups (owner review #8, 2026-07-24) ---
+    {"name": "Zimmer Group", "country": "DE", "industry": "Manufacturing", "website": "https://www.zimmer-group.com"},
+    {"name": "Rail Cargo Group", "country": "AT", "industry": "Logistics", "website": "https://www.railcargo.com"},
+    {"name": "Veolia", "country": "FR", "industry": "Utilities", "website": "https://www.veolia.com"},
+    {"name": "AkzoNobel", "country": "NL", "industry": "Manufacturing", "website": "https://www.akzonobel.com"},
+    {"name": "Fraport", "country": "DE", "industry": "Aerospace", "website": "https://www.fraport.com"},
+    {"name": "Groupe Roullier", "country": "FR", "industry": "Agriculture", "website": "https://www.roullier.com"},
+    {"name": "Pluxee", "country": "FR", "industry": "Services", "website": "https://www.pluxee.com"},
+    {"name": "Groupama", "country": "FR", "industry": "Insurance", "website": "https://www.groupama.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})
