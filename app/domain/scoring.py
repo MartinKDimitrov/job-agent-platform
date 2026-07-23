@@ -62,10 +62,22 @@ def req_weight(r: dict) -> float:
     return base * (min(5, max(1, w)) / 3.0)
 
 
+# Tokens shared by EVERY tech profile and EVERY tech requirement — a match on one of these
+# proves nothing ('5+ years of software development' must not be "covered" by a profile
+# that merely contains 'years' and 'software'). Caught by the eval set: a Python profile
+# scored 100% coverage on 'Senior Android Developer' through exactly these words.
+_GENERIC_REQ_TOKENS = {
+    "years", "year", "experience", "experienced", "software", "development", "developer",
+    "engineer", "engineering", "team", "teams", "working", "work", "knowledge", "skills",
+    "skill", "strong", "good", "excellent", "solid", "ability", "understanding", "using",
+    "със", "опит", "години", "умения", "познания", "работа", "the", "and", "with",
+}
+
+
 def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None = None) -> bool:
     """Is this requirement covered by the profile? ANNOTATED requirements match
     deterministically — any canonical skill present in the profile text (word-boundary);
-    un-annotated ones fall back to whole-token overlap."""
+    un-annotated ones fall back to whole-token overlap minus generic tokens."""
     skills = r.get("skills")
     if skills:
         low = (profile_text or "").lower()
@@ -74,8 +86,8 @@ def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None 
                 return True
         return False
     toks = profile_tokens if profile_tokens is not None else _tokens(profile_text)
-    rtok = _tokens(r.get("text", ""))
-    return bool(rtok and rtok & toks)
+    rtok = _tokens(r.get("text", "")) - _GENERIC_REQ_TOKENS
+    return bool(rtok and rtok & (toks - _GENERIC_REQ_TOKENS))
 
 
 def _norm_reqs(requirements) -> list[dict]:

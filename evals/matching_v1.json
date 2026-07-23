@@ -1,0 +1,736 @@
+{
+ "version": "matching-eval-v1",
+ "profiles": {
+  "p1_android": {
+   "name": "Android Developer",
+   "target_roles": "Android Developer",
+   "skills": "Kotlin, Java, Jetpack Compose, Coroutines, MVVM, Android SDK, REST API, Git, Gradle",
+   "experience": "8 years native Android development, apps with millions of users"
+  },
+  "p2_ml": {
+   "name": "Machine Learning Engineer",
+   "target_roles": "Machine Learning Engineer, AI Engineer",
+   "skills": "Python, PyTorch, scikit-learn, LLM, RAG, MLOps, SQL, Docker",
+   "experience": "5 years building and deploying ML models and LLM applications"
+  },
+  "p3_backend": {
+   "name": "Backend Developer",
+   "target_roles": "Backend Developer, Software Engineer",
+   "skills": "Python, Go, PostgreSQL, Kubernetes, AWS, REST API, microservices",
+   "experience": "6 years backend services and distributed systems"
+  }
+ },
+ "postings": [
+  {
+   "id": 38,
+   "title": "Android Software Developer",
+   "company": "Yettel",
+   "location": "",
+   "description": "Whether you’re just starting out or bringing years of experience, at Yettel we believe the right role isn’t just about responsibilities — it’s about growth, impact, and being part of something meaningful.\nTake a look — this might be the opportunity you’ve been waiting for!\nThe impact you’ll make:\nThe Android Software Developer will be responsible for designing, developing, and maintaining high-quality mobile applications for the Android platform. You will work closely with cross-functional teams to create intuitive, feature-rich, and performant mobile experiences. The ideal candidate will have a solid foundation in Android development, an eye for detail, and a passion for delivering top-tier applications.\nWhat you’ll do:\nDevelop and maintain Android applications focused on quality and performance\nCollaborate with UI/UX designers and backend developers for seamless integration\nParticipate in code reviews and Agile ceremonies to ensure smooth delivery\nWrite tests to ensure app stability and quality\nManage app deployment and version control for the Google Play Store\nTroubleshoot and optimize app performance\nStay updated on Android development trends and suggest improvements\nTo thrive in this role, you’ll need:\nMobile Development Expertise: Proven experience designing and building high-quality Android apps with Kotlin and Java.\nPlatform Proficiency: Skilled in native Android development using Android Studio and related tools.\nUI/UX Implementation: Strong understanding of Android design principles and ability to create intuitive interfaces.\nAPI Integration: Experience connecting mobile apps with backend services via RESTful APIs.\nTesting & Quality Assurance: Proficient with Android testing frameworks to ensure app stability.\nVersion Control & Collaboration: Comfortable working with Git and collaborating across teams.\nApp Deployment: Knowledgeable about deploying apps to the Google Play Store.\nCommunication & Teamwork: Effective communicator and team player across departments.\nOptimization: Focused on optimizing apps for speed, scalability, and reliability.\nWhat’s in It for you:\nFinancial & Time-Off Perks\n21 days of paid leave (birthday included!)\n+4 bonus days if you use all your time off\n1-month sabbatical every 5 years\nAnnual bonus based on performance\nFood & gift vouchers every month\nTravel allowance\nMobile & Tech Goodies\nUnlimited mobile & internet\nExclusive discounts on devices and accessories\nHealth & Wellbeing\nPremium health insurance\nWellbeing support: in-house psychologist, sports at the office, expert talks\nDiscounted Multisport or Coolfit cards\nGrowth & Learning\nTop online learning platform access\nSupportive team and manager\nYour ideas shape what we build\nPurpose & Culture\nDo work that matters — we create real impact\nWe’re serious about sustainability and social responsibility\nA Tip from Us:\nAI is great, but this part is all you! We encourage AI at work, but for your application, we’d love to hear your own thoughts, experiences, and motivation.\nYou don’t need to tick every box! If this role excites you, go for it! We value potential over perfection.\nJoin Yettel now by sending us your up-to-date CV.\nOnly shortlisted applicants will be contacted with information about next steps of our selection process.\nApplicants are treated with strict confidentiality following the applicable personal data protection legislation."
+  },
+  {
+   "id": 33,
+   "title": "Android Developer",
+   "company": "A1 Bulgaria",
+   "location": "",
+   "description": "Strength. Care. Growth\nDid you know that A1 Bulgaria is working on international projects as well?\nOur wide portfolio has long past the telecom services, and we are now offering digital solutions to millions of corporate, public, and private customers.\nState-of-the-art technology, the latest innovations, and extremely talented professionals in various areas help us deliver the best-in-class products, services, and customer experience.\nYou’ll know A1 Bulgaria is the right place for you if you are driven by:\nOpportunities to learn and build your career.\nMeaningful work in a stable and fast-paced company.\nDiversity of people, projects, and platforms.\nA supportive, fun, and inspiring place to work.\nWould you like to join us?\nMetodi Mladenov ​is looking for a new team member.\nJoin our team as an Android Developer and help build the next generation of the A1 XploreTV platform, developing high-performance Android TV and Set-Top Box applications for millions of users.\nYour daily routine would include:\nBuild and maintain high-performance features for the A1 XploreTV Android TV application and custom STB launcher using Kotlin and Java.\nDrive the migration of legacy views to Jetpack Compose, ensuring smooth animations and rendering optimized for TV hardware and D-pad navigation.\nLeverage Kotlin Coroutines and Flow for efficient, asynchronous state management and fluid user experiences.\nImplement robust data-fetching layers using GraphQL to communicate with our high-scale backend services\nWork closely within an agile Android team collaborating also with  QA automation engineers, and Business Analysts to deliver clean, maintainable code.\nParticipate in code reviews, architectural discussions, and hardware-specific optimizations (including memory management and lazy loading for large content catalogs).\nWe’ll know you can make it if you have:\n2+ years of professional Android development experience (experience with Android TV, Fire OS, or STB platforms is a major plus).\nStrong proficiency in Kotlin is required, alongside a solid understanding of Java for handling core/legacy platform components.\nHands-on experience with Jetpack Compose (or a strong desire to master it) and standard Android UI XML/View groups.\nPractical experience working with GraphQL APIs (Apollo client) and handling complex data schemas.\nFamiliarity with modern architectural patterns (MVVM, MVI) and dependency injection (Hilt/Dagger).\nTeam player with strong communication skills who enjoys collaborative problem-solving.\nPerformance-oriented mindset—you care about frames-per-second, memory footprints, and network efficiency.\nFluent in English (written and spoken).\nOur gratitude for the job done will be eternal, but we’ll also offer you:\nInnovative technologies and platforms to “play” with.\nModern working environment for your comfort.\nFriendly, ambitious, and motivated teammates to support each other.\nThousands of online and in-person learning opportunities to grow.\nChallenging assignments and career development opportunities in multinational environment.\nAttractive remuneration package.\nFlexible working schedule and opportunity for home office.\nNumerous additional goodies, including, but not limited to free A1 services, discounts, health insurance and services, sports center, childcare, team and family events, etc.\nNot sure yet? See us in action in our A1 Blog.\nSounds good? Apply now!\nOnly shortlisted candidates will be contacted."
+  },
+  {
+   "id": 655,
+   "title": "Senior Android Developer",
+   "company": "People And Places",
+   "location": "",
+   "description": "Create your own future with inspiring people in the right place!\nWe are looking for developers for our partners – excellent IT product companies and best employers.\nPeople and Places is a fast-growing company in the consultancy and IT recruitment area. We are supporting Talent growth for one of the most exciting technology brands.\nOur company provides job opportunities in the most valuable software companies in Bulgaria and leaves a massive impact on their business journey.\nOur focus is on consultancy, people development, and recruitment in the software business field. We create powerful connections between the talent and best organizations.\nContinue your Career journey with People and Places, a preferred partner for many excellent techies.\nIn connection with expanding the teams of our partners, we are looking for a Senior Android Developer!\nAbout the role:\nWhile Android development will be the primary focus of this role, the successful candidate will also contribute to the client’s Angular-based web applications. This position involves both Android and web development, making it ideal for an engineer who enjoys working across platforms and expanding their technical expertise.\nRequirements:\n– 5+ years of experience in Android Development\n– Experience with Kotlin and knowledge of Java\n– Android SDK, Jetpack components, and modern Android architecture\n– Good command of English\nConsidered a plus:\n– Willingness and ability to contribute to Angular-based web applications\nBenefits:\n– Excellent salary ranges depending on experience\n– Modern technologies\n– Working on an interesting product with a mission\n– Flexible work time\n– Flexible hybrid work with a great team in Plovdiv, Bulgaria\n– Last but not least: chance to work for one of the leading industry employers!\nPlease send your CV in English if you recognize yourself in the role.\nAll applications will be treated as strictly confidential.\nOnly short-listed candidates will be contacted.\nPeople and Places is a licensed Recruitment Consultancy Company from MLSP with permanent license N 2645"
+  },
+  {
+   "id": 36,
+   "title": "Senior Android Developer",
+   "company": "Recruit Experts",
+   "location": "",
+   "description": "We are looking for an Android Developer for an exciting opportunity with a client in the fintech industry, working on innovative solutions to enhance customer experiences and streamline financial services. This role offers the chance to contribute to cutting-edge technology projects in a fast-paced, impactful environment.\nAs an Android Developer, you will develop innovative Android applications. A key contributor to mobile design and architecture to deliver outstanding apps. We expect engineers to have the desire of curiosity, passion, and a driven, enthusiastic mentality, to be proficient in algorithms, problem-solving, and crafting scalable, resilient, and crash-free Android apps. Effective communication is an attribute we care deeply about, as an engineer you and your team will move in a fast-paced engineering environment to achieve outstanding results.\nDuties and responsibilities:\n– Architect, design, build, and deliver world-class Android applications using Kotlin and Java\n– Collaborate with engineers, product owners, and other colleagues to seek exciting and results-oriented problems for delivering value\n– Write clear, maintainable code that will scale\n– Learn, grow, and mentor other engineers through code reviews and pair programming to accelerate their technical mastery\n– Challenge team processes, looking for ways to improve them\n– Assist in the development and drive of good practices within the team, making an impact on the whole team\nQualifications, Skills, and Experience:\n– 5+ years of experience in software development\n– 4+ years of working experience in Android development using Kotlin and Java\n– Architect, design, build, and deliver world-class Android applications\n– Collaborate with engineers, product owners, and other colleagues to seek exciting and results-oriented problems for delivering value\n– Write clear, maintainable code that will scale\n– Challenge team processes, looking for ways to improve them\n– Experience in customizing the standard Android `s UI (navigation controls, transitions, lists, tables)\n– Consistent record of design and implementation of high-quality, crash-free Android applications\n– Strong experience with the Android SDK\n– A good understanding of design patterns and SOLID principles\n– Practical experience in using RESTful services\n– Experience implementing sophisticated Android applications\n– Experience with agile methodologies\n– Excellent communication skills in English: both written and verbal\nAdvantages:\n– Experience designing and building highly quality and reliable Android apps that meet the demands of millions of users\n– Practical use of AI-assisted development tools for coding, testing, and debugging\n– Experience in mobile testing strategies\n– Experience with GraphQL\n– Experience in FinTech\nBenefits:\nRemote Office – Flexible hybrid form of working\nParking Space – free parking spots\nFun Office Space – game zone and a relaxation area\nHealth Insurance – Additional private health insurance, including a dental care plan\nPersonal Development – Company-sponsored training budget to further develop your skills\nEmployee Referral Program – Receive a bonus for referring a friend\nFamily Insurance – Add insurance to a family member\nOffering sports cards – 100% sponsored by the company\nLicense for Bulgaria: № 3778 / 24.07.2024."
+  },
+  {
+   "id": 35,
+   "title": "Kotlin Multiplatform Developer",
+   "company": "Accedia",
+   "location": "",
+   "description": "What are we looking for?\nWe are expanding our team of Mobile software developers and we are looking for bright people who enjoy dynamics and are eager to learn and develop their professional skills. You will have the opportunity for fully remote or hybrid work (remote and in the office in Sofia)\nAs a Kotlin Multiplatform Developer, you’ll be:\nWork in a supportive environment on projects for international clients.\nParticipate across diverse domains and tech stacks, covering the full software development lifecycle (feature development, maintenance, troubleshooting, testing, documentation, etc.).\nCollaborate with developers of various seniority levels to analyze requirements, propose architecture and system design solutions, and estimate and plan tasks.\nCommunicate effectively with team members and clients regarding tasks, requirements, and issues.\nContinuously learn new technologies, take part in knowledge-sharing initiatives (e.g. internal trainings), and pursue professional certifications.\nRequirements\nThe perfect candidate meets the following:\nSolid understanding of Swift or Kotlin.\nExperience building native UI for iOS (SwiftUI, UIKit) or Android (Jetpack Compose, XML).\nUnderstanding of mobile architectural patterns such as MVVM, MVI, or MVC.\nFamiliarity with local data persistence (Room, Core Data, SwiftData, SQLite, or Realm).\nGenuine interest in cross-platform mobile development and working within a Kotlin Multiplatform (KMP) architecture.\nFluency in English.\nThe following will be considered an advantage:\nExperience with Kotlin Multiplatform (KMP).\nFamiliarity with Objective-C and/or Java.\nExposure to React Native, Flutter, or other cross-platform frameworks.\nFamiliarity with testing, CI/CD, and distribution tooling (TestFlight, Firebase App Distribution, Play Console) and App Store / Google Play publishing processes.\nWhat we offer:\nDiscover the diverse opportunities and benefits we offer to help you grow and excel in your career with us.\nCareer growth – We do 4 performance and salary reviews a year for every team member and make sure everyone has personal career and skills development plan.\nTechnology dynamics – We deliver more than 80 projects every year using a wide set of technologies and each of our engineers is constantly learning something new.\nTeam spirit – We have built an incredible community of talented and fun people – all of us bond and enjoy our time together at more than 40 social events each year.\nBalanced lifestyle – We believe creativity requires balance, that’s why we offer the flexibility and choice to work from the office or anywhere in Bulgaria, plus up to 25 days of annual paid vacation.\nAbout us\nAccedia is a premier European IT services company, specializing in technology consulting and custom software development. Founded in 2012, the company has established itself as a trusted global technology partner. Recognized by the International Association of Outsourcing Professionals and ranked among Europe’s fastest-growing tech firms by the Financial Times and Deloitte, our team excels in full-stack application development, cloud solutions, and AI adoption. With a focus on creating transformative digital experiences and driving innovation, we serve clients across 20 countries on 5 continents, offering tailored solutions that empower businesses. Accedia’s commitment to excellence and sustainability sets us apart as a leader in the tech industry."
+  },
+  {
+   "id": 838,
+   "title": "Senior Android Engineer - KMP",
+   "company": "SumUp",
+   "location": "Warsaw, Poland",
+   "description": "Salary range: 18 850 - 29 660 PLN per month\nAbout the team\nSumUp’s Point-of-Sale (POS) solution empowers cafes, shops, bars, hair salons, and other businesses to operate efficiently and grow. It offers a wide range of features, including product catalogs, inventory management, business analytics, compliance support, and loyalty tools.\nOur POS solution integrates seamlessly into the SumUp SuperApp, which supports both our proprietary register hardware and mobile devices like tablets and phones.\nAs a Senior Android Developer, you’ll collaborate with a dynamic, cross-functional team of Product Managers, Product Designers, Engineering Managers, and fellow engineers.\nAbout the role\nWe’re evolving toward a Kotlin Multiplatform (KMP) strategy, enabling shared development across Android and iOS. In this role, you’ll learn, refine, and help implement this technology, shaping the future of our mobile apps.\nYou’re a developer who values user-centric design, precision, and seamless collaboration. You bring structure to communication and thrive in a cross-functional environment.\nThis role will be a B2B based role in Warsaw.\nWhat you’ll do\nBuild new features for the item catalog within the SumUp SuperApp\nHelp improve the architecture of the application and contribute to our Kotlin Multiplatform strategy\nEnhance and maintain our unified android app, distributed across 60+ countries, ensuring high-quality, scalable solutions\nShape the product’s evolution by identifying opportunities for improvement and contributing to daily decision-making\nWrite thorough documentation and implement robust testing for features before shipping\nCollaborate closely with Designer, Product Manager and Android engineers to deliver a unified UX experience across platforms\nYou’ll thrive in this role if:\nYou have 8+ years experience in mobile engineering with Android and Kotlin.\nYou have 2+ years of experience working with Jetpack Compose.\nYou have a solid understanding of software design patterns (e.g., MVVM, MVI) and expertise in building modular, scalable app architectures.\nYou have good knowledge of reactive programming (Flow, Coroutines and Concurrency).\nYou have a strong grasp of testing best practices: knowing what to test, why, and how to write resilient tests.\nYou strive for clean code, and you are flexible to balance pragmatism and perfection.\nYou have a keen interest in multi-platform development using Kotlin Multiplatform.\nWhy You Should Join SumUp (Warsaw) 🇵🇱\n🌎 Opportunity to work , from our vibrant Warsaw office with inspiring art-filled lounges and a skyline terrace in the Mennica Legacy Tower.\n🌈 Commitment to Diversity and Inclusion: be part of a workplace that values and promotes diversity, fostering an inclusive environment where everyone's perspectives are respected and embraced\n🚀 Enrolment onto our VSOP program: you will own a stake in SumUp’s future success\n🚴 Fitness support: work out on-site at our gym or explore the city using the Multisport Card, subsidised by SumUp for access to sports facilities across Warsaw\n🩺 Commitment to well-being: access health insurance coverage for you and your family, plus life insurance to further protect your peace of mind\n🏖️ Generous time off: enjoy 26 days of paid leave plus public holidays and special leave days\n🌴 Break4me: 1-month sabbatical after 3 years of service\n🔗 Referral Bonus: earn additional rewards by referring talented individuals to join the SumUp team\n*Disclaimer\nThe stated salary range represents the expected compensation for candidates who meet the core requirements of this role. Offers above this range may be considered in exceptional circumstances, subject to internal review and approval, where a candidate's qualifications, skills, or experience significantly exceed the role's standard expectations.\nJob Application Tip\nWe recognise that candidates feel they need to meet 100% of the job criteria in order to apply for a job. Please note that this is only a guide. If you don’t tick every box, it’s o"
+  },
+  {
+   "id": 751,
+   "title": "Android Engineer",
+   "company": "SumUp",
+   "location": "Berlin, Germany",
+   "description": "About the role\nAs an Android Engineer in SumUp's Hardware Tribe, you will be part of one of our small and highly skilled cross-functional teams and work together with Product Managers, Backend Engineers, iOS Engineers, Product Designers, and more. You will also be part of and collaborate on a global level with the broader Mobile chapter. You will deal with a variety of topics ranging from improving reliability of Bluetooth implementation within the Android SumUp app and the SumUp SDK, to implementing user-facing features such as screens to interact with card readers, to collaborating on developing technical roadmaps.\nYou should be a mobile engineer with a product mindset who can fully own the features you are working on and remain flexible with changing priorities.\nThe role is based on-site in our office in Berlin. We believe in the power of face-to-face conversations that happen organically when working next to one another.\nAbout the team\nYou have probably used our card readers to buy a cappuccino or pay your hairdresser already. In Hardware, we are passionate about creating these beautifully designed card payment devices and accessories that enable our merchants to start, run, and grow their own businesses. In doing so, we deal with a diverse range of engineering topics - industrial and electronic design, embedded systems, all the way to mobile apps and backend services.\nWe believe in open communication and constant learning over strict rules. If you're looking for the chance to innovate and help millions of small independent merchants succeed - join us!\nWhat you’ll do\nShip a variety of payment-related features and services within our Android ecosystem, supporting both our SDKs and the SuperApp\nRefactor and enhance existing solutions (including Bluetooth Low Energy connections, online/offline payments, and tap-to-pay functionality), and generally improve reliability and performance\nWork closely with the rest of the team to drive our roadmap and design our developer experience\nYou'll be great for this position if:\nYou're comfortable with Kotlin, Java, and Android framework\nYou have good knowledge of architectural design patterns such as MVVM and MVI, and experience ensuring modularized and scalable app architecture\nYou know what to test, why to test it, and how to write flexible tests that won't break\nYou care about user interaction, usability, and have attention to detail\nYou strive for clean code, but also know how to be pragmatic when needed\nWhy you should join SumUp\nThe opportunity to work on large scale fintech products used by millions of small businesses around the world\nA dedicated annual Learning & Development budget for attending conferences and/or advancing your career through further education\nEnrollment onto our virtual stock ownership program - you will own a stake in SumUp’s future success\nA corporate pension scheme\n28 days paid leave + 1 for birthday\nYou’ll attend global offsites and/or hackathons.\nYou'd enjoy other great benefits such as Urban Sports Club subsidy, Kita placement assistance, subsidized office lunches and other location-tailored benefits, Babbel language platform subscription and more!\nJob Application Tip\nWe recognise that candidates feel they need to meet 100% of the job criteria in order to apply for a job. Please note that this is only a guide. If you don’t tick every box, it’s ok too because it means you have room to learn and develop your career at SumUp."
+  },
+  {
+   "id": 933,
+   "title": "Senior Engineer, Flutter",
+   "company": "Tide",
+   "location": "Lithuania",
+   "description": "ABOUT TIDE\nAt Tide, we help SMEs save time and money in the running of their businesses by not only offering business accounts and related banking services, but also a comprehensive set of highly usable and connected administrative solutions, from invoicing to accounting.\nTide is transforming the small business banking market and now supports over 2 million members globally across the UK, India, Germany and France.\nUsing advanced technology, all solutions are designed with SMEs in mind. With quick onboarding, low fees and innovative features, we thrive on making data driven decisions to serve our mission: to help SMEs save time and money so they can get back to doing what they love.\nTide facts:\nTide is available for UK, Indian, German and French SMEs\nOver 2 million members: 900,000 UK and 1,100,000 in India and growing rapidly\nOver $300 million raised in funding\nOver 2,800 Tideans globally\nRecognised with Great Place to Work certification three years in a row, and among India’s Top 50 Best Workplaces in Banking, Financial Services, and Insurance in 2026\nWe have offices in Central London, with a member support and technology centre in Sofia, Bulgaria, technology centres in Serbia, Romania, Lithuania and Hyderabad and offices in Gurugram, New Delhi, Berlin, Paris and Luxembourg\nABOUT THE TEAM:\nAs an Engineer at Tide you will be working on the designing, creating and running the rich product catalogue in one of our Business areas (e.g. Payments Service, Business Service). We have a long roadmap ahead of us and rarely run out of interesting problems to tackle.\nThis role offers an exceptional opportunity to make a real difference by taking ownership of engineering practices in a rapidly expanding company! We trust and empower our engineers to make real technical decisions that affect multiple teams and shape the future of Tide’s Global One Platform.\nWe work in small autonomous teams, grouped under common domains owning the micro-frontends that makes Tide a great application. We self-organise, gather together to discuss technical challenges, and set our own guidelines on our Community of Practice regardless of where one currently stand in our Growth Framework. We are focus on deliver a WOW! experience whilst ensuring a resilient, error-free and scalable codebase.\nABOUT THE ROLE:\nAs a Mobile Engineer you’ll be:\nYou will be learning and sharing knowledge with our engineers on new things often, as we believe in experimentation, T-shaped engineering and collaborative learning for career growth\nYou will be working on our new and existing products for our Business Areas. We have an exciting roadmap with brand new features and we will need you to solve interesting problems\nYou will have the opportunity to make a difference by leveraging your experience connecting with less experienced engineers, collaborating and cheering together\nJoining one of our expanding multi-disciplinary agile teams, you will work together with product owners, UI/UX designers, architects, engineers, and other business members to translate requirements into well-engineered solutions\nYou will join our Flutter Community of Practices, and your input on how to improve processes and maintain high quality across the team will be very welcome\nCareer progression is as important to us as it is for you, and we, therefore, have put in place a Tide Growth Framework to guide you. With our expanding teams and business, we will encourage you to outgrow your initial responsibilities, if you so desire\nTo learn more about how we develop out application, please check us out on Medium.com\nOur company is committed to creating an inclusive and diverse environment, that fosters cooperation in everything we do. This role offers an exceptional opportunity to make a real difference with responsibilities across engineering practices in a supportive and rapidly expanding company!\nWHAT WE ARE LOOKING FOR:\nWorking experience with Flutter as a Software Engineer\nExperience with popular Flutter libr"
+  },
+  {
+   "id": 1510,
+   "title": "Senior/Mid React Native Engineer – Tieto Tech Consulting (m/f/d)",
+   "company": "",
+   "location": "",
+   "description": "A part of global technology organization Tieto, MentorMate creates durable technical solutions that deliver digital transformation at scale by blending strategic insights and thoughtful design with brilliant engineering. With mature and established practices in enterprise web and mobile development, quality engineering, technical architecture, human-centered design, cloud, DevOps, data, and analytics, the company provides its people with the opportunity to work on impactful, global projects for recognizable brands. We value every team member and share our success through flexible working models, competitive pay and benefits, and advancement opportunities in a team of thousands of experts located around the globe.\nAbout the role\nWe are looking to hire a React Native Engineer to join our growing team and lead the development of high-quality mobile applications. You will play a key role in designing and implementing scalable, performant, and user-friendly mobile solutions using React Native, with a strong emphasis on modern JavaScript (ES6+), state management, and clean architecture. This role is ideal for someone who thrives in a collaborative environment, enjoys solving complex problems, and is passionate about delivering impactful solutions.\nResponsibilities\nArchitect, develop, and maintain mobile applications using React Native\nCollaborate with cross-functional teams including product, design, and backend engineers\nImplement and manage state management using Redux and Redux Toolkit\nEnsure code quality through unit testing, code reviews, and adherence to best practices\nOptimize application performance and responsiveness across platforms\nStay up-to-date with the latest mobile development trends and technologies\nMentor junior developers and contribute to team growth\nRequirements\n5+ years of professional experience in JavaScript/TypeScript\n3+ years of hands-on experience with React Native\nStrong understanding of ES6+ features and modern JavaScript practices\nDeep knowledge of Redux, Redux Toolkit, and application state management\nExperience with RESTful APIs, mobile UI/UX patterns, and performance optimization\nFamiliarity with CI/CD pipelines and mobile app deployment (App Store / Google Play)\nExcellent problem-solving skills and attention to detail\nStrong communication and collaboration skills\nA significant advantage would be\nHands-on experience with Bluetooth integrations (e.g., BLE devices, wearable tech)\nFamiliarity with native modules and bridging between React Native and native code (iOS/Android)\nKnowledge of accessibility standards and inclusive design practices\nExperience with analytics, crash reporting, and monitoring tools\nAdditional Information\nAt Tieto, we believe in the power of diversity, equity, and inclusion. We encourage applicants of all backgrounds, genders (m/f/d), and walks of life to join our team, as we believe that this fosters an inspiring workplace and fuels innovation. Our commitment to openness, trust, and diversity is at the heart of our mission to create digital futures that benefit businesses, societies, and humanity.\nDiversity, equity and inclusion (tietoevry.com)\nWe are Tieto – A leading software and technology consulting company\nWe provide customers across different industries with mission-critical solutions through our specialized software businesses Tieto Caretech, Tieto Banktech and Tieto Indtech as well as Tieto Tech Consulting business.\nOur around 14 000 talented vertical software, design, cloud and AI experts are dedicated to empowering our customers to succeed and innovate with latest technology.\nTieto’s annual revenue is approximately EUR 2 billion. The company’s shares are listed on the NASDAQ exchange in Helsinki and Stockholm, as well as on Oslo Børs."
+  },
+  {
+   "id": 1054,
+   "title": "Senior Mobile Engineer",
+   "company": "Musala Soft",
+   "location": "Remote",
+   "description": "This is us\nAt Avenga, we believe that human creativity empowers technology that matters. Operating globally, our 6000+ specialists provide a full spectrum of services, including business and tech advisory, enterprise solutions, CX, UX and Ul design, managed services, product development, and software development.\nThis is the job\nIn Argentina within the Industrial IoT & Mobile Solutions industry, we are actively seeking a Senior Mobile Engineers (Android Kotlin + React Native) to lead the end-to-end migration of the Optimus industrial app. Your mission will be to transform an existing native Android application into a highly resilient React Native solution, integrating secure AWS cloud features, IoT data streams, and robust offline-first capabilities for plant operations.\nThis is you\n3+ years of proven professional experience in native mobile development for Android using Kotlin.\nSolid hands-on experience with React Native using TypeScript, hooks, React Navigation, and state management frameworks (Redux Toolkit, Zustand, or MobX).\nPractical experience driving brownfield/strangler-fig migrations or modernizing legacy mobile apps.\nStrong background in backend integration via REST APIs, JWT, and OAuth2/OIDC protocols (experience with AWS Cognito is a big plus).\nProficiency in offline-first engineering using local storage engines (SQLite, Realm, AsyncStorage, or MMKV) and data synchronization queues.\nExperience setting up mobile CI/CD automation and build pipelines (Fastlane, GitHub Actions, Bitrise, or CircleCI), including code signing and distribution.\nSolid testing practices utilizing Jest, React Native Testing Library, and optionally automated E2E tools like Detox or Appium.\nNice-to-have skills:\nFamiliarity with Industrial IoT architectures, MQTT, AWS IoT Core, Greengrass, or Edge computing.\nUnderstanding of manufacturing KPIs and metrics such as OEE (Availability, Performance, Quality).\nExperience writing native bridges (modules) and optimizing performance for industrial-grade Android devices.\nFamiliarity with monorepos powered by Turborepo or NX, and mobile observability stacks (Sentry, Crashlytics, CloudWatch).\nBasic knowledge of security frameworks in industrial environments (OWASP MASVS, ISO 27001, or IEC 62443).\nThis is your role\nDesign and execute the mobile migration strategy from Android Kotlin to React Native utilizing a modular architecture (MVVM/Clean Architecture).\nExtend shared data contracts and types within a Turborepo monorepo structure to keep cross-platform specifications unified.\nBuild resilient, offline-first operation screens for device monitoring, alerts, and synchronization to guarantee high performance in variable connectivity areas.\nConsume APIs and streams from cloud environments (AWS API Gateway, Lambda) and IoT devices efficiently to preserve battery and minimize network latency.\nImplement mobile hardening and token storage standards to satisfy industrial-level security and compliance.\nWork in active shift-left coordination with QA, writing unit and integration tests, while participating in agile Scrum ceremonies.\nDeliver clear documentation, architecture decision records (ADRs), contribution guidelines, and code handovers to the team.\nAt Avenga, everyone matters. We provide equal opportunities in recruitment, career development, and leadership, regardless of race, ethnicity, gender identity, sexual orientation, disability, age, religion, or any other characteristic. We are committed to fostering a work environment where our diverse community of employees, candidates, and business partners actively shapes our growth. By bringing together people from different backgrounds and experiences, we build a workplace where everyone feels free to be themselves while honoring the boundaries of others."
+  },
+  {
+   "id": 850,
+   "title": "Senior iOS Engineer",
+   "company": "SumUp",
+   "location": "London, England, United Kingdom",
+   "description": "About the Role\nAt SumUp, we're on a mission to bring merchants and consumers closer together and help local communities thrive. With SumUp Consumer, we're building a rewarding banking experience that connects people to the small businesses they love while enabling free transactions for our merchants.\nSumUp Consumer helps consumers manage their money with ease and get more from everyday spending. It offers seamless payment experiences and financial tools designed for modern life—spanning banking, cards, savings, and open banking.\nThis is a high-impact, hands-on engineering role where you'll own the development and quality of the SumUp Consumer iOS application. You'll work directly on the features that consumers interact with every day, collaborating closely with Backend Engineers, Product Managers, Designers, and Android Engineers to deliver polished, reliable, and impactful mobile experiences.\nWhat you’ll do\nBuild and ship features across key consumer banking product areas—including KYC flows, card management, savings, open banking consent, and payment experiences.\nWrite clean, testable Swift code and participate actively in code reviews to uphold high engineering standards across the codebase.\nContribute to and evolve the iOS app architecture, including modularisation, dependency management, and scalability patterns as the product grows.\nOwn performance and reliability by monitoring crash rates, proactively identifying issues, and driving app stability before they impact consumers.\nMaintain a culture of quality by writing unit and UI tests and contributing to the health of our CI/CD pipelines.\nCollaborate cross-functionally with Backend Engineers on API design, Product Managers on roadmap priorities, and Designers on seamless user experiences.\nWhat makes you great for this position\nStrong proficiency in Swift and deep knowledge of the iOS framework (Objective-C knowledge is a plus).\nSolid understanding of RESTful API integration and experience working with backend engineers on API design.\nExperience working with agile methodologies, CI/CD pipelines, and pair programming.\nDeep care for user interaction, usability, and interface quality—you build things that feel great to use.\nAbility to understand a large problem, design a solution, break it into deliverable chunks, and ship it independently.\nPassion for clean, maintainable, and testable code and a genuine pride in your craft.\nMature, business-minded approach—balancing high-quality engineering with pragmatism in a fast-paced environment.\nSelf-driven and proactive nature, comfortable owning a domain with limited direct oversight.\nPrevious experience in payments, financial services, or fintech environments is a strong plus.\nWhy you should join SumUp\n🌎 Opportunity to work with SumUppers globally on large-scale fintech products used by millions of businesses worldwide.\n🌈 Commitment to Diversity and Inclusion: be part of a workplace that values and promotes diversity, fostering an inclusive environment where everyone's perspectives are respected and embraced.\n🚀 Enrolment onto our Virtual Stock Option programme: you will own a stake in SumUp’s future success.\n📚 A dedicated annual L&D budget for your individual development, which can be used to attend conferences and/or advancing your career through further education.\n💶 Competitive Health & Life Insurance: Includes comprehensive cover (optical, dental) and Life Assurance (2 x your salary).\n💰 Financial Future: A corporate pension scheme and a referral bonus for bringing in top talent.\n🏖️ Generous time off: 28 days of paid leave plus public holidays and special leave days.\n🌴 Break4me: 1-month paid sabbatical after 3 years of service.\n🎉 Culture of Connection: Attend global offsites and/or hackathons with your teammates.\nAbout SumUp\nBe empowered to do more that matters. At SumUp, we're on a mission to empower small businesses across the globe by providing a vast set of simple and affordable business tools to help them start, run, and gro"
+  },
+  {
+   "id": 663,
+   "title": "Senior Mobile Automation QA Engineer",
+   "company": "Pontica Solutions",
+   "location": "",
+   "description": "**All interviews will be conducted remotely (online or by phone).\nJoin a fast-growing fintech company transforming the way people spend abroad. Leveraging open-banking technology and a modern, cloud-based stack, the engineering team continuously experiments with new approaches to push the boundaries of what’s possible in payments. You’ll be part of a small, friendly, and highly collaborative group where everyone has real ownership and influence.\nWe’re looking for a Quality Assurance Engineer with automation and mobile testing experience to join our growing engineering team!\nYou’ll collaborate closely with developers, product managers, and designers to identify bugs early, ensure test coverage is strong, and deliver smooth, bug-free releases.\nIf you’re passionate about automation, mobile testing, and continuous improvement, we’d love to hear from you.\nKey Responsibilities:\n• Design, write, and maintain automated tests for iOS, Android, and APIs.\n• Build and expand our test automation framework using WebdriverIO, Appium, and Cucumber.\n• Perform regression and integration testing in CI/CD pipelines.\n• Execute API testing using Postman and create validation scripts.\n• Collaborate with developers, product managers, and designers to investigate and report bugs.\n• Perform manual and exploratory testing where automation can’t reach.\n• Contribute to test planning, requirement reviews, and sprint ceremonies.\n• Help evolve our QA strategy and improve test coverage, reliability, and speed.\nRequirements:\n• 4+ years of experience in QA, with experience in both manual and automation testing.\n• Mandatory experience in testing mobile applications (iOS and Android).\n• Hands-on experience with WebdriverIO, Appium, and Cucumber.\n• Proven experience using Postman and writing test scripts.\n• Mandatory experience with JavaScript automation tools.\n• Required experience working with CI/CD pipelines (e.g. Bitbucket Pipelines).\n• Required experience with device cloud platforms (e.g. BrowserStack).\n• Strong debugging and collaboration skills.\n• Attention to detail and a proactive mindset.\n• Startup, fintech, or fast-paced environment experience is a plus.\nNice to Have:\n• Familiarity with JIRA or similar project management tools.\n• Background in fintech, payments, or customer-facing technology.\n• Prior experience in a startup or small company environment.\nWhat we offer:\n• An attractive remuneration. Referral bonuses.\n• Standard working hours.\n• Remote work, requiring 2 office days per month in Sofia.\n• Full training provided.\n• Additional health insurance and other social benefits. Exclusive discounts & offers.\n• Digital food vouchers.\n• Open-minded management team promoting innovation, and personal and professional development.\n• Permanent employment; full-time."
+  },
+  {
+   "id": 1190,
+   "title": "Lead AI Engineer",
+   "company": "Cadabra",
+   "location": "",
+   "description": "Our client is a technological company at the forefront of the global medical research scene with real-world data. As a part of their growth, they need a Lead AI Engineer whose main task would be to set the technical direction for how the team works with models, build the first versions yourself, and bring the team along.\nResponsibilities:\n> Evolve their clinical extraction pipeline so the model returns one normalized value per field, a calibrated confidence score, and the source text it came from.\n> Build the fine-tune feedback loop: corrected cases become training data, models retrain on a cadence, and a regression gate against a frozen gold set protects quality before any release.\n> Stand up their MLOps stack from self-hosted open-source tools: annotation, data versioning, experiment tracking, evaluation, drift monitoring.\n> Push automation deeper into the delivery workflow with LLM pipelines and agents, so the team spends its time on clinical judgment, not repetitive steps.\n> Set the evaluation discipline: gold test sets, calibration measurement, honest metrics.\n> Upskill the team. Pair with people, review their work, and run internal workshops.\nRequirements (Must):\n> AI-first thinking. Your default question is “can a model do this?” and you reach for the newest tools on the market before writing another script by hand.\n> You use LLMs daily in your own work: coding agents, eval suites, prompt pipelines.\n> You ship. A working prototype this week beats a perfect design next quarter.\n> You argue with evidence and stand your ground, including with senior people. We want someone who pushes.\n> You measure. A model change without a metric behind it is not done.\n> Strong Python.\n> Hands-on LLM work beyond API calls: fine-tuning (LoRA/QLoRA), structured output, prompt pipelines, evaluation.\n> Some MLOps exposure: experiment tracking, data versioning, or model serving.\n> Comfort with Linux, Docker, and running open-source tools yourself.\nBrownie points:\n> Confidence calibration and applied ML statistics (ECE, reliability curves).\n> vLLM or other self-hosted model serving.\n(Recruitment License № 2709/ 17.01.2019)"
+  },
+  {
+   "id": 1513,
+   "title": "Agentic AI Engineer",
+   "company": "Flat Rock Technology",
+   "location": "",
+   "description": "About Us\nAt Flat Rock Technology, we build the future!\nWhether it’s helping clients grow their teams through staff augmentation, developing software that scales businesses, protecting companies from cyber threats, or managing large operational teams as an extension of each of our wonderful customers, we’re there to empower growth and drive impact.\nWith offices across the Globe: UK, Europe, South America, Sri Lanka, and the US, we’re a fast-growing global tech and staff augmentation organization delivering cutting-edge software development, data services, and business process outsourcing to clients worldwide.\nWe believe in innovation, ownership, and growing & developing our people. Your ideas matter here and your work truly makes a difference. Whether we’re engineering powerful software, optimizing operations, or helping customers scale, we move fast, stay curious, and build with purpose.\nJoin a team that’s collaborative, ambitious, and always pushing for better.\nAt Flat Rock, we don’t just follow the future – we create it.\nMain responsibilities:\nDesign and build agentic AI systems, including autonomous agents, multi-agent orchestration, workflow state machines, and tool-using agents.\nDevelop LLM-driven agents capable of reasoning, planning, retrieval (RAG), and task execution across enterprise systems.\nBuild and maintain AI-powered automation workflows using platforms like n8n and Make to orchestrate business processes and cross-application integrations.\nIntegrate agents with APIs, CRM/ERP systems, collaboration tools, databases, and payment platforms using tool/function calling, MCP, and A2A patterns.\nImplement robust execution logic (validation, retries, rate limits, fallbacks, error handling) to ensure reliability and scalability.\nDesign and manage RAG pipelines using embeddings, vector databases, chunking, and reranking strategies.\nEstablish safety guardrails, access controls, and human-in-the-loop workflows for high-risk actions.\nBuild evaluation, observability, and tracing pipelines to monitor performance, cost, latency, and reliability.\nDeploy and operate agent services in cloud environments (AWS, Azure, or GCP) using Docker, Kubernetes, Terraform, and CI/CD.\nMonitor production systems, troubleshoot issues, and continuously improve agent performance and policies.\nPrototype and benchmark emerging agentic AI frameworks and models.\nCreate technical documentation and communicate AI solutions effectively to cross-functional stakeholders.\nRequirements:\nBachelor’s or Master’s degree in Computer Science, AI, Engineering, or related field.\n3+ years of software engineering experience (Python and/or TypeScript).\n1+ year building LLM-powered or agentic AI systems in production or near-production environments.\nExperience with agent frameworks (e.g., LangChain, LangGraph, AutoGen, CrewAI, Semantic Kernel).\nHands-on experience with automation/orchestration tools (e.g., n8n, Make) in production settings.\nStrong understanding of LLMs, embeddings, prompt engineering, structured outputs, and tool calling.\nExperience designing REST APIs, microservices, and backend systems.\nFamiliarity with vector databases and RAG architectures.\nExperience with cloud platforms (AWS, Azure, or GCP), containerization (Docker, Kubernetes), and infrastructure-as-code tools.\nStrong system design, debugging, and communication skills.\nPreferred:\nExperience with MCP, A2A, or advanced agent communication patterns.\nAdvanced experience with n8n (custom nodes, self-hosting) or Make (complex scenarios).\nExperience combining LLMs with workflow engines for document processing, reporting, chatbots, or decision support.\nFamiliarity with AI evaluation and observability tools (e.g., LangSmith, OpenAI Evals, Weights & Biases).\nExperience with multi-agent systems, planning algorithms, RL, fine-tuning, or RLHF.\nKnowledge of CI/CD pipelines and security best practices.\nExperience in regulated industries (e.g., healthcare, finance, defense).\nRelevant cloud or ML certifications.\nW"
+  },
+  {
+   "id": 1007,
+   "title": "Data Scientist",
+   "company": "myPOS",
+   "location": "London, United Kingdom (hybrid)",
+   "description": "At myPOS, we’re all about helping businesses grow and get paid. We make payments simple, smart, and accessible for everyone, but we’re more than just payment solutions - myPOS is a partner in growth. From free multicurrency accounts to powerful e-commerce tools, we’re here to support business owners of all sizes and everyone out there who dreams of starting their own business.\nAs we are expanding our team, we’re looking for Data Scientist to help us make a real difference in the Fintech industry. Ready to join us and shape the future of payments? Let’s make it happen!\nAbout the role:\nmyPOS is building a high-impact Data Science function to power the intelligence layer of one of Europe’s fastest-growing payment and commerce platforms. As a Data Scientist, you will contribute to a focused team working across a rich portfolio of models that drive smarter decisions in Sales, Marketing, Risk, Operations, Product and Technology.\nYou will move fluidly across problem types: from customer lifetime value and churn modelling to fraud scoring and agentic AI workflows.\nWhat you’ll do:\nBuild and maintain ML models across the core portfolio: CLTV, churn prediction, propensity to buy, and Next Most Likely Product (NMLP)\nDevelop fraud detection models including transaction-level classifiers, merchant behaviour anomaly detectors, and new-account risk scorers\nContribute scored model outputs to the Next Best Action (NBA) decisioning layer that selects the optimal action for each merchant across Sales, Marketing, and in-product touchpoints\nSupport A/B experiments, uplift tests, and multi-armed bandit evaluations to measure the incremental impact of model-driven interventions\nDesign and implement end-to-end ML pipelines - from data ingestion and feature engineering through to model training, evaluation, and deployment\nMonitor deployed models in production: detect performance degradation, data drift, and data quality issues; iterate and document changes proactively\nCollaborate with business teams across Sales, Marketing, Risk, Operations, and Product to translate business problems into well-defined data science solutions\nRun rigorous experiments and communicate findings clearly to both technical and non-technical stakeholders\nContribute to LLM-powered agentic workflows using tool-use patterns (RAG, function calling, memory) and frameworks such as LangChain or LlamaIndex\nContribute to team documentation: model cards, methodology write-ups, and internal playbooks that help the team scale its practices\nWhat you bring:\n3–5 years of hands-on applied data science, machine learning or statistical modelling experience in a commercial setting, with models shipped and measured in production.\nStrong proficiency in Python for data science: pandas, numpy, scikit-learn, XGBoost / LightGBM, and at least one deep learning framework (PyTorch or TensorFlow).\nSolid grounding in supervised and unsupervised learning: classification, regression, clustering, survival analysis, and time-series modelling.\nDemonstrable experience building at least one of: CLTV, churn, fraud detection, propensity, or uplift models in a production environment.\nComfort working with large-scale structured and semi-structured data; proficient in SQL and cloud data warehouses - GCP and BigQuery strongly preferred.\nFamiliarity with ML experiment tracking platforms (MLflow, Weights & Biases) and model serving patterns (REST APIs, batch inference pipelines).\nWorking knowledge of LLM APIs (OpenAI, Anthropic, etc.) and at least one agentic AI framework (LangChain, LlamaIndex, AutoGen, or similar).\nUnderstanding of responsible AI: fairness assessment, model explainability methods (SHAP, LIME), bias detection and mitigation strategies.\nClear communication - able to distil statistical findings into actionable insights for both technical peers and business stakeholders.\nWhy you should join myPOS:\nAnnual salary reviews, promotions, and performance bonuses\nmyPOS Academy and unlimited LinkedIn Learning access"
+  },
+  {
+   "id": 956,
+   "title": "Data Scientist",
+   "company": "Egt Digital",
+   "location": "",
+   "description": "EGT Digital is a next-generation tech company that is focused on all online gaming products, and its portfolio includes Casino Games, Sportsbook, as well as the all-in-one solution – a Gambling Platform.\nEGT Digital is a part of Euro Games Technology (EGT) Group, headquartered in Sofia, Bulgaria. EGT Group is one of the fastest-growing enterprises in the gaming industry. Our global network includes offices in 25 countries and our products are installed in over 85 jurisdictions in Europe, Asia, Africa, North, Central, and South America.\nBeing a part of such a fast-moving industry as iGaming, the company knows no limits and is growing rapidly through its dedication to innovation and constant improvement. This is why we are expanding our team and are now looking for some fresh and enthusiastic people to join us in the exciting digital world of iGaming.\nResponsibilities:\nAssist in the design, development, and implementation of machine learning algorithms and predictive models to address business challenges\nApply and adapt existing NLP models to support business needs and enhance application performance\nContribute to research and experimentation with new techniques and tools in machine learning, data science and LLMs\nCollaborate with data engineers to develop and maintain data pipelines and ensure high-quality feature engineering\nAnalyze large datasets to identify trends, patterns, and opportunities for model improvement\nMonitor model performance and implement improvements to enhance accuracy, efficiency, and scalability\nParticipate in the deployment and maintenance of machine learning models, ensuring their reliability in production environments\nDocument methodologies, experiments, and code to ensure reproducibility and knowledge sharing within the team\nRequirements:\nBachelor’s degree in Data Science, Computer Science, Statistics, or a related field\nProven experience as a Data Scientist, with a strong focus on data analysis and machine learning\nKnowledge in large language models (LLMs) architecture\nProficiency in programming languages such as Python and frameworks like TensorFlow or PyTorch\nSolid understanding of machine learning algorithms and statistical analysis\nExperience with data visualization tools like Tableau, Matplotlib, or Plotly to communicate findings\nStrong problem-solving skills and the ability to work in a fast-paced, dynamic environment\nStrong communication and collaboration skills, with the ability to work effectively with cross-functional teams\nFamiliarity with cloud-based platforms (e.g., AWS, Azur, or Google Could) is a plus\nExperience in the iGaming industry or a similar high-volume, data-intensive environment\nWhat we offer:\nCompetitive salary\nPerformance based annual bonus\nPerformance evaluation & salary review twice a year\n25 days paid annual leave\nWork from home option -2 days weekly\nFlexible working schedule\nAdditional health insurance – premium package\nFully paid annual transportation card\nFully paid Sports card\nFree company shuttle by the office\nSports Teams/Sports events\nProfessional development, supportive company culture, and challenging projects\nCompany-sponsored trainings\nTickets for conferences and seminars\nTeam building events and office parties\nReferral Program\nFree snacks, soft drinks, coffee, and fruit are always available\nBirthday, newborn baby, and first-grader bonuses\nCorporate discounts in various shops and restaurants\nState-of-the-art modern office\nPositive working environment and chill-out zone (PS4, foosball-table, and lazy chairs)\nAll applications will be treated in strict confidentiality and only the approved candidates will be invited to an interview."
+  },
+  {
+   "id": 942,
+   "title": "Staff Data Scientist (Fraud & Risk)",
+   "company": "Tide",
+   "location": "India, Hyderabad",
+   "description": "ABOUT TIDE\nAt Tide, we help SMEs save time and money in the running of their businesses by not only offering business accounts and related banking services, but also a comprehensive set of highly usable and connected administrative solutions, from invoicing to accounting.\nTide is transforming the small business banking market and now supports over 2 million members globally across the UK, India, Germany and France.\nUsing advanced technology, all solutions are designed with SMEs in mind. With quick onboarding, low fees and innovative features, we thrive on making data driven decisions to serve our mission: to help SMEs save time and money so they can get back to doing what they love.\nTide facts:\nTide is available for UK, Indian, German and French SMEs\nOver 2 million members: 900,000 UK and 1,100,000 in India and growing rapidly\nOver $300 million raised in funding\nOver 2,800 Tideans globally\nRecognised with Great Place to Work certification three years in a row, and among India’s Top 50 Best Workplaces in Banking, Financial Services, and Insurance in 2026\nWe have offices in Central London, with a member support and technology centre in Sofia, Bulgaria, technology centres in Serbia, Romania, Lithuania and Hyderabad and offices in Gurugram, New Delhi, Berlin, Paris and Luxembourg\nABOUT THE ROLE:\nAs Staff Data Scientist for the Fraud & Risk area, you will work closely with the Business Team, Product Managers, Data Governance team, Analysts, Scientists, and Data Engineers in order to deliver Company, Business, and Product OKRs. You will be at the forefront of addressing fraud globally for Tide, utilizing your deep expertise in classical Machine Learning to build and continuously improve models that detect and mitigate fraud.\nThis role is an Individual Contributor (IC) position. You will spend most of your time dealing with highly imbalanced data use cases, data drift in pipelines, and identifying rapidly changing fraud patterns using classical ML. Some of your time will also focus on implementing and scaling production-ready GenAI and Agentic AI workflows. You will act as the Subject Matter Expert (SME) across the team, improving our technical standards.\nAs a Staff Data Scientist you’ll be:\nDesign and develop advanced predictive ML models tailored for global fraud detection, risk assessment, and anomaly detection.\nDesign and develop production-grade GenAI and Agentic AI solutions (leveraging frameworks like LangGraph on AWS or GCP) to automate alert handling and accelerate fraud investigations.\nTackling highly imbalanced datasets using advanced techniques, ensuring models optimize for real business impact (minimizing false positives while catching evolving fraud).\nProactively identifying, measuring, and resolving data drift and concept drift in production pipelines to maintain continuous model performance.\nPresenting compelling insights and demonstrating strong storytelling skills to translate complex model outputs for non-technical stakeholders.\nActing as the definitive technical IC and SME for the team—setting technical standards and reviewing architectures to push the boundaries of what \"best\" looks like.\nCollaborate with ML engineers to deploy models, establish CI/CD pipelines, and implement robust model tracking and observability.\nPartnering with Data Engineering to optimize feature engineering and feature stores for real-time and batch fraud decisioning.\nWorking with Product and Business teams to translate complex fraud typologies and business requirements into rigorous mathematical formulations and data science problems.\nBuild and track metrics for the performance of our models and their direct impact on the business bottom line, feeding this back to Product and Business Teams.\nAbility to deal with ambiguity and propose innovative solutions without getting blocked.\nWHAT WE ARE LOOKING FOR:\nYou have 10+ years of experience in Data Science or Machine Learning, with a substantial portion of your career dedicated to fighting frau"
+  },
+  {
+   "id": 1058,
+   "title": "Senior Data Science Engineer",
+   "company": "Musala Soft",
+   "location": "Skopje, North Macedonia (hybrid)",
+   "description": "This is us\nAt Avenga, we believe that human creativity empowers technology that matters. Operating globally, our 6000+ specialists provide a full spectrum of services, including business and tech advisory, enterprise solutions, CX, UX and Ul design, managed services, product development, and software development.\nThis is the job\nAs an Data Science Engineer, you will be responsible for developing and enhancing the core engine behind an advanced AI assistant, focusing on Agentic AI systems, retrieval-augmented generation (RAG), LLM orchestration, and answer quality.\nYour work will help evolve AI capabilities from simply answering questions to executing real customer requests in a reliable and secure way. You will design and improve intelligent workflows, optimize retrieval quality, and ensure that AI-generated responses are accurate, grounded and production-ready.\nIn this role, you'll collaborate closely with cross-functional teams to build scalable AI services, continuously evaluate system performance, and contribute to the evolution of modern AI solutions. Beyond technical expertise, you'll be expected to demonstrate strong communication, ownership, proactive problem-solving and a collaborative mindset in a fast-paced environment.\nThis is you\nStrong Gen AI focus\nMaster (WO) degree in AI, Machine Learning, Data Science\nDeep knowledge of AI/ML, data science and telecom\nKnowledge of GenAI: LLM (essential) and text2image (nice2have)\nKnowledge of Agentic AI, vector Databases, RAG systems, chunking methods\nKnowledge of at least one of the popular LLM frameworks: Langraph, Langchain, Llamaindex, AutoGen, and PydanticAI\nKnowledge of building and deploying AI solutions (using Python, API, MCP, SQL and Git is essential; Docker, Github Runners and Airflow are a nice to have)\nKnowledge of how to deploy solutions on AWS and on-prem\n3-6 years’ experience as (Senior) Data Scientist\nKnowledge of the Google AI stack for Natural language processing is a plus\nAt Avenga, everyone matters. We provide equal opportunities in recruitment, career development, and leadership, regardless of race, ethnicity, gender identity, sexual orientation, disability, age, religion, or any other characteristic. We are committed to fostering a work environment where our diverse community of employees, candidates, and business partners actively shapes our growth. By bringing together people from different backgrounds and experiences, we build a workplace where everyone feels free to be themselves while honoring the boundaries of others."
+  },
+  {
+   "id": 954,
+   "title": "Staff Software Engineer | AI Applied Engineering",
+   "company": "Quickbase",
+   "location": "",
+   "description": "About the Role\nWe are building a new product at Quickbase. It helps our users in Ops heavy industries get their work done, with agents that do that work alongside them. This is a small pod, and we are at the beginning: there is a first version to ship, and plenty still to figure out. The product runs on the agentic foundation we built for Pave, our AI app builder. That foundation already runs in production, and what we put on top of it is its own distinct product. You would be one of the people deciding what it becomes.\nYou would work across the whole loop with the team. We shape the idea, build the agents, ship them to users, see how they hold up with real work, and come back to make them better. We also write and own the evals that tell us whether the product is any good, so quality stays with the engineers building it.\nWe are looking for builders who already build with AI every day. You use coding agents in your own workflow, and you have shipped LLM-backed features to production and lived with them afterward, so you know how to keep them reliable for real users. You would join a team that stays close to its users and holds a high bar on quality. We take ownership together.\nWhat You will Do\nBuild and ship fullstack features end-to-end, from design through production\nExtend our Claude Agent SDK integration MCP tool design, streaming (SSE) chat, context compaction, tool-permission gating\nDesign and implement LLM-based features (RAG, agents, tool use) that power agents generating code, configuring workflows, and importing data\nBuild reliable AI pipelines with a focus on latency, cost, and failure modes\nDefine and implement evaluation strategies for AI outputs: offline (curated test sets, regression checks before shipping) and online (live production metrics: accuracy, override/escalation rates, latency, cost)\nOwn prompt/context engineering strategy and drive model and approach iteration\nDesign guardrails, tool-permission gating, and fallback mechanisms for non-deterministic outputs\nWhat We are Looking For\nStrong React/TypeScript experience, with a track record of shipping production features\nComfortable working across frontend and backend\nExperience building complex, stateful UI – visual/node-based editors, real-time or streaming interfaces, or similar\nStrong architectural instincts, considers system and product impact when making decisions\nHands-on experience with LLM applications: RAG, agents, tool use, or similar, ideally with the Claude API/Agent SDK or MCP tool servers specifically\nPractical experience using LLMs in real production systems, including streaming responses and prompt/context engineering\nAbility to reason about system design, not just about models or prompts\nDemonstrated ability to move a feature from prototype to production, including monitoring, cost control, and failure handling\nA pragmatic engineering mindset – knows when not to use AI\nComfort working in a fast-moving, early-stage product environment\nNice to Have\nComfortable using AI coding assistants (Copilot, Cursor, Claude Code, or similar) to speed up day-to-day development\nSome exposure to AWS-based backends (DynamoDB, Lambda, ECS)\nExperience with search, recommendation systems, or other data-heavy systems\nExperience with observability/monitoring of production systems\nFamiliarity with evaluating AI/ML features in production (offline eval sets, online metrics, A/B testing)\nExposure to durable/stateful execution engines (Temporal, AWS Step Functions/Durable Execution, or similar)\nExperience with vector databases\nProduction ML or MLOps experience\nTech Stack\nTypeScript • Bun • Claude Agent SDK • MCP (Model Context Protocol) • Vercel AI SDK • RAG • Vector DBs • AWS\nHow We Think About AI\nAt Quickbase, we view AI as a tool to accelerate how work gets done, not replace it. We encourage thoughtful use of AI to improve speed, quality, and decision-making, while maintaining strong judgment, accountability, and data integrity.\nBenefits\nUnlimited remote work poli"
+  },
+  {
+   "id": 1270,
+   "title": "Senior Manager, Machine Learning",
+   "company": "Twilio",
+   "location": "Anywhere in the World",
+   "description": "Headquarters: Remote - India\nWho we are\nAt Twilio, we’re shaping the future of communications, all from the comfort of our homes. We deliver innovative solutions to hundreds of thousands of businesses and empower millions of developers worldwide to craft personalized customer experiences.\nOur dedication to remote-first work, and strong culture of connection and global inclusion means that no matter your location, you’re part of a vibrant team with diverse experiences making a global impact each day. As we continue to revolutionize how the world interacts, we’re acquiring new skills and experiences that make work feel truly rewarding. Your career at Twilio is in your hands.\nWe use Artificial Intelligence (AI) to help make our hiring process efficient. That said, every hiring decision is made by real Twilions!\n.\nSee yourself at Twilio\nJoin the team as Twilio’s next Senior Manager, Machine Learning on Twilio’s Conversation Memory team.\nAbout the job\nThis position is critical to leveraging Twilio’s massive data ecosystem and communication scale to build foundational platform capabilities for the next generation of conversational AI, specifically by owning the development of 0-to-1 platform features that empower developers to build sophisticated, context-aware customer engagement applications. This is a highly technical, hands-on role, requiring a \"player-coach\" mentality to actively contribute technical expertise, bridge the gap between theoretical research and production-grade experimentation, and provide strategic direction to the team, rather than being purely a people manager. The leader in this role must demonstrate a strong bias for action, establishing a high-performing engineering setup that enables rapid iteration, experimentation, and deployment of models in this 0-to-1 setting. Furthermore, they will be responsible for working closely with cross-functional stakeholders to translate ambiguous business problems into a clear, prioritized product roadmap and communicate progress and updates to leadership.\nResponsibilities\nIn this role, you’ll:\nCollaborate with other engineering teams and cross functional teams to translate ambiguous business problems into a clear, prioritized ML product roadmap for your team.\nHave a 'player-coach' mentality, and contribute hands-on technical expertise while providing strategic direction and mentorship to the team.\nEstablish a high-performing engineering setup that enables the team to rapidly iterate, experiment, and deploy models, fostering a culture of operational excellence and close partnership with product and business stakeholders.\nDrive continuous improvement in the team's processes, tooling, and infrastructure to optimize for velocity, quality, and maintainability.\nActively monitor the ML and AI landscape to ensure the team is continuously up-to-speed on state-of-the-art research, techniques, and tools, promoting their strategic adoption where appropriate.\nRecruit, manage, and develop a diverse and highly-skilled team of Machine Learning Engineers, setting clear goals and expectations, and providing timely and actionable feedback.\nDefine and track key performance indicators (KPIs) to measure the impact and success of the team’s ML products, communicating results clearly to leadership and stakeholders.\nManage project timelines, dependencies, and risks, ensuring timely delivery of high-quality, reliable, and scalable ML solutions.\nQualifications\nTwilio values diverse experiences from all kinds of industries, and we encourage everyone who meets the required qualifications to apply. If your career is just starting or hasn't followed a traditional path, don't let that stop you from considering Twilio. We are always looking for people who will bring something new to the table!\n*Required:\nBachelors in Computer Science, Engineering, or a related field.\n10+ years of experience in Applied ML or AI, including 3+ years of either leading a team of Machine Learning Engineers or data scientists.\nPr"
+  },
+  {
+   "id": 1030,
+   "title": "Senior .NET with AI Developer",
+   "company": "Musala Soft",
+   "location": "Remote",
+   "description": "This is us\nAt Avenga, we believe that human creativity empowers technology that matters. Operating globally, our 6000+ specialists provide a full spectrum of services, including business and tech advisory, enterprise solutions, CX, UX and UI design, managed services, product development, and software development.\nThis is the job\nWe are seeking a Senior Full-Stack Developer with 8–10+ years of enterprise development experience to join our BuildingLink team. This role requires advanced proficiency in SPA technologies (React, Vue, Angular) and backend expertise in .Net / .NetCore, with strong database skills (SQL Server preferred).\nThis is you\nRequirements:\n8–10+ years of enterprise development experience as a full-stack developer.\nAdvanced expertise in SPAs (React, Vue, Angular) and backend technologies (.Net / .NetCore).\n4+ years of hands-on experience with SQL Server and other databases (on-premise and cloud).\nStrong foundation in software analysis, testing, debugging, and the full SDLC.\nAbility to set up development environments independently and make autonomous technical decisions.\nProven leadership in Agile environments, fostering continuous improvement.\nStrong sense of urgency in delivering high-quality solutions on time.\nExcellent collaboration and communication skills, with adaptability to contribute across all facets of the system.\nTechnologies you will work with:\nWebAPI / JSON / REST / OData / OpenAPI\nSPAs / Vue / JavaScript / TypeScript / ASP.NET\nMicroservices / C# / .NetCore / SQL Databases\nAWS Cloud Platform\nThis is your role\nProvide technical leadership and mentorship to the development team.\nGuide full-stack development from UI to backend, ensuring code quality and scalability.\nOversee and implement robust testing practices (unit, integration, end-to-end).\nAnalyze complex technical requirements and align codebase with best practices.\nDrive code optimization and refactoring initiatives.\nPlan and execute advanced software tests to ensure reliability.\nCollaborate with product managers and design engineers to deliver new features.\nDocument development processes and contribute to a comprehensive knowledge base.\nWhat awaits you at Avenga?\nA long-term project with real ownership and impact.\nA collaborative environment that values innovation, teamwork, and continuous learning.\nOpportunities to grow expertise in cloud-native architectures, microservices, and enterprise-scale solutions.\nAt Avenga, everyone matters. We provide equal opportunities in recruitment, career development, and leadership, regardless of race, ethnicity, gender identity, sexual orientation, disability, age, religion, or any other characteristic."
+  },
+  {
+   "id": 1278,
+   "title": "Senior Software Engineer, Backend - Platform (Core AI Automation)",
+   "company": "Coinbase",
+   "location": "Anywhere in the World",
+   "description": "Headquarters: Remote - USA\nReady to do the most impactful work of your career? At Coinbase, we are uncompromising on our mission to increase economic freedom. The bar is high, the environment is intense, and we like it that way. This isn't a place for complacency, it’s a place to be pushed past your perceived limits. If you're ready to build the future of finance alongside people who refuse to settle for \"good enough,\" you belong here. Coinbase is a remote-first, but not remote-only company. Expect to get together quarterly for intense in-person working sessions called “surges.” learn more about working at Coinbase.\nAs a Senior Software Engineer on the Platform Core Automation team, you'll build the AI infrastructure and agentic systems that automate customer support and compliance operations at Coinbase. This team is reimagining what these processes look like when AI handles them end-to-end, replacing manual workflows with intelligent agents that resolve customer issues and execute compliance tasks autonomously. You'll own the design and delivery of LLM-powered systems, grounding techniques, and integration pipelines that directly reduce resolution times, cut costs, and improve accuracy across millions of customer interactions.\nWhat you’ll be doing (ie. job duties):\nOwn the design and delivery of agentic AI systems that power Coinbase's customer support and compliance automation, from LLM orchestration through production deployment and monitoring.\nBuild scalable, secure backend infrastructure in Python and Golang that serves AI workloads, including model integration pipelines, guardrails, grounding mechanisms, and measurement frameworks.\nDrive end-to-end project execution on complex AI initiatives, making technical trade-offs across latency, accuracy, cost, and reliability.\nPartner with Customer Experience, Compliance, and product engineering teams to identify high-impact automation opportunities and translate operational pain points into AI-powered solutions.\nStrengthen engineering quality across the team by leading code reviews, mentoring engineers on AI system design patterns, and contributing to on-call rotations and incident response.\nWhat we look for in you (ie. job requirements):\n5+ years of experience in software engineering, with proven expertise in designing, building, and maintaining production services using a microservices architecture.\nHands-on experience building LLM-based applications or AI/ML systems in production, including prompt engineering, retrieval-augmented generation (RAG), or agentic AI frameworks.\nProficiency in Python and Golang (or comparable backend languages), with experience integrating third-party AI models and APIs into production workflows.\nTrack record of delivering end-to-end projects with measurable business impact in ambiguous problem spaces.\nExperience building data pipelines, integrating with external vendors, or working with large-scale unstructured data sources (e.g., blockchain data, customer interaction logs).\nUtilizes generative AI responsibly, maintaining human oversight to deliver business-ready outputs and drive measurable improvements in workflow efficiency, cost, and quality.\nNice to haves:\nExperience navigating rapid company growth (e.g., from startup to mid-size).\nFamiliarity with GenAI frameworks/tools, Python, GoLang, Docker, Postgres, MongoDB.\nBackground in AI/LLM infrastructure is a strong plus.\nPay Transparency Notice: Base salary varies by location (see range below). Total compensation may also include equity and bonus eligibility, and benefits (medical, dental, vision, 401(k)).\nAnnual base salary range (excluding equity and bonus):\n$186,065—$218,900 USD\nApplication Limit: Candidates may submit a maximum of 3 applications within a 6-month period.\nEqual Opportunity Employer: Coinbase is an Equal Opportunity Employer. All qualified applicants will receive consideration for employment without regard to race, color, religion, sex, sexual orientation, gender identity, nati"
+  },
+  {
+   "id": 1520,
+   "title": "Senior Python Engineer",
+   "company": "Man Group",
+   "location": "",
+   "description": "About Man Group\nMan Group is a global alternative investment management firm focused on pursuing outperformance for sophisticated clients via our Systematic, Discretionary and Solutions offerings. Powered by talent and advanced technology, our single and multi-manager investment strategies are underpinned by deep research and span public and private markets, across all major asset classes, with a significant focus on alternatives. Man Group takes a partnership approach to working with clients, establishing deep connections and creating tailored solutions to meet their investment goals and those of the millions of retirees and savers they represent.\nHeadquartered in London, we manage $227.6 billion* and operate across multiple offices globally. Man Group plc is listed on the London Stock Exchange under the ticker EMG.LN and is a constituent of the FTSE 250 Index. Further information can be found at www.man.com\n* As at 31 December 2025\nPurpose of the Role\nWe’re seeking Senior Python Engineers to join various teams across our technology organisation, working on diverse challenges spanning systematic trading, quantitative research, a petabyte-scale data platform, and AI solutions.\nThe role offers the opportunity to collaborate with and learn alongside highly skilled engineers whilst developing core technical and financial services knowledge. You will work with cutting-edge technologies and systems that power critical areas of Man Group’s business.\nRole Responsibilities\nDesign and maintain scalable backend systems and APIs that support quantitative research and trading infrastructure\nDevelop distributed compute applications, optmise performance, and implement monitoring and observability tooling to ensure system reliability\nBuild high-performance data pipelines for processing large-scale financial datasets using timeseries, SQL, and NoSQL databases\nPartner with engineers, researchers, and platform teams to translate complex requirements into technical solutions that integrate with Man Group’s technology estate\nParticipate in production support rotations and contribute to architecture decisions, code reviews, and engineering best practices across the team\nYou should have the enthusiasm for leveraging AI development tools to accelerate delivery and driving their adoption across the team.\nOur Technology\nYou’ll work in a modern, Linux-based infrastructure where Python is the primary development language, utilising the full scientific stack including pandas, numpy, scipy, and scikit-learn. A key component of our data infrastructure is ArcticDB (https://arcticdb.io/), our internally developed DataFrame database that you’ll use extensively. We maintain a dynamic technology landscape, continuously evaluating and adopting new tools and libraries that enhance our capabilities. man.com/technology\nKey Competencies\nRequired\nMinimum 5 years’ professional software development experience in any object-oriented language. Python experience is preferred, though we are open to candidates proficient in other object-oriented languages who are willing to learn Python.\nStrong academic record with coursework focused on mathematical and computing content e.g. Computer Science, Mathematics, Engineering or Science\nExperience developing mission-critical production systems, with knowledge of best practices for testing, monitoring, and deployment\nProficient on Linux platforms and strong understanding of Git\nStrong knowledge of one or more relevant database technologies e.g. MS SQL, Postgres, or MongoDB\nDemonstrated experience working with large data sets, both structured and unstructured\nAbility to work independently and gather requirements from stakeholders\nEmbracing agentic engineering — willingness and ability to work effectively with AI -assisted development tools as part of daily workflow\nAdvantageous\nDeep understanding of the Python scientific stack (pandas, numpy, scipy, scikit-learn)\nFamiliarity with distributed systems and orchestration\nKnowledge of mod"
+  },
+  {
+   "id": 1518,
+   "title": "Software Engineer (Python)",
+   "company": "Remote It World",
+   "location": "",
+   "description": "We are looking for a Software Engineer to join a growing global team in the digital finance sector. In this role you will have the opportunity to work on high-impact financial services using a modern, scalable technology stack.\nMain responsibilities:\nDesign, develop, and deploy secure backend services with high availability and low latency.\nCollaborate with cross-functional teams to deliver innovative fintech solutions.\nContribute to architectural decisions and mentor junior team members.\nMaintain high code quality and drive continuous improvement.\nRequirements:\n5+ years of commerical experience in programming.\nSolid understanding of computer science fundamentals.\nPractical experience with Python and AWS.\nStrong collaboration and communication skills.\nBasic knowledge of microservices architecture, 12-factor applications based on containers, and cloud-native practices Interest in CI/CD patterns and automated testing processes.\nExperience with or a keen interest in learning Event-Driven Architecture, Domain-Driven Design, and scalable asynchronous software.\nA growth-oriented mindset.\nFluency in English.\nCompany Offer:\nJoin a globally recognized digital assets bank.\nLearn by doing the best practices in software engineering.\nThis is an unique opportunity for professional development.\nCollaborate with global experts pioneers in the crypto space since 2013.\nTeam up with professionals across 40+ countries in a diverse and inclusive environment.\nGenerous PTO policy matching your personal related preferences.\nCompany shares as part of the total compensation package.\nFlexible working hours synced with European time zone.\nInterview Process:\nHR Interview\nTechnical Interview\nFinal Round\nOffer\nApply Now by sending your CV in English with contact details in it\nOnly shortlisted candidates will be invited to an interview.\nYour job search is strictly confidential.\nRemote IT World operates under License № 2934 /10.12.2019 for providing recruitment services."
+  },
+  {
+   "id": 1176,
+   "title": "Senior Python Backend Developer",
+   "company": "Tumba Solutions",
+   "location": "",
+   "description": "We're seeking a seasoned Senior Python Backend Developer to join our team and play a pivotal role in building and scaling a Medtech product."
+  },
+  {
+   "id": 1519,
+   "title": "Senior Backend Engineer – Payment Infrastructure",
+   "company": "Remote It World",
+   "location": "",
+   "description": "A well-funded, globally recognised Web3 infrastructure company is scaling its payments platform at speed. The team powers a network used by tens of thousands of applications and hundreds of millions of transactions, and has recently launched a stablecoin and crypto payments product now embedded with major global payment providers and merchants. Engineering here means real ownership – no dedicated infra team, no hand-holding, just senior engineers building and operating what they ship.\nAbout the role\nYou’ll join the payments engineering team and take ownership of backend systems across the stack – payment orchestration, merchant and partner APIs, settlement flows, and internal business services. Where you focus will depend on your background and where the team needs depth. The common thread: you’ll design systems, ship production code, own your deployments, and operate with the accountability of a senior engineer in a fast-moving fintech environment. The primary stack is Rust and TypeScript on AWS infrastructure managed with Terraform.\nMain Responsibilities:\nDesign and build backend services across payment flows, APIs, and internal tooling.\nWrite technical design documents and participate in architecture decisions.\nOwn systems end-to-end: from development and testing through deployment and incident response.\nBuild and manage infrastructure via Terraform alongside your engineering work.\nInstrument everything you ship: logging, metrics, tracing, and alerting.\nTranslate requirements from product, finance, ops, and compliance into clean implementations.\nContribute to code review culture and engineering documentation.\nKey Requirements:\nSenior backend engineering experience – you’ve designed, built, and operated production services with real consequences.\nHands-on Rust experience, or strong production background in TypeScript, Go, Java, or Kotlin with clear willingness to move into Rust quickly.\nStrong system and API design skills – you reason well about trade-offs in distributed, high-throughput environments.\nExperience with payment systems, fintech infrastructure, or real-time transaction and ledger-style data.\nComfortable owning infrastructure directly – deploying and managing what you build via AWS and Terraform.\nHigh-ownership mentality – you’ve worked autonomously without heavy process or structural support.\nClear written communication; you can produce technical documents and work effectively across a remote, async team.\nBonus Points:\nBackground in settlement, reconciliation, FX, or multi-party payment flows.\nExperience building merchant-facing or developer-facing APIs and SDKs.\nExposure to data pipelines or internal reporting and compliance systems.\nFamiliarity with blockchain ecosystems, stablecoins, or on-chain settlement patterns.\nCompany Offer:\nUp to 130K USD gross annual remuneration.\nEquity and potential token allocation.\nFully remote with a home office setup budget.\nRegular team offsites and conference travel.\nGenerous PTO and parental leave.\nLearning and development budget.\nInterview Process:\nDiscovery call.\nHiring Manager interview.\nTechnical interviews.\nFinal interview.\nOffer.\nApply Now by sending your CV in English with contact details in it\nOnly shortlisted candidates will be invited to an interview.\nYour job search is strictly confidential.\nRemote IT World operates under License № 2934 /10.12.2019 for providing recruitment services."
+  },
+  {
+   "id": 1247,
+   "title": "Backend Developer",
+   "company": "albo",
+   "location": "Ciudad de MÃ©xico, Ciudad de MÃ©xico, MÃ©xico",
+   "description": "albo\nalbo is a leading fintech company offering financial products to individuals and SMBs with the mission to bring financial freedom to everyone everywhere.\nAbout The Role\nAs a Senior Backend Engineer you'll design, build, and operate the microservices that power albo's core financial products â from card issuing and authorization to credit lines, payments, and money movement. You'll own services end-to-end across our polyglot, event-driven platform, making pragmatic architectural decisions that keep money-critical flows correct, idempotent, and observable at scale. You'll work close to the domain (SPEI, ledgers, credit, authorization) and close to production, partnering with Product, Infra, and other engineering squads to ship reliable financial infrastructure.\nWhat Youâll Be Doing At Albo\nDesign, build, and maintain backend microservices in Go and Java/Quarkus within our domain-oriented architecture (customer, account, transactional, and shared domains).\nOwn services end-to-end: architecture, implementation, testing, deployment to QA/SBX/PROD, monitoring, and on-call ownership of what you ship.\nBuild event-driven and REST integrations across services (Pub/Sub, service-to-service REST via our private-proxy mesh), with strong guarantees around idempotency, reconciliation, and failure handling (dead-letter/reprocess, no silent data loss).\nModel and evolve data across MongoDB and SingleStore/MemSQL, keeping dual-write flows consistent between the display source of truth and what card authorization actually validates.\nShip through our CI/CD (Jenkins shared pipelines, containerized deploys to GKE/Kubernetes on GCP), managing configuration and secrets via GCP Secret Manager.\nWrite clean, self-documenting, well-tested code; participate in code reviews and raise the engineering bar for correctness and simplicity.\nCollaborate cross-functionally with Product, Infra/Platform, and other backend squads to break down epics into shippable, incremental deliveries.\nInstrument observability (structured logging, metrics, tracing) and use it to debug production issues and continuously improve reliability and performance.\nContribute to technical design docs, architecture diagrams, and shared conventions/scaffolding that scale the team.\nAbout You And What Type Of Skills You'll Need\nBachelor's degree in Computer Science, Software Engineering, or related field (or equivalent hands-on experience).\n+5 years of experience building and operating backend services in production, ideally in the Banking or Fintech industry.\nStrong proficiency in at least one of Go or Java (Quarkus/Spring or similar), and willingness to work across both in a polyglot environment.\nSolid experience with microservices and distributed systems: REST APIs, asynchronous/event-driven messaging (Pub/Sub, Kafka, or similar), service boundaries, and versioned contracts.\nHands-on experience with cloud infrastructure (GCP preferred), containers and Kubernetes, and CI/CD pipelines.\nComfort with both SQL and NoSQL data stores (MongoDB, SingleStore/MySQL/Postgres) and an eye for data consistency in money-critical flows.\nDeep understanding of reliability patterns â idempotency, retries, reconciliation, graceful degradation â and why they matter when handling real money.\nFamiliarity with fintech/payments concepts (card authorization, ledgers, transfers, credit) is a strong plus.\nCustomer Centricity: You're customer-obsessed, constantly thinking about improving the customer experience.\nHands-on: We're looking for a comfortable and willing leader to be a hands-on contributor who is energized by rolling up their sleeves, making things happen, and enabling the team to do the same.\nDone is better than perfect: As things change and move quickly, you are excited by the fast pace and opportunity to constantly learn and help your team learn.\nCommunication: Excellent ability to communicate internally and externally, quickly build relationships, and work cross-functionally.\nExtreme ownership: "
+  },
+  {
+   "id": 1169,
+   "title": "Senior Java Engineer",
+   "company": "Avenga (Musala Soft)",
+   "location": "Remote",
+   "description": "This is us\nAt Avenga, we believe that human creativity empowers technology that matters. Operating globally, our 6000+ specialists provide a full spectrum of services, including business and tech advisory, enterprise solutions, CX, UX and Ul design, managed services, product development, and software development.\nThis is the job\nIn Argentina within the Fintech industry, we are actively seeking a professional to strengthen our team dedicated to scaling and evolving our high-availability payment platforms. In this position, you will play a key role in driving high-throughput transactional flows, leveraging modern cloud-native architectures to enhance our financial solutions.\nThis is the team\nIn your role, you'll become a vital member of a team of skilled professionals dedicated to building low-latency distributed systems and optimizing critical payment rails. Your primary responsibility will involve designing robust microservices, mastering cloud integrations, and continuously improving code quality through innovative development workflows. Here you will have the opportunity to make a meaningful contribution to technological progress while at the same time advancing your own skills and career.\nThis is you\n6+ years of strong experience working with Java and building resilient backend services.\nPractical, hands-on knowledge of payment systems, with a strong focus on acquiring or issuing domains.\nSolid experience developing high-availability, low-latency systems and designing robust REST APIs.\nStrong understanding of microservices architecture and integration patterns.\nExperience managing deployments, pipelines, and CI/CD workflows, operating both with and without containers.\nProficient working with AWS cloud infrastructure, including tools like Lambda, EKS, ECS, SQS, SNS, EventBridge, DynamoDB, and API Gateway.\nActive adopter of AI agents and development assistants used daily for designing, generating, and continuously improving code quality.\nNice-to-have skills:\nPrevious experience working in promotional environments or within acquirer processors.\nFamiliarity with AWS tools like CloudWatch and DMS.\nThis is your role\nDesign, develop, and maintain high-scale microservices and integration patterns for core backend solutions.\nSecure and optimize high-availability, low-latency systems that process volume-heavy financial operations.\nBuild, deliver, and continuously evolve robust REST APIs.\nOwn end-to-end deployment workflows, managing pipelines and CI/CD routines across containerized and non-containerized setups.\nLeverage a wide array of AWS services to support distributed architectures and event-driven data flows.\nDrive engineering excellence by incorporating advanced AI-assisted development tools into your daily workflow.\nAt Avenga, everyone matters. We provide equal opportunities in recruitment, career development, and leadership, regardless of race, ethnicity, gender identity, sexual orientation, disability, age, religion, or any other characteristic. We are committed to fostering a work environment where our diverse community of employees, candidates, and business partners actively shapes our growth. By bringing together people from different backgrounds and experiences, we build a workplace where everyone feels free to be themselves while honoring the boundaries of others."
+  },
+  {
+   "id": 1192,
+   "title": "Java Engineer (AI-native)",
+   "company": "Cadabra",
+   "location": "",
+   "description": "Our client is a technological company at the forefront of the global medical research scene with real-world data. As a part of their growth, they Java Engineer whose main task would be to build and maintain features for the main product of the company – a data analytics and anonymization platform.\nResponsibilities:\n> Build and maintain features on the platform’s backend.\n> Develop the anonymization tool: an on-premise product where reliability and data protection are non-negotiable.\n> Automate the boring parts of engineering itself: CI on GitLab, test generation, code review support, internal services powered by their LLM stack.\n> Use coding agents as your default way of working, and help set the standard for how the rest of the team adopts them.\n> Own what you ship: tests, deployment, monitoring.\nRequirements (Must):\n> AI-first thinking. You reach for a model before writing boilerplate by hand, and you know when not to trust it.\n> You use coding agents daily and have opinions about where they’re strong and where they fail.\n> You ship. Working software in production over elegant designs in documents.\n> You hold quality when the tool moves fast: AI writes the draft; you own the correctness.\n> You’re comfortable in a small team where you see the whole system, not one microservice.\n> Strong engineering fundamentals in at least one major language. Java experience helps but is not required.\n> Daily, hands-on use of AI coding tools. Be ready to show us how you work, live.\n> SQL and relational databases.\n> Docker, Linux, Git, CI/CD as normal working tools.\nBrownie points:\n> Java and its ecosystem (Spring or similar).\n> On-premise or constrained-environment deployment experience.\n(Recruitment License № 2709/ 17.01.2019)"
+  },
+  {
+   "id": 1514,
+   "title": "Node.js Developer",
+   "company": "Cleverpine",
+   "location": "",
+   "description": "About the job\nCleverPine is a service company that thinks and acts like a product organization. We build and take ownership of long-term software products, focusing on solving complex challenges in the aviation sector.\nForget about leasing people and timesheets; we build products and we are proud of the technology that drives the exciting industry of aviation forward. Our passion is tackling the toughest problems and engineering transformative solutions that reshape business operations from the ground up.\nZero corporate BS is our golden rule. We are straight shooters who think fast and focus on practical solutions. Our selection process is no exception – a single interview followed by feedback within the next calendar week.\nPlease read carefully below, because we truly mean what we say.\nWho we look for\nWe are looking for a talented and driven Node.js Developer to join our growing team in Sofia. If you have around 2–3 years of experience building backend applications and enjoy solving real engineering challenges, we’d love to meet you.\nYou’ll work on long-term products used in the aviation industry, collaborating with experienced engineers in an environment that values ownership, continuous learning, and clean, maintainable code.\nSome of your key responsibilities\n• Develop and maintain backend application features using Node.js.\n• Take ownership of your tasks from implementation through testing and deployment.\n• Collaborate closely with teammates to clarify functional and technical requirements.\n• Build and maintain RESTful APIs and integrations with external services.\n• Write clean, maintainable, and well-tested code.\n• Participate in code reviews and technical discussions.\n• Continuously improve your technical skills and stay up to date with relevant technologies.\nWhat we look for\n• Node.js development. Professional experience building backend applications with Node.js (typically around 2–4 years), with the ability to work independently on production features. Strong understanding of asynchronous programming, Promises, async/await, and the Node.js event loop.\n• Backend engineering fundamentals. Solid understanding of software engineering principles, debugging, testing, and writing maintainable code.\n• Web frameworks. Experience with frameworks such as NestJS, Express.js, Fastify, or similar.\n• REST APIs. Understanding of API security, authentication, authorization, and common web security principles.\n• Databases. Experience designing data models, writing efficient queries, understanding transactions, indexing, and performance considerations.\n• Logging & observability. Experience troubleshooting production issues using logs, metrics, and debugging tools.\n• Testing. Experience writing unit and integration tests and understanding the value of automated testing.\n• Version control. Experience working with Git in a collaborative environment.\n• Problem-solving mindset. Ability to analyze requirements and deliver practical, sustainable solutions.\n• Team player. You enjoy collaborating, sharing knowledge, and helping the team succeed. „Ego“ is a hated word.\n• Self-discipline and ownership. Strong organizational skills, attention to detail, and the ability to manage your work independently.\n• Proficiency in English. Excellent command of spoken and written English.\nWhat will be considered an advantage\n• Comfortable using modern AI-assisted development tools (e.g. GitHub Copilot, Cursor, ChatGPT, Claude) to improve development productivity while maintaining engineering quality.\n• Familiarity with microservices architecture.\n• Experience with Docker and containerized applications.\n• Experience with cloud platforms such as AWS, Azure, or Google Cloud.\n• Knowledge of message brokers such as RabbitMQ or Kafka.\n• Understanding of event-driven architectures.\n• Experience writing automated tests.\n• Knowledge of authentication and authorization standards such as OAuth 2.0 and OpenID Connect.\n• Experience working with automated build, testing, an"
+  },
+  {
+   "id": 1315,
+   "title": "Full stack developer - Python - AWS Cloud 3+ years of experience",
+   "company": "Sutherland",
+   "location": "Bogotá, //BOGOTA, Colombia (hybrid)",
+   "description": "Full Stack Development: Design and build responsive front-end interfaces and scalable back-end services and APIs, delivering features end to end.\nCloud Management: Leverage AWS services (EC2, IAM, RDS, S3, EBS, CloudWatch) to design and manage application infrastructure, ensuring high availability, security, and performance.\nInfrastructure Automation: Implement and manage infrastructure as code using Terraform, and containerized workloads using Kubernetes and Helm for scalable, reliable deployments.\nDatabase Engineering: Design, deploy, and optimize relational databases such as PostgreSQL, Oracle, MySQL, or Aurora (including AWS RDS); write and tune queries, manage backups, and resolve performance issues.\nScripting & Automation: Write and maintain Python (and PowerShell/Perl where relevant) scripts to automate build, deployment, and operational tasks, integrating tools and services.\nConfiguration Management: Use Ansible to automate configuration management, software deployment, and orchestration across environments.\nMonitoring & Troubleshooting: Implement monitoring and logging (e.g. CloudWatch) to ensure the health of applications and infrastructure, and troubleshoot issues across the stack as they arise.\nNetworking & Security Awareness: Apply a working understanding of IP networking, TCP/IP, VPN, firewalls, and SSL to build and secure cloud-hosted applications.\nCollaboration: Work closely with development, product support, and operations teams to ensure smooth deployment and operation of applications.\nSecurity Compliance: Ensure that application code, infrastructure, and deployment processes comply with industry security standards and best practices.\nRequirements:\n5+ years of total experience, with 3+ years of hands-on development experience in Python (and/or other major languages such as JavaScript/TypeScript, Java, or Perl).\nProven experience building full stack web applications — front-end frameworks plus back-end services and RESTful APIs.\nIn-depth knowledge of AWS services and best practices for cloud architecture and management.\nExperience managing AWS infrastructure using Terraform (infrastructure as code).\nExperience with Kubernetes for container orchestration and container deployments using Helm.\nApplication deployment and configuration management using Ansible.\nHands-on experience with relational databases (PostgreSQL, Oracle, MySQL, SQL Server, or Aurora) and AWS RDS, including backups, restores, and performance tuning.\nStrong knowledge of Linux/Unix systems (RHEL, Amazon Linux); Windows server familiarity is a plus.\nWorking understanding of networking and security concepts (TCP/IP, VPN/IPSec, firewalls, SSL) for cloud-hosted, multi-tenant architectures.\nExperience providing 24x7 support to production SaaS infrastructure, including on-call rotation and out-of-hours support when needed.\nUnderstanding of ITIL processes — incidents, service requests, and change management.\nB.E/B.Tech/M.Tech/M.Sc. in Computer Science, IT, or a related engineering discipline, or equivalent experience.\nCertifications such as AWS Certified DevOps Engineer or Certified Kubernetes Administrator (CKA) are a strong plus.\nProven ability to learn new technologies quickly and work effectively within a distributed, global team.\nDetail-oriented and task-driven, with excellent communication skills and a strong customer-service focus.\nAbility to work in a high-pressure, highly flexible environment against both short- and long-term objectives."
+  },
+  {
+   "id": 1524,
+   "title": "Brand & Marketing Design Intern",
+   "company": "SumUp",
+   "location": "Berlin, Germany",
+   "description": "About the team\nThe Central Marketing Creative Team sits at the heart of how SumUp shows up in the world, shaping the visual identity of a brand trusted by over 4 million small businesses across 37 markets. Within the team, the Brand pillar owns everything from campaign creative and social content to event design and brand governance, ensuring SumUp looks and feels consistent wherever it appears. We're a collaborative, craft-focused group that moves fast, holds high standards, and genuinely cares about the quality of what we put out, and this role sits right at the centre of that.\nThis is an opportunity to join a high-output creative team at a pivotal moment, as we scale our brand presence and increase the volume and ambition of our marketing campaigns. You'll report directly to the Head of Brand and Marketing Design and work day-to-day alongside designers, campaign managers, content strategists, and channel specialists.\n🎥 Take a look inside our Berlin office\nWhat you'll do\nProduce and adapt marketing assets across paid, organic, and owned channels, including resizes, format variations, and channel-specific executions, working within SumUp's visual identity system\nSupport the team with reactive creative requests across campaigns, events, internal comms, and marketing design execution\nContribute to employer brand content across LinkedIn, careers pages, and recruiting collateral, aligned to the new brand identity\nRun lightweight brand QA checks on marketing and internal materials before they ship, flagging inconsistencies early\nSupport the localisation and implementation of asset sets in Contentful, in collaboration with a senior designer\nContribute to the development and documentation of scalable design templates for use across the business\nHelp keep our Brand Standards Portal current as guidelines evolve and organise our brand and marketing design assets in our Digital Asset Management system\nYou'll be great for this role if…\nYou're studying or have recently graduated in Graphic Design, Visual Communication, Brand Design, or a related creative field\nYou have hands-on proficiency in Figma and the Adobe Creative Suite (Illustrator, Photoshop, InDesign)\nYou have a strong foundation in typography, composition, and colour theory, and can apply a visual identity system consistently across formats\nYou're organised and rigorous with digital files: naming conventions, folder structures, asset libraries, at a level that others can rely on\nYou have a sharp eye for detail and notice inconsistencies in type, colour, spacing, and layout that others might miss\nYou take ownership of your work, flag blockers early, and follow through without needing to be chased\nYou're genuinely curious about brand strategy, not just how things look, but why\nIt's a bonus if you have:\nExperience with a Digital Asset Management tool (Canto or similar)\nFamiliarity with Figma library management or component automation\nExperience with a CMS, particularly Contentful\nExposure to employer brand, social media, or marketing content production\nExperience working within or alongside a brand refresh or identity rollout\nWhy you should join SumUp\n🌎 Opportunity to work with a truly global, multicultural team from our central Covent Garden location, wrapped in historic charm and modern flair. This involves an office-first setup\n🌈 Commitment to Diversity and Inclusion: be part of a workplace that values and promotes diversity, fostering an inclusive environment where everyone's perspectives are respected and embraced\n🏖 Generous time off: enjoy 28 days of paid leave, plus bank holidays and special leaves\n📚 A dedicated annual L&D budget for attending conferences and/or advancing your career through further education\n🏥 Health matters: private health insurance, including optical and dental\n🚗 Life made easier: salary-sacrifice commuter benefits via Gogeta\n💼 Financial security: retirement scheme (SumUp matches 7% when you contribute 5%)\n🛡 Peace of mind: life insurance from MetLife for"
+  },
+  {
+   "id": 1505,
+   "title": "SEO Marketing Manager",
+   "company": "Payhawk",
+   "location": "London",
+   "description": "Your mission:\nLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.\nStet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\nAt vero eos et accusam et justo duo dolores et ea rebum.\nStet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\nYour profile:\nLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.\nStet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\nAt vero eos et accusam et justo duo dolores et ea rebum.\nStet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\nWhy us?:\nLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.\nStet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\nAt vero eos et accusam et justo duo dolores et ea rebum.\nStet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."
+  },
+  {
+   "id": 1485,
+   "title": "Специалист Логистика",
+   "company": "tbi bank",
+   "location": "Sofia, Sofia, Bulgaria",
+   "description": "Стани част от екипа на най-добрата банка за работа в България*\nПредстави си работен ден, в който си човекът, който държи всички административни и организационни процеси под контрол. Ден, в който координираш ежедневни дейности, поддържаш безпроблемната комуникация между различни екипи и се грижиш всичко да се случва навреме и по най-добрия начин. Ден, в който с добрата си организация и внимание към детайла допринасяш за ефективната работа на целия екип.\nАко това ти звучи като нещо, което би правил с удоволствие, tbi bank може да е твоето място.\nИскаш ли да станеш част от нашата уникална история?\nКаним те да се присъединиш към екипа на позицията:\nСпециалист Логистика\nКак ще протича твоят ден:\nЩе поддържаш файлове и записи, с цел да бъдат актуализирани и лесно достъпни\nЩе обработваш входяща поща и подготовяш изходяща поща (пликове, пакети и др.) за изпращане\nЩе отговаряш на телефонни обаждания, приемаш съобщения или пренасочваш обаждания до съответните колеги\nЩе изпълняваш основни административни задачи, инициираш фактури\nЩе съдействаш за управление на офиса и организационните процедури\nЩе обработваш поръчки за канцеларски материали и консумативи\nЩе съдействаш за организиране на пътувания и резервиране на места, за конференции и събития\nЩе обработваш заявки за облекло, печати и преводи\nЩе поръчваш печатни материали\nЩе кореспондираш с куриери, ще приемаш и изпращаш пратки\nЩе посрещаш и изпращаш клиентите на Банката\nЩе архивираш документи и изпращаш към външен архив\nЩе изпълняваш други възложени служебни задължения\nRequirements:\nКакво ти е нужно, за да бъдеш успешен:\nПредишен опит на подобна позиция не се изисква, но ще се счита за предимство.\nКомпютърна грамотност (MS Office: Word, Excel, Power Point, Outlook)\nУмения за работа с офис техника\nОтлични комуникативни умения\nМного добри организационни умения\ntbi e твоето място, ако искаш:\nда се възползваш от възможността да развиеш кариерата си\nда се включиш във вълнуваща и иновативна работа\nда получаваш признание за работата и отношението си\nда станеш част от голям, приятелски настроен и подкрепящ се екип\nда получиш допълнително здравно осигуряване\nда получаваш ваучери за храна\nда се възползваш от страхотни намаления за карта за спорт и множество търговски обектa\nда получаваш преференциални цени за нашите банкови продукти\n*Ние сме класирани на първо място сред банките и в топ 3 на най-добрите работодатели в България според класацията на WhereWeWork за 2025 г.\nВсички кандидатури ще бъдат разгледани при пълна конфиденциалност.\nС доброволното предоставяне на документи за кандидатстване за работа в „Ти Би Ай Банк” ЕАД, потвърждавате, че сте се запознали с „Информация във връзка с обработването на лични данни за кандидати за работа в „Ти Би Ай Банк” ЕАД“, която е публично достъпна на нашата кариерна страница."
+  },
+  {
+   "id": 1516,
+   "title": "Junior Technical Customer Care Specialist with German",
+   "company": "Astrea Recruitment",
+   "location": "",
+   "description": "At Astrea Recruitment, we’ve been turning job searches into exciting new beginnings for 19 years! With offices in Bulgaria and Serbia, we connect top talent with leading Bulgarian and international companies. We believe in helping people grow into their best selves, and our ever-growing network of happy candidates and clients is what drives us forward. Let’s shape the future together!\nFor one of our clients – a global company providing customer experience solutions for leading international brands – we are looking for a Junior Technical Customer Care Specialist with German (Hybrid). The project is for a world-renowned technology company focused on healthcare and consumer products, where you will support customers via Social Media with pre-sales, post-sales, and technical inquiries while delivering an outstanding customer experience.\nResponsibilities:\nDeliver exceptional customer support via phone, email, tickets, and social media channels;\nAssist customers with product inquiries, technical questions, and after-sales support for consumer technology and home appliances;\nDiagnose and troubleshoot technical issues, providing clear, effective, and customer-friendly solutions;\nGuide customers through product features, setup, and best practices to ensure a seamless user experience;\nAccurately document customer interactions and maintain case records in internal systems;\nCollaborate with internal teams to resolve complex cases and continuously improve the customer journey;\nStay up to date with new product launches, technical updates, and support procedures while consistently meeting quality and performance targets.\nQualifications:\nExcellent command of German and good English communication skills;\nPrevious experience in Customer Support, Technical Support, or Customer Care is an advantage;\nInterest in consumer technology, smart devices, electronics, or home appliances;\nStrong analytical and troubleshooting skills with the ability to identify and resolve technical issues efficiently;\nExcellent communication, multitasking, and organizational abilities in a fast-paced environment;\nA customer-first mindset, attention to detail, and a proactive approach to problem-solving;\nConfidence in working with multiple systems while maintaining high standards of quality and accuracy.\nOur client offers:\nOffice location – good transport links and close to the metro;\nWorking on rotational shifts, with no night shifts required;\nHybrid work model available after the 6th month;\nAttractive performance bonus, welcome bonus, and relocation support package;\nHealth Insurance – after 3 months, with the option to add a family member;\nGym membership – access to 200+ fitness centers;\nFood vouchers.\nIf you feel excited and confident that you’re the perfect fit, we encourage you to take the next step. Kindly share your detailed resume in English when you get a chance. (and don’t forget to include the reference number SM_).\nRest assured that we will reach out promptly to the candidates whose profiles closely match our requirements. Your privacy is of utmost importance to us, and all your information is safeguarded in compliance with the regulations of the Commission for the Protection of Personal Data (Astrea Recruitment, license. No 1809)."
+  },
+  {
+   "id": 1409,
+   "title": "Account Manager",
+   "company": "Playtech",
+   "location": "Lima, , Peru (hybrid)",
+   "description": "Your influential mission. You will...\nBe on top of customer business models, including marketing strategies (e.g., bonuses, admin usage).\nManage day-to-day commercial contact between Playtech customers and internal stakeholders.\nDrive customer performance and revenue growth through strategic recommendations using KPI(s) & benchmark analysis.\nPromote tasks internally, including development requests and initiation of new projects.\nAssist the Regional Director in working on group-wide deals.\nEnsure customers are aware of and utilize new Playtech products.\nProvide customers with appropriate marketing materials for promoting all products.\nMaximize revenues and profits through existing products and channels by developing account management tools.\nMaintain excellent relationships with each Playtech customer through regular communication and meetings.\nCoordinate the interface of Playtech’s project management, translation, finance, compliance, and legal processes with customer’s equivalent staff.\nMaintain detailed customer relationship information and share regularly with colleagues/management.\nDevelop new marketing initiatives with customers.\nMaintain detailed information on Playtech competition in the online market for regular feedback into the team.\nProvide first-level business support and act as an escalation point for technical issues.\nAttend exhibitions and events.\nConduct operational audits.\nRequirements:\nComponents for success. You...\nAre highly self-motivated and can work well autonomously.\nPossess a high level of emotional intelligence (EQ) and are passionate about the gaming industry.\nHave excellent written and spoken English, Spanish and Portuguese skills.\nHave experience managing or working with international and external customers.\nHave experience with a software or internet company in a relevant position.\nAre detail-oriented, self-managed, a team player, and capable of multitasking.\nAre service and business-oriented with excellent interpersonal skills.\nHave strong analytical and problem-solving abilities.\nHave knowledge of internet advertising (an advantage).\nCan prioritize and manage client engagements effectively.\nHave proven negotiation skills.\nHave a background in managing legal contracts and documents (an advantage).\nHave proven ability to manage multiple client relationships and grow revenues.\nHave an interest in and knowledge of sports, betting, casino games, and poker.\nUnderstand IT platforms, systems, and development processes.\nAre good with numbers.\nHave experience in the online gaming industry.\nHave at least 2 years of experience or background in Customer Services/Customer Support B2B.\nYou'll get extra points for...\nKnowledge of internet advertising.\nBackground in managing legal contracts and documents.\nProven ability to manage multiple client relationships.\nInterest in and knowledge of sports, betting, casino games, and poker.\nThrive in a culture that values...\nA competitive salary and bonus scheme.\nA fantastic team culture.\nOpportunities to work in the gaming industry with one of the top teams in the sector.\nProfessional growth and educational development opportunities.\nAn inclusive environment where differences are celebrated, and everyone is encouraged to be themselves at work."
+  },
+  {
+   "id": 1350,
+   "title": "HR Back - office administrator with GERMAN",
+   "company": "Sutherland",
+   "location": "Remote",
+   "description": "What will you do\nProcess HR queries, using the leading ticketing and case management systems.\nManage reports and perform data audits.\nPrioritize and organize the daily tasks in your personal queue.\nShine throughout exemplary communication skills and teamwork.\nAct in accordance to company standards and project a positive overall image.\nRequirements:\nWhat will you bring to the role\nThe job holder must be computer literate and numerate with willingness to adapt to various systems and databases.\nExcellent proficiency of German (C1/B2H) and good proficiency of English (B2).\nPrevious experience in administration, HR or customer service is an advantage.\nBusiness-level communication skills, being responsive, kind and polite.\nAbility to work independently, with high-level of attention to details."
+  }
+ ],
+ "labels": {
+  "p1_android": {
+   "38": {
+    "grade": 2,
+    "review": false
+   },
+   "33": {
+    "grade": 2,
+    "review": false
+   },
+   "655": {
+    "grade": 2,
+    "review": false
+   },
+   "36": {
+    "grade": 2,
+    "review": false
+   },
+   "35": {
+    "grade": 2,
+    "review": false
+   },
+   "838": {
+    "grade": 2,
+    "review": false
+   },
+   "751": {
+    "grade": 2,
+    "review": false
+   },
+   "933": {
+    "grade": 1,
+    "review": true
+   },
+   "1510": {
+    "grade": 1,
+    "review": true
+   },
+   "1054": {
+    "grade": 1,
+    "review": true
+   },
+   "850": {
+    "grade": 1,
+    "review": true
+   },
+   "663": {
+    "grade": 0,
+    "review": true
+   },
+   "1190": {
+    "grade": 0,
+    "review": false
+   },
+   "1513": {
+    "grade": 0,
+    "review": false
+   },
+   "1007": {
+    "grade": 0,
+    "review": false
+   },
+   "956": {
+    "grade": 0,
+    "review": false
+   },
+   "942": {
+    "grade": 0,
+    "review": false
+   },
+   "1058": {
+    "grade": 0,
+    "review": false
+   },
+   "954": {
+    "grade": 0,
+    "review": false
+   },
+   "1270": {
+    "grade": 0,
+    "review": true
+   },
+   "1030": {
+    "grade": 0,
+    "review": true
+   },
+   "1278": {
+    "grade": 0,
+    "review": false
+   },
+   "1520": {
+    "grade": 0,
+    "review": false
+   },
+   "1518": {
+    "grade": 0,
+    "review": false
+   },
+   "1176": {
+    "grade": 0,
+    "review": false
+   },
+   "1519": {
+    "grade": 0,
+    "review": false
+   },
+   "1247": {
+    "grade": 0,
+    "review": false
+   },
+   "1169": {
+    "grade": 0,
+    "review": false
+   },
+   "1192": {
+    "grade": 0,
+    "review": false
+   },
+   "1514": {
+    "grade": 0,
+    "review": false
+   },
+   "1315": {
+    "grade": 0,
+    "review": true
+   },
+   "1524": {
+    "grade": 0,
+    "review": false
+   },
+   "1505": {
+    "grade": 0,
+    "review": false
+   },
+   "1485": {
+    "grade": 0,
+    "review": false
+   },
+   "1516": {
+    "grade": 0,
+    "review": false
+   },
+   "1409": {
+    "grade": 0,
+    "review": false
+   },
+   "1350": {
+    "grade": 0,
+    "review": false
+   }
+  },
+  "p2_ml": {
+   "38": {
+    "grade": 0,
+    "review": false
+   },
+   "33": {
+    "grade": 0,
+    "review": false
+   },
+   "655": {
+    "grade": 0,
+    "review": false
+   },
+   "36": {
+    "grade": 0,
+    "review": false
+   },
+   "35": {
+    "grade": 0,
+    "review": false
+   },
+   "838": {
+    "grade": 0,
+    "review": false
+   },
+   "751": {
+    "grade": 0,
+    "review": false
+   },
+   "933": {
+    "grade": 0,
+    "review": true
+   },
+   "1510": {
+    "grade": 0,
+    "review": true
+   },
+   "1054": {
+    "grade": 0,
+    "review": true
+   },
+   "850": {
+    "grade": 0,
+    "review": true
+   },
+   "663": {
+    "grade": 0,
+    "review": true
+   },
+   "1190": {
+    "grade": 2,
+    "review": false
+   },
+   "1513": {
+    "grade": 2,
+    "review": false
+   },
+   "1007": {
+    "grade": 2,
+    "review": false
+   },
+   "956": {
+    "grade": 2,
+    "review": false
+   },
+   "942": {
+    "grade": 2,
+    "review": false
+   },
+   "1058": {
+    "grade": 2,
+    "review": false
+   },
+   "954": {
+    "grade": 2,
+    "review": false
+   },
+   "1270": {
+    "grade": 1,
+    "review": true
+   },
+   "1030": {
+    "grade": 1,
+    "review": true
+   },
+   "1278": {
+    "grade": 1,
+    "review": false
+   },
+   "1520": {
+    "grade": 0,
+    "review": false
+   },
+   "1518": {
+    "grade": 0,
+    "review": false
+   },
+   "1176": {
+    "grade": 1,
+    "review": false
+   },
+   "1519": {
+    "grade": 0,
+    "review": false
+   },
+   "1247": {
+    "grade": 0,
+    "review": false
+   },
+   "1169": {
+    "grade": 0,
+    "review": false
+   },
+   "1192": {
+    "grade": 1,
+    "review": false
+   },
+   "1514": {
+    "grade": 0,
+    "review": false
+   },
+   "1315": {
+    "grade": 0,
+    "review": true
+   },
+   "1524": {
+    "grade": 0,
+    "review": false
+   },
+   "1505": {
+    "grade": 0,
+    "review": false
+   },
+   "1485": {
+    "grade": 0,
+    "review": false
+   },
+   "1516": {
+    "grade": 0,
+    "review": false
+   },
+   "1409": {
+    "grade": 0,
+    "review": false
+   },
+   "1350": {
+    "grade": 0,
+    "review": false
+   }
+  },
+  "p3_backend": {
+   "38": {
+    "grade": 0,
+    "review": false
+   },
+   "33": {
+    "grade": 0,
+    "review": false
+   },
+   "655": {
+    "grade": 0,
+    "review": false
+   },
+   "36": {
+    "grade": 0,
+    "review": false
+   },
+   "35": {
+    "grade": 1,
+    "review": false
+   },
+   "838": {
+    "grade": 0,
+    "review": false
+   },
+   "751": {
+    "grade": 0,
+    "review": false
+   },
+   "933": {
+    "grade": 0,
+    "review": true
+   },
+   "1510": {
+    "grade": 0,
+    "review": true
+   },
+   "1054": {
+    "grade": 0,
+    "review": true
+   },
+   "850": {
+    "grade": 0,
+    "review": true
+   },
+   "663": {
+    "grade": 0,
+    "review": true
+   },
+   "1190": {
+    "grade": 1,
+    "review": false
+   },
+   "1513": {
+    "grade": 1,
+    "review": false
+   },
+   "1007": {
+    "grade": 0,
+    "review": false
+   },
+   "956": {
+    "grade": 0,
+    "review": false
+   },
+   "942": {
+    "grade": 0,
+    "review": false
+   },
+   "1058": {
+    "grade": 0,
+    "review": false
+   },
+   "954": {
+    "grade": 1,
+    "review": false
+   },
+   "1270": {
+    "grade": 0,
+    "review": true
+   },
+   "1030": {
+    "grade": 1,
+    "review": true
+   },
+   "1278": {
+    "grade": 2,
+    "review": false
+   },
+   "1520": {
+    "grade": 2,
+    "review": false
+   },
+   "1518": {
+    "grade": 2,
+    "review": false
+   },
+   "1176": {
+    "grade": 2,
+    "review": false
+   },
+   "1519": {
+    "grade": 2,
+    "review": false
+   },
+   "1247": {
+    "grade": 2,
+    "review": false
+   },
+   "1169": {
+    "grade": 1,
+    "review": false
+   },
+   "1192": {
+    "grade": 1,
+    "review": false
+   },
+   "1514": {
+    "grade": 1,
+    "review": false
+   },
+   "1315": {
+    "grade": 1,
+    "review": true
+   },
+   "1524": {
+    "grade": 0,
+    "review": false
+   },
+   "1505": {
+    "grade": 0,
+    "review": false
+   },
+   "1485": {
+    "grade": 0,
+    "review": false
+   },
+   "1516": {
+    "grade": 0,
+    "review": false
+   },
+   "1409": {
+    "grade": 0,
+    "review": false
+   },
+   "1350": {
+    "grade": 0,
+    "review": false
+   }
+  }
+ }
+}
