@@ -65,12 +65,14 @@ _BROWSER_HEADERS = {
 
 
 def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT,
-               browser: bool = False):
+               browser: bool = False, headers: dict | None = None):
     """GET `url` and return parsed JSON, or None on any network/HTTP/parse error. Set
-    browser=True for hosts that reject plain bot UAs (RemoteOK, Lever, Ashby)."""
+    browser=True for hosts that reject plain bot UAs (RemoteOK, Lever, Ashby); `headers`
+    merges on top (API keys — e.g. Arbeitsagentur's public X-API-Key)."""
     if _blocked(url):
         return None
-    headers = _BROWSER_HEADERS if browser else {"User-Agent": _UA}
+    base_headers = _BROWSER_HEADERS if browser else {"User-Agent": _UA}
+    headers = {**base_headers, **(headers or {})}
     try:
         r = httpx.get(url, params=params, timeout=timeout, headers=headers, follow_redirects=True)
         r.raise_for_status()
