@@ -30,7 +30,8 @@ def _platform_llm():
     p = get_provider(settings.server_llm_provider)
     if p is None:
         return None
-    return p, settings.server_llm_api_key, settings.server_llm_model
+    return p, settings.server_llm_api_key, (settings.annotate_model
+                                            or settings.server_llm_model)
 
 
 def annotate_posting(db: Session, post: Posting, llm) -> bool:
@@ -47,11 +48,11 @@ def annotate_posting(db: Session, post: Posting, llm) -> bool:
         answer = provider.generate(system, prompt, api_key=api_key, model=model)
     except LLMError as e:
         log.warning("annotation failed for posting %s: %s", post.id, e)
-        return False
+        raise _RateLimited() if "rate limit" in str(e).lower() else _Failed()
     parsed = parse_annotate_response(answer, len(scored))
     if parsed is None:
         log.warning("unparseable annotation for posting %s", post.id)
-        return False
+        raise _Failed()
     # merge into a NEW requirements list (JSON column change detection needs reassignment)
     new_reqs = []
     scored_idx = 0
@@ -67,8 +68,16 @@ def annotate_posting(db: Session, post: Posting, llm) -> bool:
     return True
 
 
+class _Failed(Exception):
+    """Annotation of one posting failed — skip it, retry next cycle."""
+
+
+class _RateLimited(_Failed):
+    """The provider rate-limited us — wait it out instead of burning the budget."""
+
+
 def annotate_postings(db: Session, budget: int | None = None, delay: float = 0.3,
-                      sleep=time.sleep) -> dict:
+                      rate_limit_wait: float = 30.0, sleep=time.sleep) -> dict:
     """Annotate up to `budget` live postings whose annotation is missing or stale
     (version/fingerprint mismatch). Platform LLM lane only; silently a no-op without one."""
     budget = settings.annotate_budget if budget is None else budget
@@ -91,9 +100,15 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 0.3
             continue
         if annotated + failed:
             sleep(delay)
-        if annotate_posting(db, post, llm):
+        try:
+            annotate_posting(db, post, llm)
             annotated += 1
-        else:
+        except _RateLimited:
+            failed += 1
+            if failed > 3:               # persistent limiting — yield, the next cycle continues
+                break
+            sleep(rate_limit_wait)       # one-off burst: wait out the window and keep going
+        except _Failed:
             failed += 1
     db.commit()
     return {"annotated": annotated, "failed": failed}

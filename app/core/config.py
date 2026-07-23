@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Requirement annotation (annotate-v1): LLM calls per ingest cycle on the PLATFORM key
     # (0 = off). One call per posting, ever — version+fingerprint make re-annotation lazy.
     annotate_budget: int = 60
+    # Annotation is a simple structured task — a small fast model with high rate limits
+    # beats the big default (groq: llama-3.1-8b-instant). Empty = the server default model.
+    annotate_model: str = ""
 
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).
