@@ -20,6 +20,7 @@ from ...data.models import Posting
 from ...domain.prompts.annotate_v1 import (ANNOTATE_VERSION, build_annotate_prompt,
                                            parse_annotate_response, requirements_fingerprint,
                                            scored_requirements)
+from ...domain.skills import canon_skill, is_known
 
 log = logging.getLogger(__name__)
 
@@ -53,14 +54,21 @@ def annotate_posting(db: Session, post: Posting, llm) -> bool:
     if parsed is None:
         log.warning("unparseable annotation for posting %s", post.id)
         raise _Failed()
-    # merge into a NEW requirements list (JSON column change detection needs reassignment)
+    # merge into a NEW requirements list (JSON column change detection needs reassignment);
+    # skills are CANONIZED at write (and again at read — dictionary updates act instantly);
+    # unknown-to-the-dictionary skills are logged: reviewing them is what grows the dictionary
     new_reqs = []
     scored_idx = 0
     for r in post.requirements or []:
         r = dict(r)
         if r.get("kind", "must") in ("must", "nice"):
             if scored_idx in parsed:
-                r["skills"], r["weight"] = parsed[scored_idx]
+                raw_skills, weight = parsed[scored_idx]
+                unknown = [s for s in raw_skills if not is_known(s)]
+                if unknown:
+                    log.info("unknown skills (dictionary candidates): %s", unknown)
+                r["skills"] = sorted({canon_skill(s) for s in raw_skills})
+                r["weight"] = weight
             scored_idx += 1
         new_reqs.append(r)
     post.requirements = new_reqs

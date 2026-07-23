@@ -79,7 +79,7 @@ def test_annotate_posting_merges_skills_and_marks_version(monkeypatch):
         assert p.annotation_version == ANNOTATE_VERSION
         assert p.annotation_fp == requirements_fingerprint(p.requirements)
         must = p.requirements[0]
-        assert must["skills"] == ["kotlin", "java"] and must["weight"] == 5
+        assert must["skills"] == ["java", "kotlin"] and must["weight"] == 5  # canonized+sorted
         assert p.requirements[1]["weight"] == 1
         assert "skills" not in p.requirements[2]               # resp untouched
 

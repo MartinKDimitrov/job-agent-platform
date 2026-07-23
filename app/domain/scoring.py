@@ -7,6 +7,7 @@ import re
 from functools import lru_cache
 
 from ..core.config import settings
+from .skills import canon_skill, extract_skills
 
 _model = None
 
@@ -102,17 +103,30 @@ _GENERIC_REQ_TOKENS = {
 }
 
 
-def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None = None) -> bool:
-    """Is this requirement covered by the profile? ANNOTATED requirements match
-    deterministically — any canonical skill present in the profile text (word-boundary);
-    un-annotated ones fall back to whole-token overlap minus generic tokens."""
+def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None = None,
+                    profile_skills: set[str] | None = None) -> bool:
+    """Is this requirement covered by the profile?
+
+    ANNOTATED requirements match through the canonical dictionary on BOTH sides: the
+    annotation's skill and the profile's mention collapse to one string ('React.js' in
+    the profile covers a 'react' skill — the case the raw word-boundary regex missed).
+    Unknown-to-the-dictionary skills fall back to a word-boundary search in the raw text.
+    UN-annotated requirements: a shared canonical skill between the requirement TEXT and
+    the profile counts (the dictionary as synonym layer — 'GCP' covers 'Google Cloud
+    Platform' even before annotation), else whole-token overlap minus generic tokens."""
+    p_skills = (profile_skills if profile_skills is not None
+                else extract_skills(profile_text))
     skills = r.get("skills")
     if skills:
         low = (profile_text or "").lower()
         for s in skills:
-            if re.search(r"(?<![a-z0-9+#.])" + re.escape(s) + r"(?![a-z0-9+#.])", low):
+            if canon_skill(s) in p_skills:
                 return True
+            if re.search(r"(?<![a-z0-9+#.])" + re.escape(s) + r"(?![a-z0-9+#.])", low):
+                return True                     # unknown skill — raw word-boundary fallback
         return False
+    if p_skills & extract_skills(r.get("text", "")):
+        return True
     toks = profile_tokens if profile_tokens is not None else _tokens(profile_text)
     rtok = _tokens(r.get("text", "")) - _GENERIC_REQ_TOKENS
     return bool(rtok and rtok & (toks - _GENERIC_REQ_TOKENS))
@@ -144,10 +158,11 @@ def score(profile_text: str, posting_text: str, requirements=None,
     """
     reqs = _norm_reqs(requirements)
     p_tok = _tokens(profile_text)
+    p_skills = extract_skills(profile_text)     # canonical, computed once per call
     covered, missing = [], []
     w_cov = w_tot = 0.0
     for r in reqs:
-        hit = requirement_hit(r, profile_text, p_tok)
+        hit = requirement_hit(r, profile_text, p_tok, p_skills)
         w = req_weight(r)
         if w > 0:                       # responsibilities/soft (w=0) are not scored as gaps
             w_tot += w

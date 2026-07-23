@@ -100,7 +100,7 @@ postings twice); must-gate behaviour today; posted_at trustworthiness per adapte
 requirements — raw 7k-char descriptions truncate at E5's 512 tokens exactly where the
 requirements live); mode per eval; store embedding_version (+model/mode) on the row.
 
-**Phase 3 — canonical skills dictionary**, applied on BOTH sides (annotation output at
+**Phase 3 ✅ — canonical skills dictionary** (skills-v1, ~90 canonical entries), applied on BOTH sides (annotation output at
 write AND requirement_hit/profile at read — so dictionary updates act instantly, no
 re-annotation machinery); doubles as the synonym layer for token-fallback; BG/EN aliases;
 unknown skills from both sides are logged and reviewed — that's what keeps it alive.
