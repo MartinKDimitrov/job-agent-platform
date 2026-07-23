@@ -76,7 +76,7 @@ class _RateLimited(_Failed):
     """The provider rate-limited us — wait it out instead of burning the budget."""
 
 
-def annotate_postings(db: Session, budget: int | None = None, delay: float = 0.3,
+def annotate_postings(db: Session, budget: int | None = None, delay: float = 8.0,
                       rate_limit_wait: float = 30.0, sleep=time.sleep) -> dict:
     """Annotate up to `budget` live postings whose annotation is missing or stale
     (version/fingerprint mismatch). Platform LLM lane only; silently a no-op without one."""
