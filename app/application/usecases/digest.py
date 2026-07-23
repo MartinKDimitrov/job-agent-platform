@@ -107,7 +107,8 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
             for p in profiles:
                 search_db(db, p, stats=stats)
                 q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
-                     .where(Match.profile_id == p.id, Match.score >= p.min_match)
+                     .where(Match.profile_id == p.id, Match.score >= p.min_match,
+                            Posting.is_live.is_(True))   # never email retired postings
                      .order_by(Match.score.desc()))
                 for m, post in db.execute(q).all():
                     if (p.id, post.id) in already:

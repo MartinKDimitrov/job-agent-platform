@@ -75,6 +75,7 @@ class Posting(Base):
     is_live: Mapped[bool] = mapped_column(Boolean, default=True)
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # source date
     first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

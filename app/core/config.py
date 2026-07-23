@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # DB-first search: the in-app background ingester refreshes the posting index every
     # N hours (0 = disabled — tests and environments where cron runs `python -m app.jobs ingest`).
     ingest_every_hours: int = 0
+    # Postings older than this (source date when known, else first_seen) retire from every
+    # surface — feed, public pages, digest (owner rule: nothing older than a month).
+    posting_max_age_days: int = 30
 
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).

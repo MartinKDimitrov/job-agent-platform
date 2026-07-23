@@ -424,7 +424,8 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
                    f"{done}</div>")
 
     q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
-         .where(Match.profile_id == p.id, Match.score >= p.min_match)
+         .where(Match.profile_id == p.id, Match.score >= p.min_match,
+                Posting.is_live.is_(True))     # retired (>1 month old) postings never show
          .order_by(Match.score.desc()))
     pairs = db.execute(q).all()
     # documents per posting, one query

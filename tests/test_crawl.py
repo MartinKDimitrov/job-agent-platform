@@ -169,8 +169,9 @@ def test_concurrent_search_integrity_error_is_survived(monkeypatch):
         def flaky_commit():
             calls["n"] += 1
             # the FINAL commit in run_search is the one that flushes pending matches — fail it
-            # once, mimicking the concurrent duplicate-key collision
-            if calls["n"] == 3:
+            # once, mimicking the concurrent duplicate-key collision. Ordinals: ingest(1),
+            # enrich(2), retire(3), search_db matches(4).
+            if calls["n"] == 4:
                 db.rollback()
                 raise IntegrityError("stmt", {}, Exception("duplicate key uq_profile_posting"))
             return real_commit()

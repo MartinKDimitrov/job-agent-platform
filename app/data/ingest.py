@@ -27,7 +27,13 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
 
     for rp in postings:
         chash = rp.content_hash()
-        if db.execute(select(Posting.id).where(Posting.content_hash == chash)).first():
+        existing = db.execute(
+            select(Posting).where(Posting.content_hash == chash)).scalar_one_or_none()
+        if existing is not None:
+            # cheap backfill: rows ingested before posted_at existed learn their source date
+            # the next time the source shows them (age filter needs it)
+            if existing.posted_at is None and rp.posted_at is not None:
+                existing.posted_at = rp.posted_at.replace(tzinfo=None)
             skipped += 1
             continue
         # cross-source duplicate? (same employer, same/near title, different URL)
@@ -50,6 +56,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             title=(rp.title or "")[:512], company=(rp.company or "")[:255],
             url=rp.url, apply_url=rp.apply_url,
             location=(rp.location or "")[:255], description=rp.description, requirements=None,
+            posted_at=(rp.posted_at.replace(tzinfo=None) if rp.posted_at else None),
             content_hash=chash, source_id=source_id,
         )
         db.add(post)

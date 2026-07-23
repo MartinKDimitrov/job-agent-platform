@@ -43,7 +43,8 @@ def _matching_postings(db: Session, occ: dict, limit: int = 6) -> tuple[int, lis
     In-memory filter — the postings table is small; revisit with SQL when it grows."""
     toks = _distinct_tokens(occ)
     matched = []
-    for p in db.execute(select(Posting).order_by(Posting.first_seen.desc())).scalars().all():
+    for p in db.execute(select(Posting).where(Posting.is_live.is_(True))
+                        .order_by(Posting.first_seen.desc())).scalars().all():
         title_toks = set(_TOKEN_RE.findall((p.title or "").lower()))
         if toks & title_toks:
             matched.append(p)
@@ -129,8 +130,9 @@ def _jobs_index(db: Session, lang: str):
     """The general public showcase: diverse recent openings + profession links (SEO landers)."""
     c = _COPY[lang]
     postings = db.execute(
-        select(Posting).order_by(Posting.first_seen.desc()).limit(6)).scalars().all()
-    total = len(db.execute(select(Posting.id)).all())
+        select(Posting).where(Posting.is_live.is_(True))
+        .order_by(Posting.first_seen.desc()).limit(6)).scalars().all()
+    total = len(db.execute(select(Posting.id).where(Posting.is_live.is_(True))).all())
     label = "bg" if lang == "bg" else "en"
     prof_links = "".join(
         f"<a class='tab' href='{'/bg' if lang == 'bg' else ''}/jobs/{escape(o['id'])}' "
@@ -172,8 +174,9 @@ def _occupation_page(request: Request, db: Session, occupation_id: str, lang: st
     note = ""
     if count == 0:
         sample = db.execute(
-            select(Posting).order_by(Posting.first_seen.desc()).limit(6)).scalars().all()
-        count = len(db.execute(select(Posting.id)).all())
+            select(Posting).where(Posting.is_live.is_(True))
+            .order_by(Posting.first_seen.desc()).limit(6)).scalars().all()
+        count = len(db.execute(select(Posting.id).where(Posting.is_live.is_(True))).all())
         note = f"<p class='small'>{escape(c['expanding'])}</p>"
 
     sample_html = (f"<h2>{escape(c['sample'])}</h2>{note}{_sample_rows(sample, c['cta_btn'])}"

@@ -11,9 +11,13 @@ from __future__ import annotations
 import logging
 import re
 
-from sqlalchemy import or_, select
+from datetime import datetime, timedelta
+
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
+from ...core.config import settings
 
 from ...data.models import Posting, Match
 from ...data.sources import (greenhouse, dev_bg, remoteok, wwr, lever, ashby, workable,
@@ -212,9 +216,28 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
             seen_urls.update(rp.url for rp in targeted if rp.url)
     ing = ingest(db, raw_postings)
     enriched = _enrich_new_postings(db)
+    retired = retire_stale_postings(db)
     if stats is not None:
-        stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched)
-    return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched}
+        stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
+                  retired=retired)
+    return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched,
+            "retired": retired}
+
+
+def retire_stale_postings(db: Session, max_age_days: int | None = None) -> int:
+    """Owner rule: postings older than a month disappear from every surface. Age is the
+    SOURCE's publish date when the adapter provided one, else our first_seen. Runs on each
+    ingest cycle; retired rows keep their data (is_live=False) but no query shows them."""
+    days = settings.posting_max_age_days if max_age_days is None else max_age_days
+    if not days:
+        return 0
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    res = db.execute(update(Posting)
+                     .where(Posting.is_live.is_(True),
+                            func.coalesce(Posting.posted_at, Posting.first_seen) < cutoff)
+                     .values(is_live=False))
+    db.commit()
+    return res.rowcount or 0
 
 
 def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dict:
