@@ -99,6 +99,22 @@ _ALIASES: dict[str, tuple[str, ...]] = {
     "oop": ("object oriented programming", "object-oriented programming", "ооп"),
     "design patterns": ("солид", "solid"),
     "unit testing": ("unit tests", "юнит тестове"),
+    # skills-v1.1 (2026-07-24): top unknown-skill candidates from the in-session annotation
+    # runs over the doubled index — roles/domains employers name as requirements
+    "devops": ("dev ops", "девопс"),
+    "sre": ("site reliability engineering", "site reliability engineer"),
+    "finops": ("cloud cost management", "cloud cost optimization"),
+    "distributed systems": ("distributed computing",),
+    "data pipelines": ("data pipeline", "etl pipelines"),
+    "ai agents": ("agentic ai", "ai agent", "llm agents"),
+    "cybersecurity": ("cyber security", "information security", "infosec",
+                      "security engineering"),
+    "disaster recovery": ("business continuity",),
+    "data structures": ("data structures and algorithms",),
+    "algorithms": (),
+    "splunk": (), "kibana": (), "datadog": (), "argocd": ("argo cd",), "helm": (),
+    "openshift": (), "cloudformation": (), "logstash": (), "gitlab": (),
+    "english": ("английски", "english language"),
 }
 
 # reverse index: alias -> canonical (canonical maps to itself)
@@ -137,4 +153,6 @@ def extract_skills(text: str) -> set[str]:
 RECALL_GENERIC_SKILLS = frozenset({
     "git", "sql", "rest api", "agile", "oop", "unit testing", "ci/cd", "linux", "bash",
     "jira", "html", "css", "docker", "design patterns", "microservices",
+    # v1.1: near-universal in JDs — coverage yes, relevance no
+    "english", "algorithms", "data structures", "distributed systems",
 })
