@@ -114,5 +114,7 @@ def verify_top_matches(db: Session, profile, top_n: int | None = None) -> dict:
             verified += 1
         else:
             failed += 1
+            break   # a failing provider (rate limit/outage) would fail 8x — stop burning
+                    # the search latency; the next search retries the rest
     db.commit()
     return {"verified": verified, "failed": failed}
