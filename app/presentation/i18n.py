@@ -129,6 +129,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "llm.no_key": " — no key needed", "llm.test_save": "Test &amp; save",
         "llm.err_unknown": "Unknown provider.",
         "llm.err_key_required": "This provider requires an API key.",
+        "llm.free_note": ("Free generation: up to {n} documents/day without a key. "
+                          "Add your own key below for unlimited generation."),
+        "acct.llm_needed": ("To generate a CV or cover letter we need an AI provider — "
+                            "add a free key below (Google AI Studio or Groq, ~2 minutes)."),
         # ---- onboarding ----
         "ob.head": "Quick start — build your profile",
         "ob.sub": "Pick your profession and we'll suggest the typical skills.",
@@ -265,6 +269,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "llm.no_key": " — не изисква ключ", "llm.test_save": "Тествай и запази",
         "llm.err_unknown": "Непознат доставчик.",
         "llm.err_key_required": "Този доставчик изисква API ключ.",
+        "llm.free_note": ("Безплатно генериране: до {n} документа на ден без ключ. "
+                          "Добави свой ключ по-долу за генериране без лимит."),
+        "acct.llm_needed": ("За да генерираме CV или мотивационно писмо, ни трябва AI — "
+                            "добави безплатен ключ по-долу (Google AI Studio или Groq, "
+                            "~2 минути)."),
         # ---- onboarding ----
         "ob.head": "Бърз старт — създай профила си",
         "ob.sub": "Избери професията си и ще ти предложим типичните умения.",

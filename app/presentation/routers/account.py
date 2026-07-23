@@ -38,9 +38,13 @@ def _llm_card(db: Session, user_id: int, llm_msg: str = "", llm_ok: bool = True,
     options = "".join(
         f"<option value='{escape(p.name)}'>{escape(p.label)}"
         f"{'' if p.needs_key else escape(t('llm.no_key', ui))}</option>" for p in list_providers())
+    from ...core.config import settings as _settings
+    free_note = ""
+    if _settings.server_llm_provider:
+        free_note = (f"<p class='small'><b>{escape(t('llm.free_note', ui).format(n=_settings.free_docs_per_day))}</b></p>")
     return f"""<div class='card'><h3>{escape(t('llm.head', ui))}</h3>
     <p class='small'>{escape(t('llm.note', ui))}</p>
-    {configured}{msg}
+    {free_note}{configured}{msg}
     <form method='post' action='/account/llm'>
       <div class='row2'>
         <div><label>{escape(t('llm.provider', ui))}</label><select name='provider'>{options}</select></div>
@@ -55,7 +59,8 @@ def _llm_card(db: Session, user_id: int, llm_msg: str = "", llm_ok: bool = True,
 
 @router.get("/account", response_class=HTMLResponse)
 def account_view(request: Request, db: Session = Depends(get_db),
-                 llm: str | None = None, llm_err: str | None = None):
+                 llm: str | None = None, llm_err: str | None = None,
+                 llm_needed: str | None = None):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -78,6 +83,8 @@ def account_view(request: Request, db: Session = Depends(get_db),
         llm_msg = t("acct.llm_ok", ui)
     elif llm == "removed":
         llm_msg = t("acct.llm_removed", ui)
+    elif llm_needed:
+        llm_msg, llm_ok = t("acct.llm_needed", ui), False
     elif llm_err:
         llm_msg, llm_ok = llm_err, False
     body = f"""<div class='card'><h2>{escape(t('acct.heading', ui))}</h2>

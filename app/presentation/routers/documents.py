@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from ...data.db import get_db
 from ...data.models import Document, Posting, Match, Profile
-from ...application.usecases.generate_document import generate_document, GenerationError
+from ...application.usecases.generate_document import (GenerationError, NoProviderConfigured,
+                                                       generate_document)
 from ..web import page, current_user, redirect, escape
 from ..i18n import t, current_lang
 from ..doc_template import render_document_html
@@ -45,6 +46,9 @@ def generate(pid: int, posting_id: int, request: Request,
         return redirect("/login")
     try:
         doc = generate_document(db, u, pid, posting_id, kind=kind, lang=lang)
+    except NoProviderConfigured:
+        # no key and no free lane: ask for the key exactly when it's needed (owner request)
+        return redirect("/account?llm_needed=1")
     except GenerationError as e:
         return redirect(f"/profiles/{pid}?gen_err={str(e)[:180]}")
     return redirect(f"/documents/{doc.id}")

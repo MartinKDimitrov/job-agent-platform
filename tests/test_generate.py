@@ -8,7 +8,9 @@ from app.data.llm import LLMError
 from app.data.llm.base import ProviderInfo, register
 from app.data.models import User, Profile, Posting, Match, Document
 from app.domain.prompts import PROMPT_VERSION, build_cv_prompt, build_cover_letter_prompt
-from app.application.usecases.generate_document import generate_document, GenerationError
+from app.application.usecases.generate_document import (GenerationError, NoProviderConfigured,
+                                                        generate_document)
+from app.core.config import settings
 from tests.conftest import register as register_user, make_profile
 
 
@@ -104,8 +106,57 @@ def test_generate_without_config_readable_error():
     _fake_provider()
     with SessionLocal() as db:
         u, p, post = _setup_db(db, with_config=False)
-        with pytest.raises(GenerationError, match="Account"):
+        with pytest.raises(NoProviderConfigured, match="Account"):
             generate_document(db, u, p.id, post.id)
+
+
+# ---- free lane (shared server LLM, daily cap) ----
+def test_free_lane_used_when_no_byok(monkeypatch):
+    _fake_provider(name="freeprov")
+    monkeypatch.setattr(settings, "server_llm_provider", "freeprov")
+    monkeypatch.setattr(settings, "server_llm_api_key", "sk-platform")
+    with SessionLocal() as db:
+        u, p, post = _setup_db(db, with_config=False)
+        doc = generate_document(db, u, p.id, post.id)
+        assert doc.content.startswith("GENERATED") and doc.provider == "freeprov"
+
+
+def test_free_lane_daily_limit(monkeypatch):
+    _fake_provider(name="freeprov2")
+    monkeypatch.setattr(settings, "server_llm_provider", "freeprov2")
+    monkeypatch.setattr(settings, "free_docs_per_day", 2)
+    with SessionLocal() as db:
+        u, p, post = _setup_db(db, with_config=False)
+        generate_document(db, u, p.id, post.id, kind="cv")
+        generate_document(db, u, p.id, post.id, kind="cover_letter")
+        with pytest.raises(GenerationError, match="limit"):
+            generate_document(db, u, p.id, post.id, kind="cv", lang="bg")
+
+
+def test_byok_users_are_not_limited(monkeypatch):
+    _fake_provider(name="paidprov")
+    monkeypatch.setattr(settings, "server_llm_provider", "paidprov")
+    monkeypatch.setattr(settings, "free_docs_per_day", 1)
+    with SessionLocal() as db:
+        u, p, post = _setup_db(db, provider="paidprov")   # BYOK configured
+        generate_document(db, u, p.id, post.id, kind="cv")
+        generate_document(db, u, p.id, post.id, kind="cover_letter")   # no limit error
+
+
+def test_route_redirects_to_account_when_no_llm_at_all(auth_client, monkeypatch):
+    client, _ = auth_client
+    monkeypatch.setattr(settings, "server_llm_provider", "")
+    pid = make_profile(client, skills="Kotlin", min_match=0)
+    client.post(f"/profiles/{pid}/postings",
+                data={"title": "Role", "company": "Acme",
+                      "description": "Requirements:\n- Kotlin experience"})
+    with SessionLocal() as db:
+        post_id = db.execute(select(Posting.id)).scalar_one()
+    r = client.post(f"/profiles/{pid}/postings/{post_id}/generate",
+                    data={"kind": "cv"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/account?llm_needed=1"
+    body = client.get("/account?llm_needed=1").text
+    assert "add a free key" in body
 
 
 def test_generate_provider_failure_propagates_readably():
@@ -166,7 +217,9 @@ def test_generate_route_without_key_shows_error(auth_client):
         post_id = db.execute(select(Posting.id)).scalar_one()
     r = client.post(f"/profiles/{pid}/postings/{post_id}/generate",
                     data={"kind": "cv"}, follow_redirects=True)
-    assert "Generation failed" in r.text and "Account" in r.text
+    # new UX (owner request): no key + no free lane -> land on Account, asked for the key
+    assert str(r.url).endswith("/account?llm_needed=1")
+    assert "add a free key" in r.text
 
 
 def test_print_view_renders_a4_template(auth_client):

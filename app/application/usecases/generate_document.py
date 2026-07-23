@@ -7,9 +7,12 @@ Document. The user reviews/edits before using it — human in the loop, always.
 """
 from __future__ import annotations
 
-from sqlalchemy import select
+from datetime import datetime, time as dtime
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ...core.config import settings
 from ...data.models import Profile, Posting, Match, Document
 from ...data.keystore import get_config
 from ...data.llm import LLMError, get_provider
@@ -20,7 +23,32 @@ LANGS = ("en", "bg")
 
 
 class GenerationError(Exception):
-    """User-presentable failure (no key configured, bad posting, provider error...)."""
+    """User-presentable failure (bad posting, provider error, daily limit...)."""
+
+
+class NoProviderConfigured(GenerationError):
+    """No BYOK key AND no server free lane — the route sends the user to Account."""
+
+
+def _resolve_llm(db: Session, user) -> tuple[dict, bool]:
+    """(provider config, is_free_lane). BYOK wins (unlimited, user's own account); else the
+    platform's shared provider with a daily cap; else there is nothing to generate with."""
+    cfg = get_config(db, user.id)
+    if cfg is not None:
+        return cfg, False
+    if settings.server_llm_provider:
+        today = datetime.combine(datetime.utcnow().date(), dtime.min)
+        used = db.execute(select(func.count(Document.id)).where(
+            Document.user_id == user.id, Document.created_at >= today)).scalar() or 0
+        if used >= settings.free_docs_per_day:
+            raise GenerationError(
+                f"Daily free limit reached ({settings.free_docs_per_day}/day). "
+                "Add your own AI key in Account for unlimited generation.")
+        return {"provider": settings.server_llm_provider,
+                "api_key": settings.server_llm_api_key,
+                "model": settings.server_llm_model}, True
+    raise NoProviderConfigured(
+        "No AI provider configured — add your key in Account → AI generation.")
 
 
 def generate_document(db: Session, user, profile_id: int, posting_id: int,
@@ -34,10 +62,7 @@ def generate_document(db: Session, user, profile_id: int, posting_id: int,
     if posting is None:
         raise GenerationError("Posting not found.")
 
-    cfg = get_config(db, user.id)
-    if cfg is None:
-        raise GenerationError(
-            "No AI provider configured — add your key in Account → AI generation.")
+    cfg, _free_lane = _resolve_llm(db, user)
     provider = get_provider(cfg["provider"])
     if provider is None:
         raise GenerationError("Configured provider is no longer available — re-add it in Account.")
