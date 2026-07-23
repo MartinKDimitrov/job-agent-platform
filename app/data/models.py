@@ -77,6 +77,8 @@ class Posting(Base):
     content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # source date
     first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   # by a fetch
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # URL probe
 
 
 class Match(Base):

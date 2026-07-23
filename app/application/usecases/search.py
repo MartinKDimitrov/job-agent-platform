@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import re
 
+import time
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, or_, select, update
@@ -217,11 +218,82 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
     ing = ingest(db, raw_postings)
     enriched = _enrich_new_postings(db)
     retired = retire_stale_postings(db)
+    unseen = retire_unseen_board_postings(db)
+    taken_down = probe_taken_down_urls(db)
     if stats is not None:
         stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
-                  retired=retired)
+                  retired=retired, unseen_retired=unseen, taken_down=taken_down)
     return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched,
-            "retired": retired}
+            "retired": retired, "unseen_retired": unseen, "taken_down": taken_down}
+
+
+# Sources that show only a RECENT WINDOW — a posting dropping out of their feed proves
+# nothing about being taken down (the board sources, by contrast, list everything current).
+_WINDOW_HOSTS = ("dev.bg", "jobtiger.bg", "remoteok.com", "weworkremotely.com")
+_UNSEEN_RETIRE_HOURS = 48        # ~8 ingest cycles of grace against transient fetch failures
+_PROBE_BUDGET = 30               # URL takedown checks per ingest cycle
+_PROBE_HOSTS = ("dev.bg", "remoteok.com", "weworkremotely.com")   # NOT jobtiger (Crawl-Delay 30)
+
+
+def _is_window_url(url: str) -> bool:
+    from urllib.parse import urlparse
+    host = urlparse(url or "").netloc.lower().removeprefix("www.")
+    return any(host == h or host.endswith("." + h) for h in _WINDOW_HOSTS)
+
+
+def retire_unseen_board_postings(db: Session, hours: int = _UNSEEN_RETIRE_HOURS) -> int:
+    """Takedown detection for FULL-LIST boards: registry companies' boards return their whole
+    current list every cycle, so a posting of theirs that no fetch has shown for `hours` is
+    gone from the source — retire it. Window-source URLs (dev.bg...) are exempt (their feeds
+    only show recent items), as are rows without last_seen_at (not yet backfilled)."""
+    from ...data.models import Company
+    board_companies = {name for (name,) in db.execute(
+        select(Company.name).where(Company.ats != "", Company.active.is_(True)))}
+    if not board_companies:
+        return 0
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    retired = 0
+    rows = db.execute(select(Posting).where(
+        Posting.is_live.is_(True), Posting.company.in_(board_companies),
+        Posting.last_seen_at.isnot(None), Posting.last_seen_at < cutoff)).scalars()
+    for post in rows:
+        if _is_window_url(post.url):
+            continue
+        post.is_live = False
+        retired += 1
+    db.commit()
+    return retired
+
+
+def probe_taken_down_urls(db: Session, budget: int | None = None,
+                          delay: float = 0.5, sleep=time.sleep) -> int:
+    """Takedown detection for WINDOW sources: politely GET the least-recently-checked live
+    postings' URLs; an explicit 404/410 retires the posting. Network errors / backoff leave
+    it untouched (only proof retires). JobTiger is excluded (its 30s crawl delay)."""
+    from ...data.sources.http import url_status
+    budget = settings.takedown_probe_budget if budget is None else budget
+    if not budget:
+        return 0
+    candidates = db.execute(select(Posting).where(Posting.is_live.is_(True))
+                            .order_by(func.coalesce(Posting.last_checked_at,
+                                                    Posting.first_seen))).scalars()
+    checked = retired = 0
+    now = datetime.utcnow()
+    for post in candidates:
+        if checked >= budget:
+            break
+        if not _is_window_url(post.url) or "jobtiger" in (post.url or ""):
+            continue
+        if checked:
+            sleep(delay)
+        status = url_status(post.url)
+        checked += 1
+        post.last_checked_at = now
+        if status in (404, 410):
+            post.is_live = False
+            retired += 1
+    db.commit()
+    return retired
 
 
 def retire_stale_postings(db: Session, max_age_days: int | None = None) -> int:

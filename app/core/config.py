@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Postings older than this (source date when known, else first_seen) retire from every
     # surface — feed, public pages, digest (owner rule: nothing older than a month).
     posting_max_age_days: int = 30
+    # Takedown URL probes per ingest cycle for window sources (0 = off; tests force 0 —
+    # the probe makes REAL network requests to dev.bg etc.).
+    takedown_probe_budget: int = 30
 
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).

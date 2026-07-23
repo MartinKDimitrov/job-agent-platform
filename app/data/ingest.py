@@ -1,4 +1,7 @@
-"""Persistence of fetched postings, with two dedup layers (agent A3).
+"""Persistence of fetched postings, with two dedup layers (agent A3) + liveness signals:
+every posting a fetch shows gets its `last_seen_at` touched (takedown detection keys off
+it), and a retired posting that a source shows again resurrects — unless it's past the
+age cutoff (the owner's hard >1 month rule wins over reposts).
 
 1. content_hash (URL-based) — the same source seen again;
 2. cross-source (app.domain.dedup): same normalized employer + same/near-identical title, so a
@@ -9,17 +12,32 @@
 The cross-source index is built in memory per call (no schema change; a persisted dedup_key
 arrives with Alembic — ROADMAP step 35).
 """
+from datetime import datetime, timedelta
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..core.config import settings
 from ..domain.entities import RawPosting
 from ..domain.dedup import normalize_company, similar_titles
 from .models import Posting
 
 
+def _touch(post: Posting, now: datetime) -> None:
+    """A fetch just showed this posting: refresh liveness, resurrect if it was retired
+    early (failed fetch / repost) — but never past the hard age cutoff."""
+    post.last_seen_at = now
+    if not post.is_live and settings.posting_max_age_days:
+        cutoff = now - timedelta(days=settings.posting_max_age_days)
+        # a same-batch row isn't flushed yet (first_seen still None) — it's brand new
+        if (post.posted_at or post.first_seen or now) >= cutoff:
+            post.is_live = True
+
+
 def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None) -> dict:
     """Upsert RawPostings into the Posting table. Returns {added, skipped, deduped}."""
     added = skipped = deduped = 0
+    now = datetime.utcnow()
     # index of existing postings by normalized company, for the cross-source check
     by_company: dict[str, list[Posting]] = {}
     for post in db.execute(select(Posting)).scalars().all():
@@ -34,6 +52,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             # the next time the source shows them (age filter needs it)
             if existing.posted_at is None and rp.posted_at is not None:
                 existing.posted_at = rp.posted_at.replace(tzinfo=None)
+            _touch(existing, now)
             skipped += 1
             continue
         # cross-source duplicate? (same employer, same/near title, different URL)
@@ -49,6 +68,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             # an ATS listing carries the canonical apply URL — upgrade the stored posting
             if rp.source_kind == "ats_api" and rp.apply_url and rp.apply_url != dup.apply_url:
                 dup.apply_url = rp.apply_url
+            _touch(dup, now)
             continue
         # clamp to column limits — Postgres rejects the whole INSERT batch otherwise
         # (a long Ashby multi-location string killed a live ingest; SQLite doesn't enforce)
@@ -57,7 +77,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             url=rp.url, apply_url=rp.apply_url,
             location=(rp.location or "")[:255], description=rp.description, requirements=None,
             posted_at=(rp.posted_at.replace(tzinfo=None) if rp.posted_at else None),
-            content_hash=chash, source_id=source_id,
+            last_seen_at=now, content_hash=chash, source_id=source_id,
         )
         db.add(post)
         by_company.setdefault(norm_co, []).append(post)   # catch dups within the same batch too

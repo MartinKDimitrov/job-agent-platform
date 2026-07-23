@@ -17,6 +17,8 @@ os.environ["GOOGLE_CLIENT_SECRET"] = ""
 # The in-app background ingester fetches REAL sources — a local .env with INGEST_EVERY_HOURS=6
 # would make TestClient app startup spawn it and hang the suite on live network calls.
 os.environ["INGEST_EVERY_HOURS"] = "0"
+# The takedown probe GETs real posting URLs (dev.bg...) — never from tests.
+os.environ["TAKEDOWN_PROBE_BUDGET"] = "0"
 
 import pytest
 from sqlalchemy import event

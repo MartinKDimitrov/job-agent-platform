@@ -92,6 +92,88 @@ def test_public_pages_exclude_retired(client):
     assert "<b>1</b>" in body                               # the count excludes retired too
 
 
+# ---- takedown detection (boards + URL probe) ----
+def test_unseen_board_postings_retire_but_window_urls_are_exempt():
+    from app.application.usecases.search import retire_unseen_board_postings
+    from app.data.company_repo import upsert_company
+    with SessionLocal() as db:
+        upsert_company(db, "SumUp", ats="greenhouse", ats_slug="sumup")
+        unseen = _posting(db, "Gone Role", chash="u1")
+        unseen.company = "SumUp"
+        unseen.url = "https://sumup.com/careers/gone"
+        unseen.last_seen_at = datetime.utcnow() - timedelta(hours=72)
+        fresh = _posting(db, "Live Role", chash="u2")
+        fresh.company = "SumUp"
+        fresh.last_seen_at = datetime.utcnow() - timedelta(hours=1)
+        via_devbg = _posting(db, "dev.bg Role", chash="u3")
+        via_devbg.company = "SumUp"
+        via_devbg.url = "https://dev.bg/company/jobads/sumup-x/"
+        via_devbg.last_seen_at = datetime.utcnow() - timedelta(hours=72)
+        nonboard = _posting(db, "Other Co Role", chash="u4")   # company not in the registry
+        nonboard.last_seen_at = datetime.utcnow() - timedelta(hours=72)
+        db.commit()
+        assert retire_unseen_board_postings(db) == 1
+        live = {p.title for p in db.execute(
+            select(Posting).where(Posting.is_live.is_(True))).scalars()}
+        assert live == {"Live Role", "dev.bg Role", "Other Co Role"}
+
+
+def test_reseen_posting_resurrects_unless_age_stale():
+    with SessionLocal() as db:
+        p1 = _posting(db, "Early Retired", posted_at=FRESH, chash="r1")
+        p1.is_live = False
+        p2 = _posting(db, "Age Retired", posted_at=OLD, chash="r2")
+        p2.is_live = False
+        db.commit()
+        ingest(db, [RawPosting("rss", "1", "Early Retired", "Acme", url="https://x/r1",
+                               apply_url="https://x/r1", description="d"),
+                    RawPosting("rss", "2", "Age Retired", "Acme", url="https://x/r2",
+                               apply_url="https://x/r2", description="d")])
+        by_title = {p.title: p for p in db.execute(select(Posting)).scalars()}
+        assert by_title["Early Retired"].is_live is True     # source shows it -> resurrect
+        assert by_title["Age Retired"].is_live is False      # >1 month rule always wins
+        assert by_title["Age Retired"].last_seen_at is not None
+
+
+def test_url_probe_retires_on_404_only(monkeypatch):
+    import app.application.usecases.search as crawl
+    statuses = {"https://dev.bg/company/jobads/dead/": 404,
+                "https://dev.bg/company/jobads/alive/": 200,
+                "https://dev.bg/company/jobads/flaky/": None}
+    import app.data.sources.http as http_mod
+    monkeypatch.setattr(http_mod, "url_status", lambda url, timeout=15.0: statuses[url])
+    with SessionLocal() as db:
+        for slug in ("dead", "alive", "flaky"):
+            p = _posting(db, f"{slug} role", chash=slug)
+            p.url = f"https://dev.bg/company/jobads/{slug}/"
+        jt = _posting(db, "jobtiger role", chash="jt")
+        jt.url = "https://www.jobtiger.bg/obiavi-za-rabota/x"
+        db.commit()
+        retired = crawl.probe_taken_down_urls(db, budget=10, delay=0, sleep=lambda s: None)
+        assert retired == 1
+        rows = {p.title: p for p in db.execute(select(Posting)).scalars()}
+        assert rows["dead role"].is_live is False
+        assert rows["alive role"].is_live and rows["alive role"].last_checked_at is not None
+        assert rows["flaky role"].is_live                     # no proof -> untouched
+        assert rows["jobtiger role"].last_checked_at is None  # excluded (crawl delay)
+
+
+def test_url_probe_budget_and_off_switch(monkeypatch):
+    import app.application.usecases.search as crawl
+    calls = []
+    import app.data.sources.http as http_mod
+    monkeypatch.setattr(http_mod, "url_status",
+                        lambda url, timeout=15.0: calls.append(url) or 200)
+    with SessionLocal() as db:
+        for i in range(5):
+            p = _posting(db, f"role {i}", chash=f"b{i}")
+            p.url = f"https://dev.bg/company/jobads/{i}/"
+        db.commit()
+        crawl.probe_taken_down_urls(db, budget=2, delay=0, sleep=lambda s: None)
+        assert len(calls) == 2                                # budget respected
+        assert crawl.probe_taken_down_urls(db, budget=0) == 0  # off switch (tests default)
+
+
 def test_retire_disabled_when_zero():
     with SessionLocal() as db:
         _posting(db, "ancient", posted_at=OLD, chash="h")

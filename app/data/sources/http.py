@@ -98,6 +98,22 @@ def post_json(url: str, body: dict, timeout: float = DEFAULT_TIMEOUT):
         return None
 
 
+def url_status(url: str, timeout: float = DEFAULT_TIMEOUT) -> int | None:
+    """Final HTTP status of `url` (redirects followed), or None when unreachable / in
+    backoff. Used by the takedown probe — only an explicit status may retire a posting."""
+    if _blocked(url):
+        return None
+    try:
+        r = httpx.get(url, timeout=timeout, headers=_BROWSER_HEADERS, follow_redirects=True)
+        if r.status_code == 429:
+            _note_429(url, r)
+            return None
+        return r.status_code
+    except httpx.HTTPError as e:
+        log.warning("url_status failed for %s: %s", url, e)
+        return None
+
+
 def fetch_text(url: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT) -> str | None:
     """GET `url` (browser-like headers) and return the body text, or None on any error."""
     if _blocked(url):
