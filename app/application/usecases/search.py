@@ -400,6 +400,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     whole index measured ~2.5s over the staging tunnel vs ~0.2s this way."""
     keywords = _profile_keywords(profile)
     ptext = profile.as_text()
+    from ...domain.salary import parse_salary, posting_salary, salary_factor
+    expectation = parse_salary(profile.salary_expectation or "")   # once per search
     if profile.embedding is None:            # cached on the row; cleared on profile edit
         profile.embedding = _as_list(embed_query(profile.embed_text()))
     id_titles = db.execute(select(Posting.id, Posting.title)
@@ -452,10 +454,15 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             if stale is not None:
                 db.delete(stale)
             continue
+        # freshness and the salary signal are both soft multipliers on the base score —
+        # passed as one product (score() applies it after the blend, inside the gate cap)
+        soft = posting_freshness(post) * salary_factor(
+            posting_salary(post), expectation,
+            low=settings.salary_low_factor, fit=settings.salary_fit_boost)
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
-                                     freshness=posting_freshness(post),
+                                     freshness=soft,
                                      gate_cap=settings.must_gate_cap or None)
         existing = existing_by_post.get(post.id)
         if existing:

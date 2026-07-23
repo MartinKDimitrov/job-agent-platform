@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # Takedown URL probes per ingest cycle for window sources (0 = off; tests force 0 —
     # the probe makes REAL network requests to dev.bg etc.).
     takedown_probe_budget: int = 30
+    # Salary soft signal (Phase 7) — fires only when BOTH sides state a number in comparable
+    # currencies: multiplier when the posting pays clearly below the expectation / meets it.
+    salary_low_factor: float = 0.85
+    salary_fit_boost: float = 1.05
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with

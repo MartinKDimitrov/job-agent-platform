@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..domain.entities import RawPosting
 from ..domain.dedup import normalize_company, similar_titles
+from ..domain.salary import parse_salary
 from .models import Posting
 
 
@@ -72,12 +73,18 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             continue
         # clamp to column limits — Postgres rejects the whole INSERT batch otherwise
         # (a long Ashby multi-location string killed a live ingest; SQLite doesn't enforce)
+        sal = parse_salary(f"{rp.title or ''}\n{rp.description or ''}")
         post = Posting(
             title=(rp.title or "")[:512], company=(rp.company or "")[:255],
             url=rp.url, apply_url=rp.apply_url,
             location=(rp.location or "")[:255], description=rp.description, requirements=None,
             posted_at=(rp.posted_at.replace(tzinfo=None) if rp.posted_at else None),
             last_seen_at=now, content_hash=chash, source_id=source_id,
+            salary_min=sal["min"] if sal else None,
+            salary_max=sal["max"] if sal else None,
+            salary_currency=sal["currency"] if sal else None,
+            salary_period=sal["period"] if sal else None,
+            salary_raw=sal["raw"][:64] if sal else None,
         )
         db.add(post)
         by_company.setdefault(norm_co, []).append(post)   # catch dups within the same batch too

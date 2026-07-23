@@ -133,9 +133,18 @@ Match.hidden + logs `hidden` (future learning loop); unknown-skill counter from
 annotation lands in ingest stats/CrawlRun — a spike there means the market outgrew the
 skills dictionary.
 
-**Phase 7 — salary**: extract the value in step 3 BEFORE the money-line drop (range,
-currency, monthly/annual pitfalls), use as a SOFT signal only when both sides state it
-(Profile.salary_expectation exists).
+**Phase 7 ✅ — salary**: `domain/salary.py` parses the RAW posting text at ingest (before
+extraction drops money lines): ranges, 9 currencies incl. symbol-before ("€55,000–€70,000",
+"$120k"), monthly/annual keywords in 13 languages with size-based inference as fallback;
+deliberately conservative — a number counts only with a currency signal adjacent, plus
+plausibility floors (years and "5+ years" never parse). Stored on Posting
+(salary_min/max/currency/period/raw), shown on the card as written. Score effect is SOFT
+and fires only when BOTH sides state a number in comparable currencies (BGN↔EUR pegged
+conversion only, annual normalized to monthly): posting max >20% below the expectation →
+×SALARY_LOW_FACTOR (0.85); posting min already meets it → ×SALARY_FIT_BOOST (1.05, capped
+at 100); everything else — including currencies we can't compare — strictly neutral.
+Applied identically in search_db and the LLM verification recompute. Live: 582/1494
+postings (39%) state a parseable salary.
 
 **Deliberately skipped** (await data or scale): feedback-driven reranking / learned
 weights, ColBERT/BM25 hybrid, company reputation prior, CV/LinkedIn auto-profile,

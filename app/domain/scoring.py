@@ -210,7 +210,9 @@ def score(profile_text: str, posting_text: str, requirements=None,
         gate = must_gate_cap(((r, r in covered) for r in reqs), gate_cap)
         if gate is not None:
             base = min(base, gate)
-    return round(base * freshness * 100), covered, missing
+    # `freshness` is the combined soft multiplier (freshness × salary signal) — a boost
+    # must never push past 100
+    return min(100, round(base * freshness * 100)), covered, missing
 
 
 def semantic_pct(profile_vec, posting_vec) -> float | None:

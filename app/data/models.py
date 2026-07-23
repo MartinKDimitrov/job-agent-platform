@@ -91,6 +91,14 @@ class Posting(Base):
     embedding: Mapped[list | None] = mapped_column(EmbeddingType, nullable=True)  # passage vec
     embedding_version: Mapped[str] = mapped_column(String(32), default="")  # input+mode stamp
     is_live: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 7: salary parsed from the RAW text at ingest (domain/salary.py). NULL = not
+    # stated; a stated value shows on the card and acts as a SOFT score signal when the
+    # profile states an expectation too.
+    salary_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    salary_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    salary_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    salary_period: Mapped[str | None] = mapped_column(String(8), nullable=True)  # month/year
+    salary_raw: Mapped[str | None] = mapped_column(String(64), nullable=True)    # as written
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # source date

@@ -411,6 +411,10 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
     host = _source_host(post)
     if host:
         meta.append(f"<span class='m source'>{icon('globe', 'icon sm')}{escape(host)}</span>")
+    if post.salary_raw:
+        # as written in the posting (Phase 7) — a period suffix would need 13 translations
+        # for marginal value; the raw snippet carries the currency/period as the employer put it
+        meta.append(f"<span class='m salary'>💰 {escape(post.salary_raw)}</span>")
     age_basis = post.posted_at or post.first_seen
     if age_basis:
         days = max(0, (datetime.utcnow() - age_basis).days)

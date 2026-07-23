@@ -74,6 +74,7 @@ def verify_match(db: Session, profile, match: Match, post: Posting, llm) -> bool
             src_covered = r in (match.covered or [])
             (covered if src_covered else missing).append(r)
     from .search import posting_freshness
+    from ...domain.salary import parse_salary, posting_salary, salary_factor
     from ...domain.scoring import must_gate_cap
     pairs = [(r, hits[id(r)]) for r in scored]
     kw = coverage_ratio(pairs)
@@ -83,7 +84,11 @@ def verify_match(db: Session, profile, match: Match, post: Posting, llm) -> bool
         gate = must_gate_cap(pairs, settings.must_gate_cap)
         if gate is not None:
             base = min(base, gate)
-    match.score = round(base * posting_freshness(post) * 100)
+    # same soft multipliers as the base scorer (freshness × salary) — the paths must not drift
+    soft = posting_freshness(post) * salary_factor(
+        posting_salary(post), parse_salary(profile.salary_expectation or ""),
+        low=settings.salary_low_factor, fit=settings.salary_fit_boost)
+    match.score = min(100, round(base * soft * 100))
     match.covered, match.missing = covered, missing
     match.llm_verified = True
     return True
