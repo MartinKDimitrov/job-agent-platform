@@ -169,6 +169,31 @@ EU_COMPANIES: list[dict] = [
     {"name": "Nord Security", "country": "LT", "industry": "IT", "website": "https://nordsecurity.com"},
     {"name": "Kilo Health", "country": "LT", "industry": "Health", "website": "https://kilo.health"},
     {"name": "Printful", "country": "LV", "industry": "E-commerce", "website": "https://www.printful.com"},
+    # --- group-level entries for multinationals present on the BG market (owner review,
+    # 2026-07-24): each has separate per-country career sites; the GROUP careers site is the
+    # umbrella we probe for a supported ATS. Most run proprietary ATSes (SuccessFactors
+    # etc.) — an honest recorded miss is expected and fine.
+    {"name": "Lidl", "country": "DE", "industry": "Retail", "website": "https://jobs.lidl.com"},
+    {"name": "Kaufland", "country": "DE", "industry": "Retail", "website": "https://www.kaufland.com"},
+    {"name": "REWE Group", "country": "DE", "industry": "Retail", "website": "https://www.rewe-group.com"},
+    {"name": "Metro AG", "country": "DE", "industry": "Retail", "website": "https://www.metroag.de"},
+    {"name": "JYSK", "country": "DK", "industry": "Retail", "website": "https://jysk.com"},
+    {"name": "H&M Group", "country": "SE", "industry": "Retail", "website": "https://hmgroup.com"},
+    {"name": "Pepco Group", "country": "PL", "industry": "Retail", "website": "https://pepcogroup.eu"},
+    {"name": "LPP", "country": "PL", "industry": "Retail", "website": "https://www.lpp.com"},
+    {"name": "TEDi", "country": "DE", "industry": "Retail", "website": "https://www.tedi.com"},
+    {"name": "IKEA (Ingka Group)", "country": "NL", "industry": "Retail", "website": "https://www.ingka.com"},
+    {"name": "Deichmann", "country": "DE", "industry": "Retail", "website": "https://www.deichmann.com"},
+    {"name": "dm-drogerie markt", "country": "DE", "industry": "Retail", "website": "https://www.dm.de"},
+    {"name": "Inditex", "country": "ES", "industry": "Retail", "website": "https://www.inditex.com"},
+    {"name": "Kärcher", "country": "DE", "industry": "Manufacturing", "website": "https://www.kaercher.com"},
+    {"name": "Coca-Cola HBC", "country": "GR", "industry": "Food", "website": "https://www.coca-colahellenic.com"},
+    {"name": "Hell Energy", "country": "HU", "industry": "Food", "website": "https://www.hellenergy.com"},
+    {"name": "Hesburger", "country": "FI", "industry": "Food", "website": "https://www.hesburger.fi"},
+    {"name": "Maspex Group", "country": "PL", "industry": "Food", "website": "https://maspex.com"},
+    {"name": "GRAWE", "country": "AT", "industry": "Insurance", "website": "https://www.grawe.at"},
+    {"name": "Orbico Group", "country": "HR", "industry": "Distribution", "website": "https://www.orbico.com"},
+    {"name": "Peek & Cloppenburg", "country": "DE", "industry": "Retail", "website": "https://www.peek-cloppenburg.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})
