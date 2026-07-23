@@ -214,20 +214,25 @@ def _org_norm(name: str) -> str:
 
 
 def names_match(expected: str, reported: str) -> bool:
-    """Fuzzy same-organization check. Strict by design: a false reject only means one less
-    registration; a false accept poisons the index with a stranger's postings."""
-    import difflib
+    """Same-organization check on WHOLE tokens. Strict by design: a false reject only means
+    one less registration; a false accept poisons the index with a stranger's postings.
+    (A difflib-ratio fallback used to live here — it let 'Inter Cars' ≈ 'Inter Carreiras'
+    (0.80) and 'Vitamin C' ≈ 'Vitamin Well' (0.76) through: character similarity says
+    nothing about being the same organization. Token subset does.)"""
     a, b = _org_norm(expected), _org_norm(reported)
     if not a or not b:
         return False
     if a == b:
         return True
-    short, long_ = sorted((a, b), key=len)
-    # containment counts only when the shorter form is substantial ('kbc' inside
-    # 'kbc bank muenchen' must NOT pass on brand alone)
-    if short in long_ and (len(short) >= 8 or len(short.split()) >= 2):
-        return True
-    return difflib.SequenceMatcher(None, a, b).ratio() >= 0.75
+    ta, tb = set(a.split()), set(b.split())
+    # one side's full name contained token-wise in the other ('trade republic' ⊆
+    # 'trade republic bank') — but only when the shorter side is substantial: a short
+    # single-token brand inside a stranger's longer name ('kbc' ⊆ 'kbc bank muenchen')
+    # must not pass on the brand word alone
+    short = min(ta, tb, key=lambda s: len(" ".join(s)))
+    if len(short) < 2 and len("".join(short)) < 8:
+        return False
+    return ta <= tb or tb <= ta
 
 
 def detect_verified(name: str, careers_url: str = "") -> tuple[str, str] | None:

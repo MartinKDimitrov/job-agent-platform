@@ -40,6 +40,13 @@ def test_names_match_rejects_unrelated():
     assert not ats.names_match("Mollie", "")
 
 
+def test_names_match_rejects_char_similar_strangers():
+    # live phantoms round 2: character-ratio similarity is NOT organizational identity
+    assert not ats.names_match("Inter Cars", "Inter Carreiras")     # Brazilian bank
+    assert not ats.names_match("Vitamin C", "Vitamin Well Group")   # Swedish drinks
+    assert ats.names_match("Trade Republic", "Trade Republic Bank GmbH")  # subset stays ok
+
+
 # ---- detect_verified policy ----
 def test_guessed_slug_needs_matching_board_name(monkeypatch):
     monkeypatch.setattr(ats, "probe_slug", lambda a, s: True)          # every board "exists"
