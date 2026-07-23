@@ -250,6 +250,16 @@ EU_COMPANIES: list[dict] = [
     {"name": "Titan Cement Group", "country": "GR", "industry": "Manufacturing", "website": "https://www.titan-cement.com"},
     {"name": "Klett Gruppe", "country": "DE", "industry": "Education", "website": "https://www.klett-gruppe.de"},
     {"name": "Wienerberger", "country": "AT", "industry": "Manufacturing", "website": "https://www.wienerberger.com"},
+    # --- batch 8 groups (owner review #7, 2026-07-24) ---
+    {"name": "OMV Group", "country": "AT", "industry": "Energy", "website": "https://www.omv.com"},
+    {"name": "KONE", "country": "FI", "industry": "Industrial", "website": "https://www.kone.com"},
+    {"name": "Dräger", "country": "DE", "industry": "Health", "website": "https://www.draeger.com"},
+    {"name": "KRKA", "country": "SI", "industry": "Pharma", "website": "https://www.krka.biz"},
+    {"name": "Polpharma", "country": "PL", "industry": "Pharma", "website": "https://www.polpharma.pl"},
+    {"name": "Tchibo", "country": "DE", "industry": "Food", "website": "https://www.tchibo.com"},
+    {"name": "Gebr. Heinemann", "country": "DE", "industry": "Retail", "website": "https://www.gebr-heinemann.de"},
+    {"name": "Plansee Group", "country": "AT", "industry": "Manufacturing", "website": "https://www.plansee-group.com"},
+    {"name": "BSB", "country": "GR", "industry": "Retail", "website": "https://www.bsbfashion.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})
