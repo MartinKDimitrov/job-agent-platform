@@ -230,6 +230,15 @@ EU_COMPANIES: list[dict] = [
     {"name": "Briloner", "country": "DE", "industry": "Manufacturing", "website": "https://www.briloner.com"},
     {"name": "Office People", "country": "DE", "industry": "Staffing", "website": "https://www.office-people.de"},
     {"name": "Frankstahl Group", "country": "AT", "industry": "Distribution", "website": "https://www.frankstahl.com"},
+    # --- batch 6 groups (owner review #5, 2026-07-24) ---
+    {"name": "KWS Saat", "country": "DE", "industry": "Agriculture", "website": "https://www.kws.com"},
+    {"name": "Humanic", "country": "AT", "industry": "Retail", "website": "https://www.humanic.net"},
+    {"name": "Mateco", "country": "DE", "industry": "Industrial", "website": "https://www.mateco.de"},
+    {"name": "Hagleitner", "country": "AT", "industry": "Manufacturing", "website": "https://www.hagleitner.com"},
+    {"name": "DEKRA", "country": "DE", "industry": "Services", "website": "https://www.dekra.com"},
+    {"name": "Latecoere", "country": "FR", "industry": "Aerospace", "website": "https://www.latecoere.aero"},
+    {"name": "Iveco Group", "country": "IT", "industry": "Automotive", "website": "https://www.ivecogroup.com"},
+    {"name": "Calzedonia Group", "country": "IT", "industry": "Retail", "website": "https://www.calzedoniagroup.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})
