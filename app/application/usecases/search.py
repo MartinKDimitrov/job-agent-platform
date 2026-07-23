@@ -85,8 +85,19 @@ def _dev_bg_targeted(terms: list[str]) -> list[RawPosting]:
         return []
     return dev_bg.fetch(search_terms=terms, pages=0)   # pages=0: skip the global feed here
 
+def _jobtech_targeted(terms: list[str]) -> list[RawPosting]:
+    """Platsbanken (Sweden) via the fully open JobTech JobSearch API — first EU board
+    adapter. Targeted like dev.bg: one API search per unique role term per cycle (a full
+    dump is ~100k live postings)."""
+    if not terms:
+        return []
+    from ...data.sources import jobtech
+    return jobtech.fetch(search_terms=terms)
+
+
 # Role-term-targeted sources: each receives the DEDUPLICATED term list for the whole run.
-PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted)]
+PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted),
+                   ("jobtech_targeted", _jobtech_targeted)]
 
 
 def _safe(name: str, fn, stats=None) -> list[RawPosting]:

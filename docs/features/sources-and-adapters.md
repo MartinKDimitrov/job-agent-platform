@@ -18,6 +18,7 @@ another (hard rule). Live platforms:
 | `dev_bg.py` | RSS | global feed (recency window) + per-profile targeted search feed; company derived from URL slug vs guid/title (repost `-1-1` suffixes handled) |
 | `jobtiger.py` | sitemap+HTML | `ClaudeBot Crawl-Delay: 30` honoured; daily job only |
 | `remoteok.py` / `wwr.py` | JSON / RSS | global remote boards; run on every ingest |
+| `jobtech.py` | open API | Platsbanken (Sweden, Arbetsförmedlingen) — fully open JobSearch API, no key; TARGETED like dev.bg: one search per unique profile role term per cycle (full dump ≈100k postings). First adapter of the EU-boards plan (next: Arbeitsagentur DE, France Travail, EURES) |
 
 **Company registry** (`companies` table: name, industry, website, careers_url, ats/slug,
 active — 165+ real BG employers over 19 industries): one adapter serves every company on the
