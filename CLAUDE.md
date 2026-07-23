@@ -70,8 +70,11 @@ Working:
 - **UI/i18n** — one-page app fully EN/BG (incl. onboarding, documents, account, digest
   email, public SEO pages); ripple, full-screen loading, source badges.
 
-Next: requirement skill-annotation at ingest (approved — 1 LLM call per posting, shared
-across users), applications dashboard, ESCO full taxonomy, VPS deploy (+Alembic, SMTP).
+Next: matching plan phases 3-7 (canonical skills dictionary, scoring hardening, hybrid
+recall, observability, salary), applications dashboard, ESCO full taxonomy, VPS deploy
+(+Alembic, SMTP). Post-launch: recruiter side (employers submit a posting, we send matching
+candidates above THEIR threshold; the planned monetization — deliberately after the product
+has real candidates; opt-in/GDPR consent is a hard design requirement).
 
 ---
 
