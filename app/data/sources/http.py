@@ -2,12 +2,54 @@
 
 Network failures must never crash the pipeline — a flaky source should degrade to "no postings
 this run", not take everything down. So fetch_json returns None on any error and logs it.
+
+429 backoff: when a host rate-limits us (Workable does, per-IP, after detection bursts —
+observed live repeatedly), every further request to that host is skipped for a cooldown
+(Retry-After honoured when sent) instead of hammering it and extending the penalty window.
+Per-process cache — the background ingester and CLI tools each keep their own.
 """
 import logging
+import time
+from urllib.parse import urlparse
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+_BACKOFF_DEFAULT = 900.0            # 15 min unless the host says otherwise
+_backoff_until: dict[str, float] = {}   # host -> monotonic deadline
+
+
+def _host(url: str) -> str:
+    return urlparse(url).netloc
+
+
+def _blocked(url: str) -> bool:
+    host = _host(url)
+    deadline = _backoff_until.get(host)
+    if deadline is None:
+        return False
+    if time.monotonic() >= deadline:
+        del _backoff_until[host]
+        return False
+    log.info("skipping %s — %s in 429 backoff for %.0fs more",
+             url, host, deadline - time.monotonic())
+    return True
+
+
+def _note_429(url: str, response: httpx.Response) -> None:
+    try:
+        cooldown = float(response.headers.get("Retry-After", ""))
+    except ValueError:
+        cooldown = _BACKOFF_DEFAULT
+    _backoff_until[_host(url)] = time.monotonic() + max(cooldown, 60.0)
+    log.warning("%s rate-limited us (429) — backing off %s for %.0fs",
+                _host(url), _host(url), max(cooldown, 60.0))
+
+
+def _handle_http_error(url: str, e: Exception) -> None:
+    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
+        _note_429(url, e.response)
 
 DEFAULT_TIMEOUT = 15.0
 _UA = "JobAgent/0.1 (+https://localhost)"
@@ -26,12 +68,15 @@ def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TI
                browser: bool = False):
     """GET `url` and return parsed JSON, or None on any network/HTTP/parse error. Set
     browser=True for hosts that reject plain bot UAs (RemoteOK, Lever, Ashby)."""
+    if _blocked(url):
+        return None
     headers = _BROWSER_HEADERS if browser else {"User-Agent": _UA}
     try:
         r = httpx.get(url, params=params, timeout=timeout, headers=headers, follow_redirects=True)
         r.raise_for_status()
         return r.json()
     except (httpx.HTTPError, ValueError) as e:
+        _handle_http_error(url, e)
         log.warning("fetch_json failed for %s: %s", url, e)
         return None
 
@@ -39,6 +84,8 @@ def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TI
 def post_json(url: str, body: dict, timeout: float = DEFAULT_TIMEOUT):
     """POST JSON and return parsed JSON, or None on any error (same degrade-to-empty contract
     as fetch_json). Needed for Workable's v3 job-search endpoint, which is POST-only."""
+    if _blocked(url):
+        return None
     try:
         r = httpx.post(url, json=body, timeout=timeout,
                        headers={**_BROWSER_HEADERS, "Content-Type": "application/json"},
@@ -46,17 +93,21 @@ def post_json(url: str, body: dict, timeout: float = DEFAULT_TIMEOUT):
         r.raise_for_status()
         return r.json()
     except (httpx.HTTPError, ValueError) as e:
+        _handle_http_error(url, e)
         log.warning("post_json failed for %s: %s", url, e)
         return None
 
 
 def fetch_text(url: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT) -> str | None:
     """GET `url` (browser-like headers) and return the body text, or None on any error."""
+    if _blocked(url):
+        return None
     try:
         r = httpx.get(url, params=params, timeout=timeout,
                       headers=_BROWSER_HEADERS, follow_redirects=True)
         r.raise_for_status()
         return r.text
     except httpx.HTTPError as e:
+        _handle_http_error(url, e)
         log.warning("fetch_text failed for %s: %s", url, e)
         return None
