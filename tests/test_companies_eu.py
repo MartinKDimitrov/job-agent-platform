@@ -61,11 +61,30 @@ def test_guessing_skips_atses_without_name_api(monkeypatch):
 
 
 def test_careers_page_board_is_authoritative(monkeypatch):
-    # the company's own site links the board — no name check needed (that WAS the identity)
+    # the company's own site links the board; lever has no name API -> accepted on the probe
     monkeypatch.setattr(ats, "scan_careers_page", lambda url: ("lever", "adyen"))
     monkeypatch.setattr(ats, "probe_slug", lambda a, s: True)
     assert ats.detect_verified("Adyen", careers_url="https://www.adyen.com/careers") \
         == ("lever", "adyen")
+
+
+def test_careers_page_rejects_someone_elses_board(monkeypatch):
+    # the remote.com lesson: a customer story on the careers page linked greenhouse/openly —
+    # name API says 'Openly', slug isn't 'remote' -> rejected despite the careers-page source
+    monkeypatch.setattr(ats, "scan_careers_page", lambda url: ("greenhouse", "openly"))
+    monkeypatch.setattr(ats, "probe_slug", lambda a, s: True)
+    monkeypatch.setattr(ats, "board_display_name", lambda a, s: "Openly")
+    monkeypatch.setattr(ats, "slug_guesses", lambda n: [])      # isolate the careers path
+    assert ats.detect_verified("Remote", careers_url="https://remote.com/careers") is None
+
+
+def test_careers_page_slug_match_survives_display_rebrand(monkeypatch):
+    # the Intercom case: board reports the product name 'Fin', but the slug IS the company
+    monkeypatch.setattr(ats, "scan_careers_page", lambda url: ("greenhouse", "intercom"))
+    monkeypatch.setattr(ats, "probe_slug", lambda a, s: True)
+    monkeypatch.setattr(ats, "board_display_name", lambda a, s: "Fin")
+    assert ats.detect_verified("Intercom", careers_url="https://intercom.com/careers") \
+        == ("greenhouse", "intercom")
 
 
 def test_dead_careers_board_falls_back_to_verified_guessing(monkeypatch):

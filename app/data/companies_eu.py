@@ -216,6 +216,14 @@ EU_COMPANIES: list[dict] = [
     {"name": "Iute Group", "country": "EE", "industry": "Finance", "website": "https://iute.com"},
     {"name": "Carlsberg Group", "country": "DK", "industry": "Food", "website": "https://www.carlsberggroup.com"},
     {"name": "HSH Chemie Group", "country": "DE", "industry": "Distribution", "website": "https://www.hsh-chemie.com"},
+    # --- batch 4 groups (owner review #3, 2026-07-24) ---
+    {"name": "EGLO", "country": "AT", "industry": "Manufacturing", "website": "https://www.eglo.com"},
+    {"name": "XXXLutz Group", "country": "AT", "industry": "Retail", "website": "https://www.xxxlutz.com"},
+    {"name": "Celio", "country": "FR", "industry": "Retail", "website": "https://www.celio.com"},
+    {"name": "Etam", "country": "FR", "industry": "Retail", "website": "https://www.etam.com"},
+    {"name": "Palfinger", "country": "AT", "industry": "Manufacturing", "website": "https://www.palfinger.com"},
+    {"name": "Hemmersbach", "country": "DE", "industry": "IT", "website": "https://www.hemmersbach.com"},
+    {"name": "Marc O'Polo", "country": "DE", "industry": "Retail", "website": "https://www.marc-o-polo.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})

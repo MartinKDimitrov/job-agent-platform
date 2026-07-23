@@ -231,15 +231,26 @@ def names_match(expected: str, reported: str) -> bool:
 
 
 def detect_verified(name: str, careers_url: str = "") -> tuple[str, str] | None:
-    """detect() with the identity gate: careers-page boards pass on the live probe alone;
-    guessed slugs additionally must report a matching organization name."""
+    """detect() with the identity gate. Careers-page boards are near-authoritative, but the
+    page can also link SOMEONE ELSE'S board (remote.com's customer story handed us
+    greenhouse/openly) — so even those must corroborate identity: the board's reported name
+    matches, OR the slug itself is the company's name (covers display-name rebrands like
+    Intercom's board reporting 'Fin'), OR the ATS has no name API. Guessed slugs always
+    need a matching reported name."""
     if careers_url:
         found = scan_careers_page(careers_url)
         if found:
             ats, slug = found
             if probe_slug(ats, slug):
-                return ats, slug
-            log.info("careers page of %s names %s/%s but the board is dead", name, ats, slug)
+                reported = board_display_name(ats, slug) if ats in _NAME_APIS else None
+                if (reported is None or names_match(name, reported)
+                        or names_match(name, slug.replace("-", " "))):
+                    return ats, slug
+                log.info("careers page of %s links %s/%s but the board reports %r — "
+                         "someone else's board, skipped", name, ats, slug, reported)
+            else:
+                log.info("careers page of %s names %s/%s but the board is dead",
+                         name, ats, slug)
     for slug in slug_guesses(name):
         for ats in _NAME_APIS:
             if not probe_slug(ats, slug):
