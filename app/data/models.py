@@ -43,11 +43,17 @@ class Profile(Base):
     user: Mapped["User"] = relationship(back_populates="profiles")
 
     def as_text(self) -> str:
-        """Concatenated text used to compute the profile embedding."""
+        """Full profile text — used for requirement COVERAGE matching (languages/CEFR are
+        needed there: 'Fluent in English' is covered by the declared level)."""
         english = f"English {self.english_level}" if self.english_level else ""
         return " · ".join(x for x in [
             self.target_roles, self.skills, self.experience, self.languages, english,
         ] if x)
+
+    def embed_text(self) -> str:
+        """The EMBEDDING input — role + skills + experience only, mirroring the posting's
+        title+requirements structure (languages/CEFR are filter data, not semantics)."""
+        return " · ".join(x for x in [self.target_roles, self.skills, self.experience] if x)
 
 
 class Source(Base):
@@ -76,6 +82,7 @@ class Posting(Base):
     annotation_version: Mapped[str] = mapped_column(String(16), default="")  # annotate-vN
     annotation_fp: Mapped[str] = mapped_column(String(64), default="")       # reqs fingerprint
     embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)     # E5 vector (ingest-time)
+    embedding_version: Mapped[str] = mapped_column(String(32), default="")  # input+mode stamp
     is_live: Mapped[bool] = mapped_column(Boolean, default=True)
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)

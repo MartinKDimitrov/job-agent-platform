@@ -51,7 +51,7 @@ def fresh_db():
 @pytest.fixture(autouse=True)
 def no_embeddings(monkeypatch):
     """Keep scoring deterministic and fast: force the weighted-keyword path (no model load)."""
-    monkeypatch.setattr(scoring, "embed", lambda text: None)
+    monkeypatch.setattr(scoring, "embed", lambda text, prefix="query: ": None)
 
 
 @pytest.fixture

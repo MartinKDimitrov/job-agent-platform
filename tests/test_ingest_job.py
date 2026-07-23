@@ -16,7 +16,8 @@ from tests.test_crawl import _mock, _make_profile_row
 
 def test_ingest_stores_embedding_and_requirements(monkeypatch):
     _mock(monkeypatch)
-    monkeypatch.setattr(crawl, "embed", lambda text: [1.0, 0.0])
+    monkeypatch.setattr(crawl, "embed_passage", lambda text: [1.0, 0.0])
+    monkeypatch.setattr(crawl, "embed_query", lambda text: [1.0, 0.0])
     with SessionLocal() as db:
         res = crawl.ingest_from_sources(db)
         assert res["added"] == 2 and res["enriched"] == 2
@@ -28,14 +29,15 @@ def test_ingest_stores_embedding_and_requirements(monkeypatch):
 def test_search_db_uses_stored_vectors_not_the_model(monkeypatch):
     # After ingest, scoring a profile must NOT embed the posting text again.
     _mock(monkeypatch)
-    monkeypatch.setattr(crawl, "embed", lambda text: [1.0, 0.0])
+    monkeypatch.setattr(crawl, "embed_passage", lambda text: [1.0, 0.0])
+    monkeypatch.setattr(crawl, "embed_query", lambda text: [1.0, 0.0])
     with SessionLocal() as db:
         crawl.ingest_from_sources(db)
         p = _make_profile_row(db, target_roles="Android", skills="Kotlin, Compose")
 
-        def no_posting_embeds(text):
+        def no_posting_embeds(text, prefix="query: "):
             raise AssertionError("posting text must come from the stored vector")
-        monkeypatch.setattr(crawl, "embed", lambda text: [1.0, 0.0])   # profile vector only
+        monkeypatch.setattr(crawl, "embed_query", lambda text: [1.0, 0.0])  # profile only
         monkeypatch.setattr(scoring, "embed", no_posting_embeds)
         res = crawl.search_db(db, p)
         assert res["scored"] == 1 and res["matched"] >= 1
@@ -115,3 +117,32 @@ def test_run_ingest_targets_active_profiles_only(monkeypatch):
         _user(db, "paused@test.local", found_job=True)
         run_ingest(db)
     assert seen == ["Android"]                                # only the active user's profile
+
+
+def test_embed_version_drives_lazy_reembed(monkeypatch):
+    # bumping EMBED_VERSION (input/mode change) must re-embed old rows exactly once
+    _mock(monkeypatch)
+    calls = []
+    monkeypatch.setattr(crawl, "embed_passage", lambda text: calls.append(text) or [1.0, 0.0])
+    monkeypatch.setattr(crawl, "embed_query", lambda text: [1.0, 0.0])
+    with SessionLocal() as db:
+        crawl.ingest_from_sources(db)
+        n_first = len(calls)
+        assert n_first == 2
+        post = db.execute(select(Posting)).scalars().first()
+        post.embedding_version = "old-version"
+        db.commit()
+        crawl.ingest_from_sources(db)
+        assert len(calls) == n_first + 1              # only the stale row re-embedded
+        assert post.embedding_version == crawl.EMBED_VERSION
+        # clean input: title + requirements, NOT the raw description
+        assert calls[-1].startswith(post.title)
+
+
+def test_profile_embed_text_excludes_filter_fields():
+    from app.data.models import Profile
+    p = Profile(name="x", target_roles="Android Developer", skills="Kotlin",
+                experience="8 years", languages="Bulgarian, English", english_level="A2")
+    assert "A2" not in p.embed_text() and "Bulgarian" not in p.embed_text()
+    assert "Kotlin" in p.embed_text() and "8 years" in p.embed_text()
+    assert "English A2" in p.as_text()                # coverage matching still sees it

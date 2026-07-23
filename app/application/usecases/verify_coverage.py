@@ -75,7 +75,7 @@ def verify_match(db: Session, profile, match: Match, post: Posting, llm) -> bool
             (covered if src_covered else missing).append(r)
     kw = coverage_ratio([(r, hits[id(r)]) for r in scored])
     sem = semantic_pct(profile.embedding, post.embedding)
-    match.score = round(blend(sem, kw) * 100)
+    match.score = round(blend(sem, kw, settings.semantic_weight) * 100)
     match.covered, match.missing = covered, missing
     match.llm_verified = True
     return True

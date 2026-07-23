@@ -516,7 +516,9 @@ def add_posting(pid: int, request: Request, url: str = Form(""), apply_url: str 
                        location=location, description=description, requirements=reqs,
                        content_hash=chash)
         db.add(post); db.commit(); db.refresh(post)
-    sc, covered, missing = score(p.as_text(), post.description or post.title, post.requirements)
+    from ...core.config import settings as _settings
+    sc, covered, missing = score(p.as_text(), post.description or post.title, post.requirements,
+                                 sem_weight=_settings.semantic_weight)
     existing = db.execute(select(Match).where(Match.profile_id == p.id,
                                               Match.posting_id == post.id)).scalar_one_or_none()
     if existing:

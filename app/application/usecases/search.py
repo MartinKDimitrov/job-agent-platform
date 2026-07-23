@@ -27,7 +27,8 @@ from ...domain.entities import RawPosting
 from ...data.ingest import ingest
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
 from ...domain.extraction import extract_requirements
-from ...domain.scoring import embed, score
+from ...domain.scoring import (EMBED_VERSION, embed_passage, embed_query,
+                               posting_embed_text, score)
 from ...domain.filters import passes_hard_filters
 
 log = logging.getLogger(__name__)
@@ -144,24 +145,28 @@ def fetch_extra(stats=None) -> list[RawPosting]:
     return out
 
 
-def _embed_list(text: str):
-    """embed() as a JSON-storable list (numpy array otherwise), or None without a model."""
-    v = embed(text)
+def _as_list(v):
+    """Vector as a JSON-storable list (numpy array otherwise), or None without a model."""
     return None if v is None else [float(x) for x in v]
 
 
 def _enrich_new_postings(db: Session) -> int:
     """Ingest-time enrichment: extract requirements and compute the E5 vector ONCE per posting,
     stored on the row — searches then read instead of re-computing (DB-first search).
-    Without an embedding model (tests) requirements still get extracted; embed() fails fast."""
+    Vectors are version-stamped (EMBED_VERSION): changing the input construction or prefix
+    mode lazily re-embeds affected rows here. Without a model (tests) requirements still
+    get extracted; embed fails fast."""
     enriched = 0
-    q = select(Posting).where(or_(Posting.embedding.is_(None), Posting.requirements.is_(None)))
+    q = select(Posting).where(or_(Posting.embedding.is_(None),
+                                  Posting.embedding_version != EMBED_VERSION,
+                                  Posting.requirements.is_(None)))
     for post in db.execute(q).scalars():
         if post.requirements is None:
             post.requirements = extract_requirements(post.description or "")
-        if post.embedding is None:
-            post.embedding = _embed_list(post.description or post.title)
-            if post.embedding is not None:
+        if post.embedding is None or post.embedding_version != EMBED_VERSION:
+            vec = _as_list(embed_passage(posting_embed_text(post.title, post.requirements)))
+            if vec is not None:
+                post.embedding, post.embedding_version = vec, EMBED_VERSION
                 enriched += 1
     db.commit()
     return enriched
@@ -326,7 +331,7 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     keywords = _profile_keywords(profile)
     ptext = profile.as_text()
     if profile.embedding is None:            # cached on the row; cleared on profile edit
-        profile.embedding = _embed_list(ptext)
+        profile.embedding = _as_list(embed_query(profile.embed_text()))
     id_titles = db.execute(select(Posting.id, Posting.title)
                            .where(Posting.is_live.is_(True))).all()
     pool = len(id_titles)
@@ -365,7 +370,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
                 db.delete(stale)
             continue
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
-                                     profile_vec=profile.embedding, posting_vec=post.embedding)
+                                     profile_vec=profile.embedding, posting_vec=post.embedding,
+                                     sem_weight=settings.semantic_weight)
         existing = existing_by_post.get(post.id)
         if existing:
             existing.score, existing.covered, existing.missing = sc, covered, missing

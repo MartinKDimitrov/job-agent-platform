@@ -87,16 +87,16 @@ pages show titles/counts only — descriptions and apply links stay behind regis
 
 ## Consolidated improvement plan (owner discussions, 2026-07-23/24)
 
-**Phase 0 — the bottleneck first**: a hand-labeled EVAL SET (30-50 profile→posting pairs,
+**Phase 0 ✅ — the bottleneck first**: a hand-labeled EVAL SET (30-50 profile→posting pairs,
 NDCG/P@K harness). Five open decisions hang on it: E5 mode, recall threshold, near-dup
 threshold, blend weights, ★5 cap. Also: the profile's embed input becomes role+skills+
 experience (mirror of the posting's title+requirements; languages/CEFR are filter data).
 
-**Phase 1 — diagnostics** (measure, don't guess): E5 symmetric vs passage:/query: A/B on
+**Phase 1 ✅ (partial: mode A/B, truncation, coverage noise; weight-drift pending annotation completion)** (measure, don't guess): E5 symmetric vs passage:/query: A/B on
 the eval set; token-length/truncation stats; annotation weight drift (re-annotate 10-20
 postings twice); must-gate behaviour today; posted_at trustworthiness per adapter.
 
-**Phase 2 — vector migration** (one re-embed): embed CLEAN text (title + extracted
+**Phase 2 ✅ — vector migration** (shipped: e5-asym-clean-v2, SEMANTIC_WEIGHT=0.5) (one re-embed): embed CLEAN text (title + extracted
 requirements — raw 7k-char descriptions truncate at E5's 512 tokens exactly where the
 requirements live); mode per eval; store embedding_version (+model/mode) on the row.
 

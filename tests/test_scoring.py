@@ -67,7 +67,7 @@ def test_no_requirements_semantic_only_is_capped():
     # an "86% with 0 covered" ring destroys score credibility (observed on staging).
     import app.domain.scoring as scoring
     orig = scoring.embed
-    scoring.embed = lambda text: [1.0, 0.0]      # perfect similarity
+    scoring.embed = lambda text, prefix="query: ": [1.0, 0.0]   # perfect similarity
     try:
         sc, covered, missing = score("kotlin", "kotlin role", [])
         assert covered == [] and missing == []

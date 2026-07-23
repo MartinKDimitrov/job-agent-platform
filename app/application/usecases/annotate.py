@@ -103,6 +103,7 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 8.0
         try:
             annotate_posting(db, post, llm)
             annotated += 1
+            db.commit()      # per-posting: a multi-hour run must not hold row locks
         except _RateLimited:
             rate_limited += 1
             failed += 1

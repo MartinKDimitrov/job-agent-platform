@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     oauth_redirect_base: str = "http://localhost:8000"
 
     e5_model: str = "intfloat/multilingual-e5-small"
+    # Blend weight of the semantic component (coverage gets 1 - this). Raised 0.35 -> 0.5
+    # per the eval-v1 sweep (peak ~0.8 on the small set; cautious step, recalibrate as the
+    # eval set grows).
+    semantic_weight: float = 0.5
 
     # DB-first search: the in-app background ingester refreshes the posting index every
     # N hours (0 = disabled — tests and environments where cron runs `python -m app.jobs ingest`).

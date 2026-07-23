@@ -29,13 +29,41 @@ def _tokens(text: str) -> set[str]:
     return {t for t in re.split(r"[^a-zA-Z0-9\+\#\.]+", (text or "").lower()) if len(t) > 1}
 
 
-def embed(text: str):
+# Version stamp for stored posting vectors: bump on ANY change to input construction or
+# prefix mode — enrichment then lazily re-embeds affected rows (measured decision, eval v1:
+# asymmetric passage:/query: over CLEAN text, semantic weight raised 0.35 -> 0.5).
+EMBED_VERSION = "e5-asym-clean-v2"
+
+# Eval-v1 sweep peaked ~0.8 on the small set; 0.5 is the cautious step (config:
+# SEMANTIC_WEIGHT) pending more labeled data.
+DEFAULT_SEM_WEIGHT = 0.5
+
+
+def embed(text: str, prefix: str = "query: "):
     m = _get_model()
     if not m:
         return None
-    # E5 expects a prefix; "query:" is fine for short profile/JD text.
-    v = m.encode("query: " + (text or ""), normalize_embeddings=True)
+    v = m.encode(prefix + (text or ""), normalize_embeddings=True)
     return v
+
+
+def embed_query(text: str):
+    """The PROFILE side (the 'search query' in E5's asymmetric training)."""
+    return embed(text, "query: ")
+
+
+def embed_passage(text: str):
+    """The POSTING side (the 'document'). Feed it CLEAN text (title + requirements) —
+    raw 7k-char descriptions truncate at E5's 512 tokens exactly where requirements live."""
+    return embed(text, "passage: ")
+
+
+def posting_embed_text(title: str, requirements: list[dict] | None) -> str:
+    """The clean embedding input for a posting: role identity + what it actually asks for."""
+    parts = [title or ""]
+    parts += [r.get("text", "") for r in requirements or []
+              if isinstance(r, dict) and r.get("kind") in ("must", "nice", "resp")]
+    return "\n".join(p for p in parts if p)
 
 
 def _cosine(a, b) -> float:
@@ -104,7 +132,7 @@ def _norm_reqs(requirements) -> list[dict]:
 
 
 def score(profile_text: str, posting_text: str, requirements=None,
-          profile_vec=None, posting_vec=None):
+          profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -130,10 +158,10 @@ def score(profile_text: str, posting_text: str, requirements=None,
     # weighted keyword ratio (fallback / blend)
     kw_ratio = (w_cov / w_tot) if w_tot else None
 
-    pe = profile_vec if profile_vec is not None else embed(profile_text)
-    se = posting_vec if posting_vec is not None else embed(posting_text)
+    pe = profile_vec if profile_vec is not None else embed_query(profile_text)
+    se = posting_vec if posting_vec is not None else embed_passage(posting_text)
     sem_pct = semantic_pct(pe, se)
-    return round(blend(sem_pct, kw_ratio) * 100), covered, missing
+    return round(blend(sem_pct, kw_ratio, sem_weight) * 100), covered, missing
 
 
 def semantic_pct(profile_vec, posting_vec) -> float | None:
@@ -144,17 +172,17 @@ def semantic_pct(profile_vec, posting_vec) -> float | None:
     return max(0.0, min(1.0, (sem - 0.6) / 0.35))
 
 
-def blend(sem_pct: float | None, kw_ratio: float | None) -> float:
+def blend(sem_pct: float | None, kw_ratio: float | None,
+          sem_weight: float = DEFAULT_SEM_WEIGHT) -> float:
     """The one scoring formula — also used by the LLM verification pass when it recomputes
-    a score from corrected coverage, so the two can never drift apart.
-    Coverage dominates: E5 similarity gives a high baseline for ANY tech text, which
-    inflated scores like '45% with 1 of 26 covered' (owner report). Without requirement
+    a score from corrected coverage, so the two can never drift apart. `sem_weight` comes
+    from config at the call sites (domain stays dependency-free). Without requirement
     evidence, similarity alone never claims above 60%."""
     if sem_pct is None:
         return kw_ratio if kw_ratio is not None else 0.0
     if kw_ratio is None:
         return min(sem_pct, 0.60)
-    return 0.35 * sem_pct + 0.65 * kw_ratio
+    return sem_weight * sem_pct + (1 - sem_weight) * kw_ratio
 
 
 def coverage_ratio(requirements_with_hits) -> float | None:
