@@ -7,6 +7,7 @@ comes from their profile (target_roles / remote_pref / location_pref), so the us
 filters implicitly by how they describe what they want.
 """
 import re
+from functools import lru_cache
 
 _TOKEN_RE = re.compile(r"[a-zA-Zа-яА-Я0-9\+\#\.]+")
 
@@ -112,16 +113,20 @@ def _profile_country(profile) -> str:
     return "bulgaria"
 
 
-def _restricted_countries(location: str, description: str) -> set[str]:
+@lru_cache(maxsize=4096)
+def _restricted_countries(location: str, description: str) -> frozenset[str]:
     """Countries a posting is restricted to. In the LOCATION field any country mention counts
-    (that's what the field is for); in the DESCRIPTION only requirement-shaped phrases."""
+    (that's what the field is for); in the DESCRIPTION only requirement-shaped phrases.
+    Profile-independent and regex-heavy (~30 country patterns over multi-KB descriptions —
+    profiled at 2.9s per search across the candidate set), so it's memoized per posting
+    text: each posting pays once per process, warm searches pay nothing."""
     out: set[str] = set()
     for key in _COUNTRY_ALIASES:
         if location and _ALIAS_RES[key].search(location):
             out.add(key)
         elif description and _RESTRICT_RES[key].search(description):
             out.add(key)
-    return out
+    return frozenset(out)
 
 
 def geo_ok(profile, location: str, description: str = "") -> bool:
