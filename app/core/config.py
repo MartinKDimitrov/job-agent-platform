@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # LLM coverage verification: how many top matches to double-check per search (0 = off).
     # Verified matches are never re-checked, so the cost is one-time per match.
     verify_top_n: int = 8
+    # Requirement annotation (annotate-v1): LLM calls per ingest cycle on the PLATFORM key
+    # (0 = off). One call per posting, ever — version+fingerprint make re-annotation lazy.
+    annotate_budget: int = 60
 
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).

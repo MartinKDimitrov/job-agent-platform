@@ -73,6 +73,8 @@ class Posting(Base):
     location: Mapped[str] = mapped_column(String(255), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     requirements: Mapped[list | None] = mapped_column(JSON, nullable=True)  # extracted list
+    annotation_version: Mapped[str] = mapped_column(String(16), default="")  # annotate-vN
+    annotation_fp: Mapped[str] = mapped_column(String(64), default="")       # reqs fingerprint
     embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)     # E5 vector (ingest-time)
     is_live: Mapped[bool] = mapped_column(Boolean, default=True)
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)

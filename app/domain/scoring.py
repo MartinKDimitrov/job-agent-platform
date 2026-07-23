@@ -51,13 +51,41 @@ def _cosine(a, b) -> float:
 _KIND_WEIGHT = {"must": 1.0, "nice": 0.4, "resp": 0.0, "soft": 0.0}
 
 
+def req_weight(r: dict) -> float:
+    """Effective weight of one requirement: kind base × annotated importance (1-5, neutral 3).
+    'Kotlin ★★★★★' counts ~1.67× a plain must; 'XML ★' counts ~0.33×."""
+    base = _KIND_WEIGHT.get(r.get("kind", "must"), 1.0)
+    try:
+        w = int(r.get("weight", 3))
+    except (TypeError, ValueError):
+        w = 3
+    return base * (min(5, max(1, w)) / 3.0)
+
+
+def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None = None) -> bool:
+    """Is this requirement covered by the profile? ANNOTATED requirements match
+    deterministically — any canonical skill present in the profile text (word-boundary);
+    un-annotated ones fall back to whole-token overlap."""
+    skills = r.get("skills")
+    if skills:
+        low = (profile_text or "").lower()
+        for s in skills:
+            if re.search(r"(?<![a-z0-9+#.])" + re.escape(s) + r"(?![a-z0-9+#.])", low):
+                return True
+        return False
+    toks = profile_tokens if profile_tokens is not None else _tokens(profile_text)
+    rtok = _tokens(r.get("text", ""))
+    return bool(rtok and rtok & toks)
+
+
 def _norm_reqs(requirements) -> list[dict]:
     """Accept either the new [{'text','kind'}] shape or the old [str] one (older rows / callers)
     so scoring never breaks on legacy data."""
     norm = []
     for r in requirements or []:
         if isinstance(r, dict):
-            norm.append({"text": r.get("text", ""), "kind": r.get("kind", "must")})
+            # keep ALL keys (annotation adds skills/weight) — only default the core two
+            norm.append({**r, "text": r.get("text", ""), "kind": r.get("kind", "must")})
         else:
             norm.append({"text": str(r), "kind": "must"})
     return norm
@@ -79,10 +107,9 @@ def score(profile_text: str, posting_text: str, requirements=None,
     covered, missing = [], []
     w_cov = w_tot = 0.0
     for r in reqs:
-        rtok = _tokens(r["text"])
-        hit = bool(rtok and rtok & p_tok)
-        w = _KIND_WEIGHT.get(r["kind"], 1.0)
-        if w > 0:                       # responsibilities (w=0) are not scored as gaps
+        hit = requirement_hit(r, profile_text, p_tok)
+        w = req_weight(r)
+        if w > 0:                       # responsibilities/soft (w=0) are not scored as gaps
             w_tot += w
             if hit:
                 w_cov += w
@@ -119,11 +146,11 @@ def blend(sem_pct: float | None, kw_ratio: float | None) -> float:
 
 
 def coverage_ratio(requirements_with_hits) -> float | None:
-    """Weighted coverage from [({'text','kind'}, hit: bool)] pairs — the verifier's way to
-    recompute the ratio after the LLM corrects individual hits."""
+    """Weighted coverage from [({'text','kind',...}, hit: bool)] pairs — the verifier's way
+    to recompute the ratio after the LLM corrects individual hits."""
     w_cov = w_tot = 0.0
     for r, hit in requirements_with_hits:
-        w = _KIND_WEIGHT.get(r.get("kind", "must"), 1.0)
+        w = req_weight(r)
         if w > 0:
             w_tot += w
             if hit:

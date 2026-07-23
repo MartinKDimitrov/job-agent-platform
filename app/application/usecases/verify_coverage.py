@@ -94,8 +94,14 @@ def verify_top_matches(db: Session, profile, top_n: int | None = None) -> dict:
         .where(Match.profile_id == profile.id, Match.llm_verified.is_(False),
                Match.score >= profile.min_match, Posting.is_live.is_(True))
         .order_by(Match.score.desc()).limit(top_n)).all()
+    from ...domain.prompts.annotate_v1 import ANNOTATE_VERSION
     verified = failed = 0
     for match, post in rows:
+        if post.annotation_version == ANNOTATE_VERSION:
+            # deterministic coverage already came from the shared annotation — no LLM needed
+            match.llm_verified = True
+            verified += 1
+            continue
         if verify_match(db, profile, match, post, llm):
             verified += 1
         else:

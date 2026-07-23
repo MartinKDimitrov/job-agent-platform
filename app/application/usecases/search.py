@@ -217,14 +217,18 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
             seen_urls.update(rp.url for rp in targeted if rp.url)
     ing = ingest(db, raw_postings)
     enriched = _enrich_new_postings(db)
+    from .annotate import annotate_postings
+    ann = annotate_postings(db)
     retired = retire_stale_postings(db)
     unseen = retire_unseen_board_postings(db)
     taken_down = probe_taken_down_urls(db)
     if stats is not None:
         stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
-                  retired=retired, unseen_retired=unseen, taken_down=taken_down)
+                  annotated=ann["annotated"], retired=retired,
+                  unseen_retired=unseen, taken_down=taken_down)
     return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched,
-            "retired": retired, "unseen_retired": unseen, "taken_down": taken_down}
+            "annotated": ann["annotated"], "retired": retired,
+            "unseen_retired": unseen, "taken_down": taken_down}
 
 
 # Sources that show only a RECENT WINDOW — a posting dropping out of their feed proves
