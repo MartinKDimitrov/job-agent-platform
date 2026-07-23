@@ -1,6 +1,7 @@
 """Registry filler: run ATS detection over company candidates and upsert the results.
 
     python -m app.tools.detect_companies                 # the built-in BG seed list
+    python -m app.tools.detect_companies --eu            # the EU wave (companies_eu.py)
     python -m app.tools.detect_companies "Име" [...]     # specific companies
     python -m app.tools.detect_companies --country EU "Име" [...]
 
@@ -14,9 +15,10 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import select
 
-from ..data.ats_detect import detect
+from ..data.ats_detect import detect, detect_verified, find_careers_url
 from ..data.company_repo import upsert_company
 from ..data.companies_bg import BG_COMPANY_NAMES
+from ..data.companies_eu import EU_COMPANIES
 from ..data.db import SessionLocal
 from ..data.models import Company
 
@@ -51,6 +53,45 @@ def run(names: list[str], country: str = "BG", delay: float = 1.0, force: bool =
     return {"found": found, "missed": missed, "skipped": skipped}
 
 
+def run_entries(entries: list[dict], delay: float = 1.0, force: bool = False) -> dict:
+    """EU-wave detection over rich candidate entries ({name, country, industry, website}).
+    Differences from run(): the careers page is DISCOVERED from the website first (it is the
+    authoritative ATS pointer), and slug guesses go through detect_verified — a guessed
+    board must report a matching organization name (the phantom-board rule, automated)."""
+    found = missed = skipped = 0
+    with SessionLocal() as db:
+        for e in entries:
+            name = e["name"]
+            existing = db.execute(
+                select(Company).where(Company.name == name)).scalar_one_or_none()
+            if existing and (existing.ats or (not force and (
+                    existing.detected_at
+                    and datetime.utcnow() - existing.detected_at < _RECHECK_AFTER))):
+                skipped += 1
+                continue
+            careers = find_careers_url(e.get("website", ""))
+            res = detect_verified(name, careers_url=careers)
+            if res:
+                ats, slug = res
+                upsert_company(db, name, country=e.get("country", "EU"),
+                               industry=e.get("industry", ""),
+                               website=e.get("website", ""), careers_url=careers,
+                               ats=ats, ats_slug=slug)
+                print(f"  ✓ {name} [{e.get('country')}]: {ats}/{slug}", flush=True)
+                found += 1
+            else:
+                c = upsert_company(db, name, country=e.get("country", "EU"),
+                                   industry=e.get("industry", ""),
+                                   website=e.get("website", ""), careers_url=careers,
+                                   active=False)
+                c.detected_at = datetime.utcnow()   # remember the miss for _RECHECK_AFTER
+                db.commit()
+                print(f"  · {name} [{e.get('country')}]: no verified ATS", flush=True)
+                missed += 1
+            time.sleep(delay)
+    return {"found": found, "missed": missed, "skipped": skipped}
+
+
 if __name__ == "__main__":
     from ..data.db import init_db
     init_db()          # standalone CLI — make sure new tables exist before we write
@@ -60,6 +101,10 @@ if __name__ == "__main__":
         country = sys.argv[sys.argv.index("--country") + 1]
         args = [a for a in args if a != country]
     force = "--force" in sys.argv
-    names = args or BG_COMPANY_NAMES
-    print(f"probing {len(names)} companies ({country}, force={force})...")
-    print(run(names, country=country, force=force))
+    if "--eu" in sys.argv:
+        print(f"probing {len(EU_COMPANIES)} EU companies (force={force})...")
+        print(run_entries(EU_COMPANIES, force=force))
+    else:
+        names = args or BG_COMPANY_NAMES
+        print(f"probing {len(names)} companies ({country}, force={force})...")
+        print(run(names, country=country, force=force))

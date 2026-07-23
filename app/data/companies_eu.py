@@ -1,0 +1,174 @@
+"""EU expansion wave 1 (ROADMAP: 🇪🇺): notable tech-forward employers across the European
+Union — CANDIDATES for careers-page discovery and identity-verified ATS detection, exactly
+like companies_bg.py. Real companies only (owner rule); a dead website or an unsupported
+ATS just yields a recorded miss, never fake data.
+
+Selection bias is deliberate: scale-ups and product companies, which overwhelmingly run on
+the ATS platforms we already speak (Greenhouse/Lever/Ashby/Workable/SmartRecruiters/
+Recruitee/Personio/Teamtailor). Large corporates on proprietary ATSes (SAP, Siemens,
+Booking) are left out — no adapter, no value. `country` is ISO-3166 alpha-2.
+"""
+
+EU_COMPANIES: list[dict] = [
+    # --- Germany ---
+    {"name": "N26", "country": "DE", "industry": "Fintech", "website": "https://n26.com"},
+    {"name": "HelloFresh", "country": "DE", "industry": "Food", "website": "https://www.hellofreshgroup.com"},
+    {"name": "Delivery Hero", "country": "DE", "industry": "Food", "website": "https://www.deliveryhero.com"},
+    {"name": "GetYourGuide", "country": "DE", "industry": "Travel", "website": "https://www.getyourguide.com"},
+    {"name": "Celonis", "country": "DE", "industry": "IT", "website": "https://www.celonis.com"},
+    {"name": "Flix", "country": "DE", "industry": "Transport", "website": "https://www.flix.com"},
+    {"name": "Trade Republic", "country": "DE", "industry": "Fintech", "website": "https://traderepublic.com"},
+    {"name": "AUTO1 Group", "country": "DE", "industry": "Automotive", "website": "https://www.auto1-group.com"},
+    {"name": "Babbel", "country": "DE", "industry": "EdTech", "website": "https://www.babbel.com"},
+    {"name": "Contentful", "country": "DE", "industry": "IT", "website": "https://www.contentful.com"},
+    {"name": "Solaris", "country": "DE", "industry": "Fintech", "website": "https://www.solarisgroup.com"},
+    {"name": "Raisin", "country": "DE", "industry": "Fintech", "website": "https://www.raisin.com"},
+    {"name": "Forto", "country": "DE", "industry": "Logistics", "website": "https://forto.com"},
+    {"name": "Enpal", "country": "DE", "industry": "Energy", "website": "https://www.enpal.de"},
+    {"name": "Taxfix", "country": "DE", "industry": "Fintech", "website": "https://taxfix.de"},
+    {"name": "Moss", "country": "DE", "industry": "Fintech", "website": "https://www.getmoss.com"},
+    {"name": "Mambu", "country": "DE", "industry": "Fintech", "website": "https://mambu.com"},
+    {"name": "Adjust", "country": "DE", "industry": "IT", "website": "https://www.adjust.com"},
+    {"name": "Sennder", "country": "DE", "industry": "Logistics", "website": "https://www.sennder.com"},
+    {"name": "Personio", "country": "DE", "industry": "IT", "website": "https://www.personio.com"},
+    {"name": "DeepL", "country": "DE", "industry": "IT", "website": "https://www.deepl.com"},
+    {"name": "Tier Mobility", "country": "DE", "industry": "Transport", "website": "https://www.tier.app"},
+    {"name": "Grover", "country": "DE", "industry": "Fintech", "website": "https://www.grover.com"},
+    # --- Netherlands ---
+    {"name": "Adyen", "country": "NL", "industry": "Fintech", "website": "https://www.adyen.com"},
+    {"name": "Mollie", "country": "NL", "industry": "Fintech", "website": "https://www.mollie.com"},
+    {"name": "Picnic", "country": "NL", "industry": "E-commerce", "website": "https://picnic.app"},
+    {"name": "bunq", "country": "NL", "industry": "Fintech", "website": "https://www.bunq.com"},
+    {"name": "Backbase", "country": "NL", "industry": "Fintech", "website": "https://www.backbase.com"},
+    {"name": "Miro", "country": "NL", "industry": "IT", "website": "https://miro.com"},
+    {"name": "WeTransfer", "country": "NL", "industry": "IT", "website": "https://wetransfer.com"},
+    {"name": "Framer", "country": "NL", "industry": "IT", "website": "https://www.framer.com"},
+    {"name": "Bynder", "country": "NL", "industry": "IT", "website": "https://www.bynder.com"},
+    {"name": "Mews", "country": "NL", "industry": "IT", "website": "https://www.mews.com"},
+    {"name": "Catawiki", "country": "NL", "industry": "E-commerce", "website": "https://www.catawiki.com"},
+    {"name": "Sendcloud", "country": "NL", "industry": "Logistics", "website": "https://www.sendcloud.com"},
+    {"name": "Channable", "country": "NL", "industry": "IT", "website": "https://www.channable.com"},
+    # --- France ---
+    {"name": "Doctolib", "country": "FR", "industry": "Health", "website": "https://www.doctolib.fr"},
+    {"name": "BlaBlaCar", "country": "FR", "industry": "Transport", "website": "https://www.blablacar.com"},
+    {"name": "Back Market", "country": "FR", "industry": "E-commerce", "website": "https://www.backmarket.com"},
+    {"name": "Qonto", "country": "FR", "industry": "Fintech", "website": "https://qonto.com"},
+    {"name": "Alan", "country": "FR", "industry": "Insurance", "website": "https://alan.com"},
+    {"name": "Ledger", "country": "FR", "industry": "Fintech", "website": "https://www.ledger.com"},
+    {"name": "Contentsquare", "country": "FR", "industry": "IT", "website": "https://contentsquare.com"},
+    {"name": "Mirakl", "country": "FR", "industry": "IT", "website": "https://www.mirakl.com"},
+    {"name": "PayFit", "country": "FR", "industry": "Fintech", "website": "https://payfit.com"},
+    {"name": "Spendesk", "country": "FR", "industry": "Fintech", "website": "https://www.spendesk.com"},
+    {"name": "Swile", "country": "FR", "industry": "Fintech", "website": "https://www.swile.co"},
+    {"name": "Algolia", "country": "FR", "industry": "IT", "website": "https://www.algolia.com"},
+    {"name": "Dataiku", "country": "FR", "industry": "IT", "website": "https://www.dataiku.com"},
+    {"name": "Aircall", "country": "FR", "industry": "IT", "website": "https://aircall.io"},
+    {"name": "ManoMano", "country": "FR", "industry": "E-commerce", "website": "https://www.manomano.fr"},
+    {"name": "Vestiaire Collective", "country": "FR", "industry": "E-commerce", "website": "https://www.vestiairecollective.com"},
+    {"name": "Deezer", "country": "FR", "industry": "Media", "website": "https://www.deezer.com"},
+    {"name": "OVHcloud", "country": "FR", "industry": "IT", "website": "https://www.ovhcloud.com"},
+    {"name": "Pennylane", "country": "FR", "industry": "Fintech", "website": "https://www.pennylane.com"},
+    # --- Spain ---
+    {"name": "Glovo", "country": "ES", "industry": "Food", "website": "https://glovoapp.com"},
+    {"name": "Cabify", "country": "ES", "industry": "Transport", "website": "https://cabify.com"},
+    {"name": "TravelPerk", "country": "ES", "industry": "Travel", "website": "https://www.travelperk.com"},
+    {"name": "Factorial", "country": "ES", "industry": "IT", "website": "https://factorialhr.com"},
+    {"name": "Typeform", "country": "ES", "industry": "IT", "website": "https://www.typeform.com"},
+    {"name": "Wallbox", "country": "ES", "industry": "Energy", "website": "https://wallbox.com"},
+    {"name": "Jobandtalent", "country": "ES", "industry": "IT", "website": "https://www.jobandtalent.com"},
+    {"name": "Fever", "country": "ES", "industry": "Media", "website": "https://feverup.com"},
+    {"name": "Seedtag", "country": "ES", "industry": "IT", "website": "https://www.seedtag.com"},
+    # --- Italy ---
+    {"name": "Bending Spoons", "country": "IT", "industry": "IT", "website": "https://bendingspoons.com"},
+    {"name": "Satispay", "country": "IT", "industry": "Fintech", "website": "https://www.satispay.com"},
+    {"name": "Scalapay", "country": "IT", "industry": "Fintech", "website": "https://www.scalapay.com"},
+    {"name": "Prima Assicurazioni", "country": "IT", "industry": "Insurance", "website": "https://www.prima.it"},
+    {"name": "Docebo", "country": "IT", "industry": "IT", "website": "https://www.docebo.com"},
+    # --- Portugal ---
+    {"name": "Farfetch", "country": "PT", "industry": "E-commerce", "website": "https://www.farfetch.com"},
+    {"name": "Talkdesk", "country": "PT", "industry": "IT", "website": "https://www.talkdesk.com"},
+    {"name": "Remote", "country": "PT", "industry": "IT", "website": "https://remote.com"},
+    {"name": "Unbabel", "country": "PT", "industry": "IT", "website": "https://unbabel.com"},
+    {"name": "Sword Health", "country": "PT", "industry": "Health", "website": "https://swordhealth.com"},
+    # --- Poland ---
+    {"name": "CD Projekt Red", "country": "PL", "industry": "Gaming", "website": "https://www.cdprojektred.com"},
+    {"name": "Docplanner", "country": "PL", "industry": "Health", "website": "https://www.docplanner.com"},
+    {"name": "Brainly", "country": "PL", "industry": "EdTech", "website": "https://brainly.com"},
+    {"name": "Booksy", "country": "PL", "industry": "IT", "website": "https://booksy.com"},
+    {"name": "Ramp Network", "country": "PL", "industry": "Fintech", "website": "https://ramp.network"},
+    {"name": "Packhelp", "country": "PL", "industry": "E-commerce", "website": "https://packhelp.com"},
+    # --- Romania ---
+    {"name": "UiPath", "country": "RO", "industry": "IT", "website": "https://www.uipath.com"},
+    {"name": "Bitdefender", "country": "RO", "industry": "IT", "website": "https://www.bitdefender.com"},
+    {"name": "FintechOS", "country": "RO", "industry": "Fintech", "website": "https://fintechos.com"},
+    {"name": "MultiversX", "country": "RO", "industry": "Fintech", "website": "https://multiversx.com"},
+    {"name": "eMAG", "country": "RO", "industry": "E-commerce", "website": "https://www.emag.ro"},
+    # --- Greece ---
+    {"name": "Workable", "country": "GR", "industry": "IT", "website": "https://www.workable.com"},
+    {"name": "Blueground", "country": "GR", "industry": "Travel", "website": "https://www.theblueground.com"},
+    {"name": "Skroutz", "country": "GR", "industry": "E-commerce", "website": "https://www.skroutz.gr"},
+    {"name": "Viva.com", "country": "GR", "industry": "Fintech", "website": "https://www.viva.com"},
+    {"name": "Epignosis", "country": "GR", "industry": "IT", "website": "https://www.epignosishq.com"},
+    # --- Austria ---
+    {"name": "Bitpanda", "country": "AT", "industry": "Fintech", "website": "https://www.bitpanda.com"},
+    {"name": "GoStudent", "country": "AT", "industry": "EdTech", "website": "https://www.gostudent.org"},
+    {"name": "TourRadar", "country": "AT", "industry": "Travel", "website": "https://www.tourradar.com"},
+    {"name": "Refurbed", "country": "AT", "industry": "E-commerce", "website": "https://www.refurbed.com"},
+    # --- Belgium ---
+    {"name": "Collibra", "country": "BE", "industry": "IT", "website": "https://www.collibra.com"},
+    {"name": "Odoo", "country": "BE", "industry": "IT", "website": "https://www.odoo.com"},
+    {"name": "Showpad", "country": "BE", "industry": "IT", "website": "https://www.showpad.com"},
+    {"name": "Deliverect", "country": "BE", "industry": "IT", "website": "https://www.deliverect.com"},
+    {"name": "Silverfin", "country": "BE", "industry": "Fintech", "website": "https://www.silverfin.com"},
+    # --- Ireland ---
+    {"name": "Intercom", "country": "IE", "industry": "IT", "website": "https://www.intercom.com"},
+    {"name": "Flipdish", "country": "IE", "industry": "IT", "website": "https://www.flipdish.com"},
+    {"name": "Wayflyer", "country": "IE", "industry": "Fintech", "website": "https://wayflyer.com"},
+    {"name": "LearnUpon", "country": "IE", "industry": "IT", "website": "https://www.learnupon.com"},
+    {"name": "Tines", "country": "IE", "industry": "IT", "website": "https://www.tines.com"},
+    # --- Sweden ---
+    {"name": "Klarna", "country": "SE", "industry": "Fintech", "website": "https://www.klarna.com"},
+    {"name": "Einride", "country": "SE", "industry": "Transport", "website": "https://www.einride.tech"},
+    {"name": "Voi", "country": "SE", "industry": "Transport", "website": "https://www.voi.com"},
+    {"name": "Epidemic Sound", "country": "SE", "industry": "Media", "website": "https://www.epidemicsound.com"},
+    {"name": "Mentimeter", "country": "SE", "industry": "IT", "website": "https://www.mentimeter.com"},
+    {"name": "Tink", "country": "SE", "industry": "Fintech", "website": "https://tink.com"},
+    # --- Denmark ---
+    {"name": "Pleo", "country": "DK", "industry": "Fintech", "website": "https://www.pleo.io"},
+    {"name": "Lunar", "country": "DK", "industry": "Fintech", "website": "https://www.lunar.app"},
+    {"name": "Templafy", "country": "DK", "industry": "IT", "website": "https://www.templafy.com"},
+    {"name": "Trustpilot", "country": "DK", "industry": "IT", "website": "https://www.trustpilot.com"},
+    {"name": "Dixa", "country": "DK", "industry": "IT", "website": "https://www.dixa.com"},
+    # --- Finland ---
+    {"name": "Wolt", "country": "FI", "industry": "Food", "website": "https://wolt.com"},
+    {"name": "Supercell", "country": "FI", "industry": "Gaming", "website": "https://supercell.com"},
+    {"name": "Aiven", "country": "FI", "industry": "IT", "website": "https://aiven.io"},
+    {"name": "Smartly", "country": "FI", "industry": "IT", "website": "https://www.smartly.io"},
+    {"name": "Swappie", "country": "FI", "industry": "E-commerce", "website": "https://swappie.com"},
+    # --- Czechia ---
+    {"name": "Productboard", "country": "CZ", "industry": "IT", "website": "https://www.productboard.com"},
+    {"name": "Kiwi.com", "country": "CZ", "industry": "Travel", "website": "https://www.kiwi.com"},
+    {"name": "Rohlik Group", "country": "CZ", "industry": "E-commerce", "website": "https://www.rohlik.group"},
+    {"name": "Make", "country": "CZ", "industry": "IT", "website": "https://www.make.com"},
+    # --- Hungary ---
+    {"name": "Prezi", "country": "HU", "industry": "IT", "website": "https://prezi.com"},
+    {"name": "Bitrise", "country": "HU", "industry": "IT", "website": "https://bitrise.io"},
+    {"name": "SEON", "country": "HU", "industry": "IT", "website": "https://seon.io"},
+    # --- Croatia ---
+    {"name": "Infobip", "country": "HR", "industry": "IT", "website": "https://www.infobip.com"},
+    {"name": "Rimac Technology", "country": "HR", "industry": "Automotive", "website": "https://www.rimac-technology.com"},
+    # --- Slovenia / Slovakia ---
+    {"name": "Outfit7", "country": "SI", "industry": "Gaming", "website": "https://outfit7.com"},
+    {"name": "ESET", "country": "SK", "industry": "IT", "website": "https://www.eset.com"},
+    # --- Baltics ---
+    {"name": "Bolt", "country": "EE", "industry": "Transport", "website": "https://bolt.eu"},
+    {"name": "Wise", "country": "EE", "industry": "Fintech", "website": "https://wise.com"},
+    {"name": "Pipedrive", "country": "EE", "industry": "IT", "website": "https://www.pipedrive.com"},
+    {"name": "Veriff", "country": "EE", "industry": "IT", "website": "https://www.veriff.com"},
+    {"name": "Vinted", "country": "LT", "industry": "E-commerce", "website": "https://www.vinted.com"},
+    {"name": "Nord Security", "country": "LT", "industry": "IT", "website": "https://nordsecurity.com"},
+    {"name": "Kilo Health", "country": "LT", "industry": "Health", "website": "https://kilo.health"},
+    {"name": "Printful", "country": "LV", "industry": "E-commerce", "website": "https://www.printful.com"},
+]
+
+EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})

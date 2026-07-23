@@ -166,6 +166,92 @@ def find_careers_url(website: str) -> str:
     return ""
 
 
+# ---- identity verification (the phantom-board lesson, automated for the EU expansion) ----
+# Guessed slugs can hit a SAME-NAMED stranger's board (personio/kbc was a Munich firm, not
+# KBC Bulgaria). Policy: a careers-page-derived board is authoritative (the company's own
+# site links it); a GUESSED slug is accepted only when the ATS's public API reports the
+# organization's display name AND it matches ours. ATSes that expose no name (lever, ashby,
+# personio) are careers-page-only — guessing there is structurally unsafe.
+
+def board_display_name(ats: str, slug: str) -> str | None:
+    """The organization name as the ATS itself reports it, when the public API exposes one."""
+    if ats == "greenhouse":
+        j = fetch_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}")
+        return (j or {}).get("name") if isinstance(j, dict) else None
+    if ats == "workable":
+        j = fetch_json(f"https://apply.workable.com/api/v1/widget/accounts/{slug}")
+        return (j or {}).get("name") if isinstance(j, dict) else None
+    if ats == "smartrecruiters":
+        j = fetch_json(f"https://api.smartrecruiters.com/v1/companies/{slug}")
+        return (j or {}).get("name") if isinstance(j, dict) else None
+    if ats == "teamtailor":
+        from .sources.teamtailor import base_url
+        body = fetch_text(f"{base_url(slug)}/jobs.rss") or ""
+        m = re.search(r"<title>([^<]+)</title>", body)
+        return m.group(1).strip() if m else None
+    if ats == "recruitee":
+        j = fetch_json(f"https://{slug}.recruitee.com/api/offers/", browser=True)
+        offers = (j or {}).get("offers") if isinstance(j, dict) else None
+        return (offers[0].get("company_name") or None) if offers else None
+    return None
+
+
+_NAME_APIS = frozenset({"greenhouse", "workable", "smartrecruiters", "teamtailor", "recruitee"})
+
+
+# legal-form suffixes that boards append to their display name ("Adyen N.V.", "... GmbH") —
+# stripped before comparison so the suffix never decides the match
+_LEGAL_SUFFIX_RE = re.compile(
+    r"\b(gmbh|ag|se|n ?v|b ?v|inc|ltd|llc|plc|s ?a|s ?r ?l|sp z o ?o|oy|ab|a ?s|aps|"
+    r"co|corp|group|holding[s]?)\b\.?", re.I)
+
+
+def _org_norm(name: str) -> str:
+    from ..domain.dedup import normalize_company
+    n = normalize_company(name or "")
+    n = _LEGAL_SUFFIX_RE.sub(" ", n)
+    return re.sub(r"\s+", " ", n).strip()
+
+
+def names_match(expected: str, reported: str) -> bool:
+    """Fuzzy same-organization check. Strict by design: a false reject only means one less
+    registration; a false accept poisons the index with a stranger's postings."""
+    import difflib
+    a, b = _org_norm(expected), _org_norm(reported)
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    short, long_ = sorted((a, b), key=len)
+    # containment counts only when the shorter form is substantial ('kbc' inside
+    # 'kbc bank muenchen' must NOT pass on brand alone)
+    if short in long_ and (len(short) >= 8 or len(short.split()) >= 2):
+        return True
+    return difflib.SequenceMatcher(None, a, b).ratio() >= 0.75
+
+
+def detect_verified(name: str, careers_url: str = "") -> tuple[str, str] | None:
+    """detect() with the identity gate: careers-page boards pass on the live probe alone;
+    guessed slugs additionally must report a matching organization name."""
+    if careers_url:
+        found = scan_careers_page(careers_url)
+        if found:
+            ats, slug = found
+            if probe_slug(ats, slug):
+                return ats, slug
+            log.info("careers page of %s names %s/%s but the board is dead", name, ats, slug)
+    for slug in slug_guesses(name):
+        for ats in _NAME_APIS:
+            if not probe_slug(ats, slug):
+                continue
+            reported = board_display_name(ats, slug)
+            if reported and names_match(name, reported):
+                return ats, slug
+            log.info("identity mismatch for %s: guessed %s/%s, board reports %r — skipped",
+                     name, ats, slug, reported)
+    return None
+
+
 def detect(name: str, careers_url: str = "") -> tuple[str, str] | None:
     """Return (ats, slug) for `name`, or None when no supported ATS is found.
     The careers page (when given) wins — it's authoritative; slug probing is the fallback."""
