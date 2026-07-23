@@ -59,6 +59,7 @@ def annotate_posting(db: Session, post: Posting, llm) -> bool:
     # unknown-to-the-dictionary skills are logged: reviewing them is what grows the dictionary
     new_reqs = []
     scored_idx = 0
+    fives = 0
     for r in post.requirements or []:
         r = dict(r)
         if r.get("kind", "must") in ("must", "nice"):
@@ -67,6 +68,12 @@ def annotate_posting(db: Session, post: Posting, llm) -> bool:
                 unknown = [s for s in raw_skills if not is_known(s)]
                 if unknown:
                     log.info("unknown skills (dictionary candidates): %s", unknown)
+                # ★5 cap: small models inflate importance, and an inflated ★5 arms the
+                # must-gate — only the first FIVE_STAR_MAX keep it, the rest demote to ★4
+                if weight >= 5:
+                    fives += 1
+                    if fives > settings.five_star_max:
+                        weight = 4
                 r["skills"] = sorted({canon_skill(s) for s in raw_skills})
                 r["weight"] = weight
             scored_idx += 1

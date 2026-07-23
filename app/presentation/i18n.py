@@ -61,6 +61,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "gaps.not_in_profile": "Not in your profile",
         "gaps.advantage": "Considered an advantage",
         "gaps.verified": "AI-checked",
+        "app.age_today": "posted today", "app.age_days": "{n} days ago",
         "gaps.honest": ("Be honest about these when applying — or add them to your profile "
                         "if you have them."),
         "app.matches_ge": "Matches ≥", "app.min": "min", "app.apply_thresh": "Apply",
@@ -203,6 +204,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "gaps.not_in_profile": "Не е в профила ти",
         "gaps.advantage": "Считат се за предимство",
         "gaps.verified": "AI проверено",
+        "app.age_today": "публикувана днес", "app.age_days": "преди {n} дни",
         "gaps.honest": ("Бъди честен за тези при кандидатстване — или ги добави в профила си, "
                         "ако ги имаш."),
         "app.matches_ge": "Съвпадения ≥", "app.min": "мин.", "app.apply_thresh": "Приложи",

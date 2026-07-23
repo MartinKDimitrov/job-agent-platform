@@ -12,7 +12,7 @@ from app.domain.entities import RawPosting
 from tests.conftest import make_profile
 from tests.test_crawl import _make_profile_row, _mock
 
-OLD = datetime.utcnow() - timedelta(days=45)
+OLD = datetime.utcnow() - timedelta(days=100)   # past the 90-day zombie cap
 FRESH = datetime.utcnow() - timedelta(days=5)
 
 
@@ -193,3 +193,64 @@ def test_search_removes_matches_that_new_filters_reject():
         res = crawl.search_db(db, p)
         assert res["filtered"] >= 1
         assert db.execute(select(Match).where(Match.profile_id == p.id)).first() is None
+
+
+# ---- Phase 4: freshness decay + must-gate + near-dup gates ----
+def test_freshness_factor_curve():
+    from app.domain.scoring import freshness_factor
+    assert freshness_factor(None) == 1.0
+    assert freshness_factor(3) == 1.0                       # fresh window
+    assert freshness_factor(30) == 0.85
+    assert abs(freshness_factor(45) - 0.775) < 0.001        # midway 30->60
+    assert freshness_factor(60) == 0.70
+    assert freshness_factor(80) == 0.70                     # flat until the 90d cap
+
+
+def test_score_applies_freshness_and_must_gate():
+    from app.domain.scoring import score
+    reqs = [{"text": "Kotlin experience", "kind": "must", "skills": ["kotlin"], "weight": 5}]
+    full, _, _ = score("Android · Kotlin", "role", reqs)
+    aged, _, _ = score("Android · Kotlin", "role", reqs, freshness=0.85)
+    assert full == 100 and aged == 85                       # decay multiplies the final
+    gated, _, _ = score("Backend · Python", "role", reqs, gate_cap=0.40)
+    assert gated <= 40                                      # ★5 must missed -> hard cap
+    ungated, _, _ = score("Backend · Python", "role",
+                          [{"text": "Kotlin experience", "kind": "must",
+                            "skills": ["kotlin"], "weight": 4}], gate_cap=0.40)
+    assert ungated == 0                                     # ★4 miss: no gate, just coverage
+
+
+def test_near_dup_merge_gated(monkeypatch):
+    import app.application.usecases.search as crawl
+    with SessionLocal() as db:
+        # same job reposted across two boards (dev.bg + workable) -> merges
+        a = _posting(db, "Senior Java Developer (Finance)", posted_at=FRESH, chash="nd1")
+        b = _posting(db, "Senior Java Dev (Finance)", posted_at=FRESH, chash="nd2")
+        # same host pair with near-identical vectors -> NEVER merges (two real openings)
+        c = _posting(db, "Senior Java Developer (Insurance)", posted_at=FRESH, chash="nd3")
+        # different company -> never merges
+        d = _posting(db, "Senior Java Developer (Finance)", posted_at=FRESH, chash="nd4")
+        a.url, b.url = "https://dev.bg/company/jobads/x/", "https://apply.workable.com/acme/j/1/"
+        c.url = "https://dev.bg/company/jobads/y/"
+        for p, comp, vec in ((a, "Acme", [1.0, 0.0]), (b, "Acme", [0.999, 0.02]),
+                             (c, "Acme", [0.999, 0.02]), (d, "OtherCo", [1.0, 0.0])):
+            p.company, p.embedding = comp, vec
+        db.commit()
+        merged = crawl.merge_near_duplicates(db, cosine_threshold=0.96)
+        assert merged == 1                                   # only the cross-board repost
+        rows = {p.content_hash: p.is_live for p in db.execute(select(Posting)).scalars()}
+        assert rows["nd3"] is True                           # same host: two real openings
+        assert rows["nd4"] is True                           # other company untouched
+        assert [rows["nd1"], rows["nd2"]].count(False) == 1  # one of the repost pair retired
+
+
+def test_onsite_only_dealbreaker():
+    from app.domain.filters import passes_hard_filters
+    from tests.test_filters import P
+    ok, reason = passes_hard_filters(P(), "Android Developer", "Remote",
+                                     "Note: this is NOT a remote position.")
+    assert ok is False and reason == "location"
+    ok, _ = passes_hard_filters(P(remote_pref="onsite", location_pref="Sofia"),
+                                "Android Developer", "Sofia",
+                                "Onsite only role in Sofia.")
+    assert ok is True                                       # onsite seeker unaffected

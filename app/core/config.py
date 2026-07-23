@@ -21,9 +21,23 @@ class Settings(BaseSettings):
     # DB-first search: the in-app background ingester refreshes the posting index every
     # N hours (0 = disabled — tests and environments where cron runs `python -m app.jobs ingest`).
     ingest_every_hours: int = 0
-    # Postings older than this (source date when known, else first_seen) retire from every
-    # surface — feed, public pages, digest (owner rule: nothing older than a month).
-    posting_max_age_days: int = 30
+    # Absolute zombie cap: postings older than this retire outright (window sources where a
+    # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
+    # (owner decision: no more blanket deletion at 30 days).
+    posting_max_age_days: int = 90
+    # Freshness decay knees: full score through fresh_days, then linear to f30@30d, f60@60d.
+    freshness_fresh_days: float = 7.0
+    freshness_at_30d: float = 0.85
+    freshness_at_60d: float = 0.70
+    # Must-gate: a ★5 must with zero coverage across its annotated alternatives caps the
+    # score here (0 disables the gate).
+    must_gate_cap: float = 0.40
+    # Max ★5 requirements per posting — small models inflate importance, and an inflated
+    # ★5 arms the must-gate (post-rule on annotation; tune on the eval set).
+    five_star_max: int = 3
+    # Near-dup merge: cosine threshold (same-company + CROSS-host + similar-title gates —
+    # same-host pairs never merge; see merge_near_duplicates).
+    near_dup_cosine: float = 0.96
     # Takedown URL probes per ingest cycle for window sources (0 = off; tests force 0 —
     # the probe makes REAL network requests to dev.bg etc.).
     takedown_probe_budget: int = 30

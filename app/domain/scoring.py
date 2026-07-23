@@ -40,6 +40,34 @@ EMBED_VERSION = "e5-asym-clean-v2"
 DEFAULT_SEM_WEIGHT = 0.5
 
 
+def freshness_factor(age_days: float | None, fresh_days: float = 7.0,
+                     f30: float = 0.85, f60: float = 0.70) -> float:
+    """Age decay multiplier on the final score (owner decision: age IN the score instead of
+    hard deletion at 30 days). Piecewise linear: 1.0 through `fresh_days`, then down to
+    `f30` at day 30 and `f60` at day 60, flat after (the 90-day zombie cap retires the
+    rest). Unknown age (no dates at all) = neutral."""
+    if age_days is None or age_days <= fresh_days:
+        return 1.0
+    if age_days <= 30:
+        return 1.0 + (f30 - 1.0) * (age_days - fresh_days) / (30 - fresh_days)
+    if age_days <= 60:
+        return f30 + (f60 - f30) * (age_days - 30) / 30
+    return f60
+
+
+def must_gate_cap(requirements_with_hits, cap: float) -> float | None:
+    """The hard precision guard: a ★5 MUST requirement with annotated alternatives and
+    ZERO coverage across them caps the final score at `cap` — '90% semantic but the core
+    technology is missing' must not look good. Only fires on ANNOTATED requirements
+    (the annotation's skill list IS the equivalence set: ['aws','gcp','cloud'] means any
+    of them satisfies; ['aws'] alone means AWS really is mandatory)."""
+    for r, hit in requirements_with_hits:
+        if (not hit and r.get("kind") == "must" and r.get("skills")
+                and int(r.get("weight", 3)) >= 5):
+            return cap
+    return None
+
+
 def embed(text: str, prefix: str = "query: "):
     m = _get_model()
     if not m:
@@ -146,7 +174,8 @@ def _norm_reqs(requirements) -> list[dict]:
 
 
 def score(profile_text: str, posting_text: str, requirements=None,
-          profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT):
+          profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT,
+          freshness: float = 1.0, gate_cap: float | None = None):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -176,7 +205,12 @@ def score(profile_text: str, posting_text: str, requirements=None,
     pe = profile_vec if profile_vec is not None else embed_query(profile_text)
     se = posting_vec if posting_vec is not None else embed_passage(posting_text)
     sem_pct = semantic_pct(pe, se)
-    return round(blend(sem_pct, kw_ratio, sem_weight) * 100), covered, missing
+    base = blend(sem_pct, kw_ratio, sem_weight)
+    if gate_cap is not None:
+        gate = must_gate_cap(((r, r in covered) for r in reqs), gate_cap)
+        if gate is not None:
+            base = min(base, gate)
+    return round(base * freshness * 100), covered, missing
 
 
 def semantic_pct(profile_vec, posting_vec) -> float | None:

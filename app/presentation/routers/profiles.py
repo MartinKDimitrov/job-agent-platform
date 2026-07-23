@@ -366,6 +366,12 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
     host = _source_host(post)
     if host:
         meta.append(f"<span class='m source'>{icon('globe', 'icon sm')}{escape(host)}</span>")
+    age_basis = post.posted_at or post.first_seen
+    if age_basis:
+        days = max(0, (datetime.utcnow() - age_basis).days)
+        age_label = (t("app.age_today", lang) if days == 0
+                     else t("app.age_days", lang).format(n=days))
+        meta.append(f"<span class='m source'>{icon('clock', 'icon sm')}{escape(age_label)}</span>")
     meta_html = f"<div class='meta'>{''.join(meta)}</div>" if meta else ""
 
     docs_html = ""

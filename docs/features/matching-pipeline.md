@@ -105,7 +105,7 @@ write AND requirement_hit/profile at read — so dictionary updates act instantl
 re-annotation machinery); doubles as the synonym layer for token-fallback; BG/EN aliases;
 unknown skills from both sides are logged and reviewed — that's what keeps it alive.
 
-**Phase 4 — scoring hardening**: all weights/thresholds in config; must-gate v1 (a ★5 must
+**Phase 4 ✅ — scoring hardening** (shipped; near-dup gates tightened after a live false-merge lesson: cross-host only): all weights/thresholds in config; must-gate v1 (a ★5 must
 with ZERO overlap across its annotated alternatives → hard cap; class-equivalence only as
 a validated soft near-miss later); ★5 cap per posting (config, tuned on eval); freshness
 decay (posted_at, fallback first_seen, per-adapter date-trust flag); dealbreaker/negation

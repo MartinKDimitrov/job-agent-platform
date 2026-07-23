@@ -27,8 +27,22 @@ from ...domain.entities import RawPosting
 from ...data.ingest import ingest
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
 from ...domain.extraction import extract_requirements
-from ...domain.scoring import (EMBED_VERSION, embed_passage, embed_query,
+from ...domain.scoring import (EMBED_VERSION, embed_passage, embed_query, freshness_factor,
                                posting_embed_text, score)
+
+
+def posting_age_days(post, now=None) -> float | None:
+    """Age from the SOURCE's publish date, else our first sighting."""
+    basis = post.posted_at or post.first_seen
+    if basis is None:
+        return None
+    return max(0.0, ((now or datetime.utcnow()) - basis).total_seconds() / 86400)
+
+
+def posting_freshness(post, now=None) -> float:
+    return freshness_factor(posting_age_days(post, now),
+                            settings.freshness_fresh_days,
+                            settings.freshness_at_30d, settings.freshness_at_60d)
 from ...domain.filters import passes_hard_filters
 
 log = logging.getLogger(__name__)
@@ -225,14 +239,15 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
     from .annotate import annotate_postings
     ann = annotate_postings(db)
     retired = retire_stale_postings(db)
+    near_dups = merge_near_duplicates(db)
     unseen = retire_unseen_board_postings(db)
     taken_down = probe_taken_down_urls(db)
     if stats is not None:
         stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
-                  annotated=ann["annotated"], retired=retired,
+                  annotated=ann["annotated"], retired=retired, near_dups=near_dups,
                   unseen_retired=unseen, taken_down=taken_down)
     return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched,
-            "annotated": ann["annotated"], "retired": retired,
+            "annotated": ann["annotated"], "retired": retired, "near_dups": near_dups,
             "unseen_retired": unseen, "taken_down": taken_down}
 
 
@@ -305,6 +320,57 @@ def probe_taken_down_urls(db: Session, budget: int | None = None,
     return retired
 
 
+def merge_near_duplicates(db: Session, cosine_threshold: float | None = None) -> int:
+    """Reworded reposts of the SAME job across DIFFERENT boards (the original purpose):
+    same normalized company + DIFFERENT url hosts + similar titles + stored-vector cosine
+    above the threshold → the less informative row retires.
+
+    Hard-learned gates (first live run false-merged 'Senior AI Engineer' with 'Lead AI
+    Engineer' and two unrelated roles posted the same week): clean-text vectors share a
+    company's boilerplate, so same-source postings can exceed 0.97 cosine while being
+    genuinely different jobs. Same-host pairs are therefore NEVER merged, the close-dates
+    alternative is gone, and title similarity is required — all three gates AND-ed."""
+    import numpy as np
+    from urllib.parse import urlparse
+    from ...domain.dedup import normalize_company, similar_titles
+    threshold = settings.near_dup_cosine if cosine_threshold is None else cosine_threshold
+    if not threshold:
+        return 0
+    by_co: dict[str, list[Posting]] = {}
+    for p in db.execute(select(Posting).where(Posting.is_live.is_(True),
+                                              Posting.embedding.isnot(None))).scalars():
+        norm = normalize_company(p.company)
+        if norm:
+            by_co.setdefault(norm, []).append(p)
+    merged = 0
+    for group in by_co.values():
+        if len(group) < 2:
+            continue
+        group.sort(key=lambda p: (len(p.description or ""), p.first_seen or 0), reverse=True)
+        kept: list[Posting] = []
+        for p in group:
+            dup = None
+            p_host = urlparse(p.url or "").netloc
+            for k in kept:
+                if p_host == urlparse(k.url or "").netloc:
+                    continue                    # same source = likely two real openings
+                if not similar_titles(p.title, k.title):
+                    continue
+                cos = float(np.dot(np.asarray(p.embedding), np.asarray(k.embedding)))
+                if cos > threshold:
+                    dup = k
+                    break
+            if dup is None:
+                kept.append(p)
+            else:
+                if p.apply_url and p.apply_url != p.url and dup.apply_url == dup.url:
+                    dup.apply_url = p.apply_url          # inherit the canonical ATS link
+                p.is_live = False
+                merged += 1
+    db.commit()
+    return merged
+
+
 def retire_stale_postings(db: Session, max_age_days: int | None = None) -> int:
     """Owner rule: postings older than a month disappear from every surface. Age is the
     SOURCE's publish date when the adapter provided one, else our first_seen. Runs on each
@@ -371,7 +437,9 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             continue
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
-                                     sem_weight=settings.semantic_weight)
+                                     sem_weight=settings.semantic_weight,
+                                     freshness=posting_freshness(post),
+                                     gate_cap=settings.must_gate_cap or None)
         existing = existing_by_post.get(post.id)
         if existing:
             existing.score, existing.covered, existing.missing = sc, covered, missing

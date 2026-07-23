@@ -141,6 +141,18 @@ def geo_ok(profile, location: str, description: str = "") -> bool:
     return True
 
 
+# Dealbreaker negations — embeddings handle these badly, rules don't ("no remote work",
+# "this is NOT a remote position", "office-based role", "изисква присъствие в офиса").
+_ONSITE_ONLY_RE = re.compile(
+    r"\b(no remote|not a remote|onsite only|on-site only|office[- ]based|"
+    r"fully (?:in[- ])?office|само (?:на място|в офис)|присъствие в офиса|"
+    r"без (?:възможност за )?дистанционна)\b", re.I)
+
+
+def onsite_only(description: str) -> bool:
+    return bool(_ONSITE_ONLY_RE.search(description or ""))
+
+
 def location_ok(profile, location: str) -> bool:
     remote_pref = (profile.remote_pref or "any").lower()
     loc = (location or "").strip()
@@ -168,6 +180,9 @@ def seniority_ok(profile, title: str) -> bool:
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:
     """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority'."""
     if not location_ok(profile, location):
+        return False, "location"
+    # a "remote"-labeled posting whose text says otherwise is an onsite posting
+    if (profile.remote_pref or "").lower() == "remote" and onsite_only(description):
         return False, "location"
     if not geo_ok(profile, location, description):
         return False, "location"

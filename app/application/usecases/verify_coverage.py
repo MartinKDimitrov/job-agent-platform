@@ -73,9 +73,17 @@ def verify_match(db: Session, profile, match: Match, post: Posting, llm) -> bool
         else:                               # resp/soft entries keep their original bucket
             src_covered = r in (match.covered or [])
             (covered if src_covered else missing).append(r)
-    kw = coverage_ratio([(r, hits[id(r)]) for r in scored])
+    from .search import posting_freshness
+    from ...domain.scoring import must_gate_cap
+    pairs = [(r, hits[id(r)]) for r in scored]
+    kw = coverage_ratio(pairs)
     sem = semantic_pct(profile.embedding, post.embedding)
-    match.score = round(blend(sem, kw, settings.semantic_weight) * 100)
+    base = blend(sem, kw, settings.semantic_weight)
+    if settings.must_gate_cap:
+        gate = must_gate_cap(pairs, settings.must_gate_cap)
+        if gate is not None:
+            base = min(base, gate)
+    match.score = round(base * posting_freshness(post) * 100)
     match.covered, match.missing = covered, missing
     match.llm_verified = True
     return True
