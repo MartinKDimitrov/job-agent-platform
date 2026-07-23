@@ -194,6 +194,28 @@ EU_COMPANIES: list[dict] = [
     {"name": "GRAWE", "country": "AT", "industry": "Insurance", "website": "https://www.grawe.at"},
     {"name": "Orbico Group", "country": "HR", "industry": "Distribution", "website": "https://www.orbico.com"},
     {"name": "Peek & Cloppenburg", "country": "DE", "industry": "Retail", "website": "https://www.peek-cloppenburg.com"},
+    # --- batch 3 groups (owner review #2, 2026-07-24) ---
+    {"name": "Decathlon", "country": "FR", "industry": "Retail", "website": "https://www.decathlon.com"},
+    {"name": "Mango", "country": "ES", "industry": "Retail", "website": "https://www.mango.com"},
+    {"name": "WMF", "country": "DE", "industry": "Manufacturing", "website": "https://www.wmf.com"},
+    {"name": "KIKO Milano", "country": "IT", "industry": "Retail", "website": "https://www.kikocosmetics.com"},
+    {"name": "New Yorker", "country": "DE", "industry": "Retail", "website": "https://www.newyorker.de"},
+    {"name": "Inter Cars", "country": "PL", "industry": "Automotive", "website": "https://intercars.eu"},
+    {"name": "DHL Group", "country": "DE", "industry": "Logistics", "website": "https://group.dhl.com"},
+    {"name": "DSV", "country": "DK", "industry": "Logistics", "website": "https://www.dsv.com"},
+    {"name": "STADA", "country": "DE", "industry": "Pharma", "website": "https://www.stada.com"},
+    {"name": "PHOENIX Group", "country": "DE", "industry": "Pharma", "website": "https://www.phoenixgroup.eu"},
+    {"name": "Trenkwalder", "country": "AT", "industry": "Staffing", "website": "https://www.trenkwalder.com"},
+    {"name": "KiK Textilien", "country": "DE", "industry": "Retail", "website": "https://www.kik.de"},
+    {"name": "Sarantis Group", "country": "GR", "industry": "FMCG", "website": "https://sarantisgroup.com"},
+    {"name": "Dunapack Packaging", "country": "AT", "industry": "Manufacturing", "website": "https://www.dunapack-packaging.com"},
+    {"name": "Regiocom", "country": "DE", "industry": "BPO", "website": "https://www.regiocom.com"},
+    {"name": "Gi Group", "country": "IT", "industry": "Staffing", "website": "https://www.gigroup.com"},
+    {"name": "Caffitaly System", "country": "IT", "industry": "Manufacturing", "website": "https://www.caffitaly.com"},
+    {"name": "Miroglio Group", "country": "IT", "industry": "Retail", "website": "https://www.miroglio.com"},
+    {"name": "Iute Group", "country": "EE", "industry": "Finance", "website": "https://iute.com"},
+    {"name": "Carlsberg Group", "country": "DK", "industry": "Food", "website": "https://www.carlsberggroup.com"},
+    {"name": "HSH Chemie Group", "country": "DE", "industry": "Distribution", "website": "https://www.hsh-chemie.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})
