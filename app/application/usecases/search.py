@@ -343,6 +343,11 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         ok, _reason = passes_hard_filters(profile, post.title, post.location, post.description)
         if not ok:
             filtered += 1
+            # a match created before a NEWER filter existed must not outlive it (owner saw
+            # pre-geo-filter Monzo 'Remote (UK)' matches still in the feed)
+            stale = existing_by_post.pop(post.id, None)
+            if stale is not None:
+                db.delete(stale)
             continue
         if post.requirements is None:
             post.requirements = extract_requirements(post.description or "")

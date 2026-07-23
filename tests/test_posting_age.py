@@ -178,3 +178,18 @@ def test_retire_disabled_when_zero():
     with SessionLocal() as db:
         _posting(db, "ancient", posted_at=OLD, chash="h")
         assert retire_stale_postings(db, max_age_days=0) == 0
+
+
+def test_search_removes_matches_that_new_filters_reject():
+    # A match created BEFORE a filter existed (e.g. the geo filter) must be cleaned up by the
+    # next search, not shown forever (owner saw pre-geo Monzo 'Remote (UK)' cards).
+    with SessionLocal() as db:
+        p = _make_profile_row(db, target_roles="Android", skills="Kotlin")
+        post = _posting(db, "Android Engineer", posted_at=FRESH, chash="ukstale")
+        post.url = "https://x/uk"
+        post.location = "Cardiff, London or Remote (UK)"
+        db.add(Match(profile_id=p.id, posting_id=post.id, score=60))
+        db.commit()
+        res = crawl.search_db(db, p)
+        assert res["filtered"] >= 1
+        assert db.execute(select(Match).where(Match.profile_id == p.id)).first() is None
