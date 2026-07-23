@@ -239,6 +239,17 @@ EU_COMPANIES: list[dict] = [
     {"name": "Latecoere", "country": "FR", "industry": "Aerospace", "website": "https://www.latecoere.aero"},
     {"name": "Iveco Group", "country": "IT", "industry": "Automotive", "website": "https://www.ivecogroup.com"},
     {"name": "Calzedonia Group", "country": "IT", "industry": "Retail", "website": "https://www.calzedoniagroup.com"},
+    # --- batch 7 groups (owner review #6, 2026-07-24) ---
+    {"name": "EVN Group", "country": "AT", "industry": "Energy", "website": "https://www.evn.at"},
+    {"name": "Lagardère Travel Retail", "country": "FR", "industry": "Retail", "website": "https://www.lagardere-tr.com"},
+    {"name": "SOL Group", "country": "IT", "industry": "Industrial", "website": "https://www.solgroup.com"},
+    {"name": "CETIN Group", "country": "CZ", "industry": "Telecom", "website": "https://www.cetingroup.com"},
+    {"name": "Pierre Fabre", "country": "FR", "industry": "Pharma", "website": "https://www.pierre-fabre.com"},
+    {"name": "Intersnack", "country": "DE", "industry": "Food", "website": "https://www.intersnack.com"},
+    {"name": "Lufthansa Technik", "country": "DE", "industry": "Aerospace", "website": "https://www.lufthansa-technik.com"},
+    {"name": "Titan Cement Group", "country": "GR", "industry": "Manufacturing", "website": "https://www.titan-cement.com"},
+    {"name": "Klett Gruppe", "country": "DE", "industry": "Education", "website": "https://www.klett-gruppe.de"},
+    {"name": "Wienerberger", "country": "AT", "industry": "Manufacturing", "website": "https://www.wienerberger.com"},
 ]
 
 EU_COUNTRY_CODES = sorted({c["country"] for c in EU_COMPANIES})
