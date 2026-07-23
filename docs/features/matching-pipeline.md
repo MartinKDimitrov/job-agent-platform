@@ -37,10 +37,11 @@ deterministic (skills ∩ annotation — instant, shared across users with simil
 qualifications) and demotes the per-user LLM verification to a fallback for postings the
 annotator hasn't reached.
 
-**6. Hygiene.** `retire_stale_postings` (>30 days by source date → `is_live=False`, every
-surface hides them), `retire_unseen_board_postings` (registry-board postings unseen 48h =
-taken down), `probe_taken_down_urls` (budgeted 404-probe for window sources like dev.bg).
-Re-seen postings resurrect unless past the age rule.
+**6. Hygiene** *(age handling being reworked — see evolution plan)*: PROVEN-dead postings
+retire forever (404/410 URL probe for window sources; registry-board postings unseen 48h);
+old-but-live postings will NOT be deleted — age moves into the score as a freshness decay
+(×1.0 fresh → ×0.85 @30d → ×0.70 @60d), with only an absolute 90-day cap (config) for
+window-source zombies. Re-seen postings resurrect/rejuvenate.
 
 ## READ side — per user, no network, sub-second
 
@@ -84,15 +85,49 @@ pages show titles/counts only — descriptions and apply links stay behind regis
 | annotate-vN bumped (new model/logic) | lazy re-annotation of every posting on its next ingest touch |
 | nothing changed | nothing — vectors, requirements, annotations and verifications are all cached |
 
-## Agreed evolution (owner discussion, 2026-07-23 — in priority order)
+## Consolidated improvement plan (owner discussions, 2026-07-23/24)
 
-1. ✅ (this doc) annotation with version/fingerprint + per-requirement weights
-2. hybrid candidate recall: title-token match OR stored-vector similarity above a threshold
-   (the lexical gate alone cuts recall — "Backend" must see "Software Developer")
-3. structured years-of-experience: extract `min_years` per posting + profile years; SOFT
-   penalty, not a hard reject (JD year demands are often aspirational)
-4. second embedding for the TITLE (role identity: QA vs Android share a stack) — also feeds
-   the semantic recall of (2)
-5. skills ontology: v1 synonyms/aliases (k8s=kubernetes…), v2 hierarchy via ESCO (Phase 4)
-6. coverage floor (reject below N% must-coverage); dynamic blend weights deliberately
-   deferred to the Phase-5 learning loop (tuning without outcome data is guesswork)
+**Phase 0 — the bottleneck first**: a hand-labeled EVAL SET (30-50 profile→posting pairs,
+NDCG/P@K harness). Five open decisions hang on it: E5 mode, recall threshold, near-dup
+threshold, blend weights, ★5 cap. Also: the profile's embed input becomes role+skills+
+experience (mirror of the posting's title+requirements; languages/CEFR are filter data).
+
+**Phase 1 — diagnostics** (measure, don't guess): E5 symmetric vs passage:/query: A/B on
+the eval set; token-length/truncation stats; annotation weight drift (re-annotate 10-20
+postings twice); must-gate behaviour today; posted_at trustworthiness per adapter.
+
+**Phase 2 — vector migration** (one re-embed): embed CLEAN text (title + extracted
+requirements — raw 7k-char descriptions truncate at E5's 512 tokens exactly where the
+requirements live); mode per eval; store embedding_version (+model/mode) on the row.
+
+**Phase 3 — canonical skills dictionary**, applied on BOTH sides (annotation output at
+write AND requirement_hit/profile at read — so dictionary updates act instantly, no
+re-annotation machinery); doubles as the synonym layer for token-fallback; BG/EN aliases;
+unknown skills from both sides are logged and reviewed — that's what keeps it alive.
+
+**Phase 4 — scoring hardening**: all weights/thresholds in config; must-gate v1 (a ★5 must
+with ZERO overlap across its annotated alternatives → hard cap; class-equivalence only as
+a validated soft near-miss later); ★5 cap per posting (config, tuned on eval); freshness
+decay (posted_at, fallback first_seen, per-adapter date-trust flag); dealbreaker/negation
+patterns folded into the existing hard filters; near-dup merge GATED (cosine >0.94 AND
+same normalized company AND title similarity — reworded reposts only, never
+Finance-vs-Healthcare false merges); LOW-extraction escalation (long description but <3
+requirements → retry big model / verify-fallback).
+
+**Phase 5 — recall**: hybrid candidates — title token OR vector proximity (threshold from
+eval + candidate-set size) OR at least one shared canonical skill (same generic-token
+stop-list as titles, or one popular skill floods the set); targeted dev.bg queries grouped
+by UNIQUE ROLE across users (one query per role per cycle), not per profile.
+
+**Phase 6 — observability & explainability**: component breakdown in the UI (semantic /
+coverage / freshness + posting age on the card) + "skills of yours this posting doesn't
+ask for"; feedback events (shown/opened/apply/hidden) — substrate for the applications
+dashboard and the learning loop; unknown-skill spike alarm in CrawlRun stats.
+
+**Phase 7 — salary**: extract the value in step 3 BEFORE the money-line drop (range,
+currency, monthly/annual pitfalls), use as a SOFT signal only when both sides state it
+(Profile.salary_expectation exists).
+
+**Deliberately skipped** (await data or scale): feedback-driven reranking / learned
+weights, ColBERT/BM25 hybrid, company reputation prior, CV/LinkedIn auto-profile,
+A/B framework, ANN/pgvector (at deploy scale), personalized thresholds (min_match exists).
