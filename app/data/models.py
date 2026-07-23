@@ -32,6 +32,8 @@ class Profile(Base):
     languages: Mapped[str] = mapped_column(String(255), default="")
     english_level: Mapped[str] = mapped_column(String(16), default="B2")  # CEFR
     location_pref: Mapped[str] = mapped_column(String(255), default="")
+    country: Mapped[str] = mapped_column(String(64), default="Bulgaria")   # where the user lives
+    relocate: Mapped[bool] = mapped_column(Boolean, default=False)         # willing to move?
     remote_pref: Mapped[str] = mapped_column(String(32), default="remote")  # remote/hybrid/onsite/any
     salary_expectation: Mapped[str] = mapped_column(String(64), default="")
     min_match: Mapped[int] = mapped_column(Integer, default=65)

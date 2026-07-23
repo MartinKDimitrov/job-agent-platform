@@ -55,6 +55,92 @@ def _profile_level(profile) -> int:
     return 1
 
 
+# ---- geo restrictions (owner report: a "Remote" posting actually required moving to the UK) ----
+# country key -> alias phrases as they appear in postings; matched with word boundaries
+# (naive substring is dangerous: "the us" would match "the usER").
+_COUNTRY_ALIASES: dict[str, tuple[str, ...]] = {
+    "bulgaria": ("bulgaria", "българия"),
+    "uk": ("united kingdom", "the uk", "uk", "england", "great britain", "britain",
+           "uk-based", "london"),
+    "usa": ("united states", "the us", "usa", r"u\.s\.", "us-based", "us only",
+            "north america", "texas", "california", "new york"),
+    "canada": ("canada",),
+    "germany": ("germany", "deutschland", "berlin", "münchen", "munich"),
+    "france": ("france", "paris"),
+    "netherlands": ("netherlands", "amsterdam"),
+    "spain": ("spain",), "italy": ("italy",), "poland": ("poland",),
+    "romania": ("romania",), "greece": ("greece",), "austria": ("austria",),
+    "portugal": ("portugal",), "ireland": ("ireland",), "belgium": ("belgium",),
+    "switzerland": ("switzerland",), "sweden": ("sweden",), "denmark": ("denmark",),
+    "norway": ("norway",), "finland": ("finland",), "czechia": ("czech republic", "czechia"),
+    "hungary": ("hungary",), "serbia": ("serbia",), "turkey": ("turkey", "türkiye"),
+    "ukraine": ("ukraine",), "india": ("india",), "australia": ("australia",),
+}
+_ALIAS_RES: dict[str, re.Pattern] = {
+    key: re.compile(r"\b(?:" + "|".join(a if "\\" in a else re.escape(a)
+                                        for a in aliases) + r")\b", re.I)
+    for key, aliases in _COUNTRY_ALIASES.items()
+}
+_EU_COUNTRIES = {"bulgaria", "germany", "france", "netherlands", "spain", "italy", "poland",
+                 "romania", "greece", "austria", "portugal", "ireland", "belgium", "sweden",
+                 "denmark", "finland", "czechia", "hungary"}
+_EU_REGION_RE = re.compile(r"\b(eu|european union|europe|emea|cee|balkans?)\b", re.I)
+# description phrases that turn a country mention into a REQUIREMENT (a JD merely mentioning
+# "clients in the US" must not drop the posting). {c} is the country alias pattern.
+_RESTRICT_TEMPLATES = (
+    r"based in (?:the )?{c}", r"located in (?:the )?{c}", r"living in (?:the )?{c}",
+    r"resid(?:e|ing|ent[s]?) (?:in|of) (?:the )?{c}", r"citizens? of (?:the )?{c}",
+    r"eligible to work in (?:the )?{c}", r"authori[sz]ed to work in (?:the )?{c}",
+    r"work permit (?:in|for) (?:the )?{c}", r"right to work in (?:the )?{c}",
+    r"remote (?:in|from|within) (?:the )?{c}", r"remote \((?:the )?{c}",
+    r"must be in (?:the )?{c}", r"relocat(?:e|ion) to (?:the )?{c}")
+_RESTRICT_RES: dict[str, re.Pattern] = {
+    key: re.compile("|".join(
+        t.format(c="(?:" + "|".join(a if "\\" in a else re.escape(a) for a in aliases) + ")")
+        for t in _RESTRICT_TEMPLATES), re.I)
+    for key, aliases in _COUNTRY_ALIASES.items()
+}
+_RELOC_RE = re.compile(r"\b(relocation (?:is )?required|willing(?:ness)? to relocate|"
+                       r"must relocate|require[sd]? relocation)\b", re.I)
+
+
+def _profile_country(profile) -> str:
+    raw = (getattr(profile, "country", "") or "bulgaria")
+    for key, pat in _ALIAS_RES.items():
+        if key.lower() in raw.lower() or pat.search(raw):
+            return key
+    return "bulgaria"
+
+
+def _restricted_countries(location: str, description: str) -> set[str]:
+    """Countries a posting is restricted to. In the LOCATION field any country mention counts
+    (that's what the field is for); in the DESCRIPTION only requirement-shaped phrases."""
+    out: set[str] = set()
+    for key in _COUNTRY_ALIASES:
+        if location and _ALIAS_RES[key].search(location):
+            out.add(key)
+        elif description and _RESTRICT_RES[key].search(description):
+            out.add(key)
+    return out
+
+
+def geo_ok(profile, location: str, description: str = "") -> bool:
+    """False when the posting is tied to a country the candidate doesn't live in and they
+    are not willing to relocate. 'Remote' without a country restriction always passes."""
+    if getattr(profile, "relocate", False):
+        return True
+    user = _profile_country(profile)
+    restricted = _restricted_countries(location, description)
+    if restricted and user not in restricted:
+        # EU-wide remote is fine for an EU resident even if e.g. Germany is also listed
+        if not (user in _EU_COUNTRIES
+                and _EU_REGION_RE.search(f"{location or ''} {description or ''}")):
+            return False
+    if _RELOC_RE.search(description or "") and restricted != {user}:
+        return False    # "relocation required" — and the destination isn't (only) their country
+    return True
+
+
 def location_ok(profile, location: str) -> bool:
     remote_pref = (profile.remote_pref or "any").lower()
     loc = (location or "").strip()
@@ -82,6 +168,8 @@ def seniority_ok(profile, title: str) -> bool:
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:
     """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority'."""
     if not location_ok(profile, location):
+        return False, "location"
+    if not geo_ok(profile, location, description):
         return False, "location"
     if not seniority_ok(profile, title):
         return False, "seniority"

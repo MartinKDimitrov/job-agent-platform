@@ -37,6 +37,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "form.experience": "Experience (short)",
         "form.languages": "Languages", "form.english": "English level (CEFR)",
         "form.location": "Location preference", "form.remote": "Remote preference",
+        "form.country": "Country you live in",
+        "form.relocate": "I'm willing to relocate abroad",
+        "form.relocate_hint": ("When off, positions tied to another country (including "
+                               "\"remote\" ones that require living there) are hidden."),
         "form.salary": "Salary expectation", "form.min_match": "Min match %",
         "form.save": "Save", "form.cancel": "Cancel", "form.fix": "Please fix:",
         "form.new_profile": "New profile", "form.edit_profile": "Edit profile",
@@ -169,6 +173,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "form.experience": "Опит (накратко)",
         "form.languages": "Езици", "form.english": "Ниво на английски (CEFR)",
         "form.location": "Предпочитана локация", "form.remote": "Начин на работа",
+        "form.country": "Държава, в която живееш",
+        "form.relocate": "Склонен съм да се преместя в чужбина",
+        "form.relocate_hint": ("Когато е изключено, позиции, вързани с друга държава "
+                               "(включително „remote“, изискващи да живееш там), се скриват."),
         "form.salary": "Очаквано възнаграждение", "form.min_match": "Мин. съвпадение %",
         "form.save": "Запази", "form.cancel": "Отказ", "form.fix": "Моля, поправете:",
         "form.new_profile": "Нов профил", "form.edit_profile": "Редакция на профил",

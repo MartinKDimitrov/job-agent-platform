@@ -68,6 +68,15 @@ def _profile_form(action: str, v: dict, heading: str, errors: list[str] | None =
       <div><label>{escape(t('form.remote', lang))}</label><select name='remote_pref'>{remote}</select></div>
     </div>
     <div class='row2'>
+      <div><label>{escape(t('form.country', lang))}</label>
+        <input name='country' maxlength='64' value="{escape(v.get('country', 'Bulgaria'))}"></div>
+      <div><label style='display:flex;gap:8px;align-items:center;margin-top:28px'>
+        <input type='checkbox' name='relocate' value='1'
+               {'checked' if v.get('relocate') else ''} style='width:auto'>
+        {escape(t('form.relocate', lang))}</label>
+        <p class='small'>{escape(t('form.relocate_hint', lang))}</p></div>
+    </div>
+    <div class='row2'>
       <div><label>{escape(t('form.salary', lang))}</label>
         <input name='salary_expectation' maxlength='64' value="{escape(v.get('salary_expectation', ''))}"></div>
       <div><label>{escape(t('form.min_match', lang))}</label>
@@ -180,6 +189,7 @@ def profile_create(request: Request, name: str = Form(""), target_roles: str = F
                    skills: str = Form(""), experience: str = Form(""),
                    languages: str = Form(""), english_level: str = Form("B2"),
                    location_pref: str = Form(""), remote_pref: str = Form("remote"),
+                   country: str = Form("Bulgaria"), relocate: str = Form(""),
                    salary_expectation: str = Form(""), min_match: str = Form("65"),
                    db: Session = Depends(get_db)):
     u = current_user(request, db)
@@ -190,13 +200,15 @@ def profile_create(request: Request, name: str = Form(""), target_roles: str = F
                                          salary_expectation, lang)
     v = dict(name=name, target_roles=target_roles, skills=skills, experience=experience,
              languages=languages, english_level=english_level, location_pref=location_pref,
-             remote_pref=remote_pref, salary_expectation=salary_expectation, min_match=min_match)
+             remote_pref=remote_pref, country=country, relocate=bool(relocate),
+             salary_expectation=salary_expectation, min_match=min_match)
     if errors:
         return page(_profile_form("/profiles", v, t("form.new_profile", lang), errors, lang), u,
                     lang=lang, switch_urls=SWITCH_URLS)
     p = Profile(user_id=u.id, name=name, target_roles=target_roles, skills=skills,
                 experience=experience, languages=languages, english_level=english_level,
                 location_pref=location_pref, remote_pref=remote_pref,
+                country=(country or "Bulgaria").strip()[:64], relocate=bool(relocate),
                 salary_expectation=salary_expectation, min_match=mm)
     db.add(p); db.commit(); db.refresh(p)
     return redirect(f"/profiles/{p.id}")
@@ -214,7 +226,8 @@ def profile_edit_form(pid: int, request: Request, db: Session = Depends(get_db))
                     lang=lang, switch_urls=SWITCH_URLS)
     v = dict(name=p.name, target_roles=p.target_roles, skills=p.skills, experience=p.experience,
              languages=p.languages, english_level=p.english_level, location_pref=p.location_pref,
-             remote_pref=p.remote_pref, salary_expectation=p.salary_expectation, min_match=p.min_match)
+             remote_pref=p.remote_pref, country=p.country, relocate=p.relocate,
+             salary_expectation=p.salary_expectation, min_match=p.min_match)
     delete_card = f"""<div class='card' style='border-color:var(--red-soft)'>
     <h3 style='color:var(--red)'>{escape(t('form.delete_head', lang))}</h3>
     <p class='small'>{escape(t('form.delete_note', lang))}</p>
@@ -230,6 +243,7 @@ def profile_update(pid: int, request: Request, name: str = Form(""), target_role
                    skills: str = Form(""), experience: str = Form(""),
                    languages: str = Form(""), english_level: str = Form("B2"),
                    location_pref: str = Form(""), remote_pref: str = Form("remote"),
+                   country: str = Form("Bulgaria"), relocate: str = Form(""),
                    salary_expectation: str = Form(""), min_match: str = Form("65"),
                    db: Session = Depends(get_db)):
     u = current_user(request, db)
@@ -244,13 +258,15 @@ def profile_update(pid: int, request: Request, name: str = Form(""), target_role
                                          salary_expectation, lang)
     v = dict(name=name, target_roles=target_roles, skills=skills, experience=experience,
              languages=languages, english_level=english_level, location_pref=location_pref,
-             remote_pref=remote_pref, salary_expectation=salary_expectation, min_match=min_match)
+             remote_pref=remote_pref, country=country, relocate=bool(relocate),
+             salary_expectation=salary_expectation, min_match=min_match)
     if errors:
         return page(_profile_form(f"/profiles/{pid}/edit", v, t("form.edit_profile", lang),
                                   errors, lang), u, lang=lang, switch_urls=SWITCH_URLS)
     p.name, p.target_roles, p.skills = name, target_roles, skills
     p.experience, p.languages, p.english_level = experience, languages, english_level
     p.location_pref, p.remote_pref = location_pref, remote_pref
+    p.country, p.relocate = (country or "Bulgaria").strip()[:64], bool(relocate)
     p.salary_expectation, p.min_match = salary_expectation, mm
     p.embedding = None  # profile text changed → drop any cached vector
     # the profile's matches were computed against the OLD skills/targets — clear them so the
