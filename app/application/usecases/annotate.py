@@ -35,9 +35,12 @@ def _platform_llm():
                                             or settings.server_llm_model)
 
 
-def annotate_posting(db: Session, post: Posting, llm) -> bool:
+def annotate_posting(db: Session, post: Posting, llm,
+                     unknown_seen: list[str] | None = None) -> bool:
     """Annotate one posting in place. True = annotated (stored), False = provider/parse
-    failure (left untouched, retried next cycle)."""
+    failure (left untouched, retried next cycle). Skills the dictionary doesn't know are
+    appended to `unknown_seen` — a sudden spike there means the market moved past skills-v1
+    (Phase 6 observability: the count lands in CrawlRun stats)."""
     provider, api_key, model = llm
     scored = scored_requirements(post.requirements)
     fp = requirements_fingerprint(post.requirements)
@@ -68,6 +71,8 @@ def annotate_posting(db: Session, post: Posting, llm) -> bool:
                 unknown = [s for s in raw_skills if not is_known(s)]
                 if unknown:
                     log.info("unknown skills (dictionary candidates): %s", unknown)
+                    if unknown_seen is not None:
+                        unknown_seen.extend(unknown)
                 # ★5 cap: small models inflate importance, and an inflated ★5 arms the
                 # must-gate — only the first FIVE_STAR_MAX keep it, the rest demote to ★4
                 if weight >= 5:
@@ -98,8 +103,9 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 8.0
     budget = settings.annotate_budget if budget is None else budget
     llm = _platform_llm()
     if not budget or llm is None:
-        return {"annotated": 0, "failed": 0}
+        return {"annotated": 0, "failed": 0, "unknown_skills": 0}
     annotated = failed = rate_limited = 0
+    unknown_seen: list[str] = []
     rows = db.execute(select(Posting).where(Posting.is_live.is_(True))
                       .order_by(Posting.first_seen.desc())).scalars()
     for post in rows:
@@ -116,7 +122,7 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 8.0
         if annotated + failed:
             sleep(delay)
         try:
-            annotate_posting(db, post, llm)
+            annotate_posting(db, post, llm, unknown_seen)
             annotated += 1
             db.commit()      # per-posting: a multi-hour run must not hold row locks
         except _RateLimited:
@@ -130,11 +136,11 @@ def annotate_postings(db: Session, budget: int | None = None, delay: float = 8.0
             big = (llm[0], llm[1], settings.server_llm_model)
             if big[2] and big[2] != llm[2]:
                 try:
-                    annotate_posting(db, post, big)
+                    annotate_posting(db, post, big, unknown_seen)
                     annotated += 1
                     continue
                 except _Failed:
                     pass
             failed += 1
     db.commit()
-    return {"annotated": annotated, "failed": failed}
+    return {"annotated": annotated, "failed": failed, "unknown_skills": len(unknown_seen)}

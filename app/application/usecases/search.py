@@ -247,7 +247,8 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
     vector_cache.invalidate()             # the index changed — recall reloads lazily
     if stats is not None:
         stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
-                  annotated=ann["annotated"], retired=retired, near_dups=near_dups,
+                  annotated=ann["annotated"], unknown_skills=ann.get("unknown_skills", 0),
+                  retired=retired, near_dups=near_dups,
                   unseen_retired=unseen, taken_down=taken_down)
     return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched,
             "annotated": ann["annotated"], "retired": retired, "near_dups": near_dups,

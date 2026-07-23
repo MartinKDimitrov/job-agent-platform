@@ -113,7 +113,7 @@ def test_annotate_postings_budget_and_invalidation(monkeypatch):
 def test_annotate_no_platform_lane_is_silent():
     with SessionLocal() as db:
         _post(db, chash="c1")
-        assert annotate_postings(db) == {"annotated": 0, "failed": 0}
+        assert annotate_postings(db) == {"annotated": 0, "failed": 0, "unknown_skills": 0}
 
 
 def test_annotate_failure_left_for_retry(monkeypatch):
