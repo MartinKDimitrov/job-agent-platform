@@ -41,7 +41,10 @@ class Settings(BaseSettings):
     # Hybrid recall (Phase 5): a posting is a candidate when its TITLE shares a token, OR
     # its vector cosine >= this, OR it shares a non-generic canonical skill. Guard rail:
     # cap on the candidate set so a loose threshold can't flood scoring.
-    recall_min_cosine: float = 0.80
+    # Calibrated on the live distribution: profile-vs-index cosine has median ~0.81 and
+    # p99 ~0.87, while TRUE role matches sit at 0.88+ — 0.87 admits the real semantic
+    # neighbours and keeps 'Customer Success' (0.835) out.
+    recall_min_cosine: float = 0.87
     recall_max_candidates: int = 400
     # Takedown URL probes per ingest cycle for window sources (0 = off; tests force 0 —
     # the probe makes REAL network requests to dev.bg etc.).
