@@ -16,6 +16,7 @@ from ..data.models import User
 from ..data.security import read_token
 from .seo import meta_tags
 from .i18n import t, LANGS, DEFAULT_LANG
+from .translations import LANG_NAMES
 from ..data.activity_repo import touch
 
 __all__ = ["escape", "page", "current_user", "redirect", "icon"]
@@ -118,12 +119,16 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
     (when known) enables the direct pause/resume item in the user menu."""
     switcher = ""
     if switch_urls:
-        parts = []
+        # 13 languages don't fit as a link row — a native <select> that navigates on change
+        # (progressive: it's a plain dropdown, no framework; each option carries its URL).
+        opts = []
         for code in LANGS:
             url = switch_urls.get(code, f"/lang/{code}")
-            active = " class='active'" if code == lang else ""
-            parts.append(f"<a href='{escape(url)}'{active}>{code.upper()}</a>")
-        switcher = "<span class='langsw'>" + "".join(parts) + "</span>"
+            sel = " selected" if code == lang else ""
+            opts.append(f"<option value='{escape(url)}'{sel}>"
+                        f"{escape(LANG_NAMES.get(code, code.upper()))}</option>")
+        switcher = ("<select class='langsw' aria-label='Language' "
+                    "onchange=\"location.href=this.value\">" + "".join(opts) + "</select>")
     if user:
         right = f"{switcher}{_usermenu(user, lang, paused)}"
     else:
@@ -134,7 +139,7 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
         f'<link rel="alternate" hreflang="{escape(code)}" href="{escape(url)}">'
         for code, url in (hreflang or []))
     content = body if full_bleed else f'<main class="wrap">{body}</main>'
-    loading_msg = "Зареждане…" if lang == "bg" else "Loading…"
+    loading_msg = t("app.loading", lang)
     return f"""<!doctype html><html lang="{escape(lang)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)}</title>
 {seo}

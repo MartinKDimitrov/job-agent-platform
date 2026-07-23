@@ -14,7 +14,7 @@ from ...data.llm import LLMError, get_provider, list_providers
 
 router = APIRouter()
 
-SWITCH_URLS = {"en": "/lang/en", "bg": "/lang/bg"}
+from ..i18n import SWITCH_URLS  # noqa: F811 — cookie-based switcher, all languages
 
 
 def _llm_card(db: Session, user_id: int, llm_msg: str = "", llm_ok: bool = True,

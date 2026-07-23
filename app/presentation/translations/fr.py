@@ -1,0 +1,179 @@
+"""French."""
+
+CATALOG: dict[str, str] = {
+    "nav.dashboard": "Tableau de bord", "nav.documents": "Documents", "nav.sources": "Sources",
+    "nav.account": "Compte",
+    "nav.logout": "Se déconnecter", "nav.login": "Se connecter", "nav.register": "S'inscrire",
+    "menu.pause": "J'ai trouvé un emploi — pause", "menu.resume": "Reprendre ma recherche",
+    "menu.settings": "Clé IA et paramètres", "menu.export": "Exporter mes données",
+    "menu.delete": "Supprimer le compte",
+    "landing.title": "Job Agent — des offres qui correspondent à vos compétences",
+    "landing.description": ("Décrivez vos compétences professionnelles et recevez des postes "
+                            "ouverts notés selon votre profil, avec un lien de candidature "
+                            "direct pour chaque correspondance."),
+    "landing.h1": "Trouvez un emploi qui vous correspond",
+    "landing.sub": "Créez des profils, faites noter les offres et postulez directement.",
+    "landing.get_started": "Commencer", "landing.login": "Connexion",
+    "login.title": "Connexion — Job Agent", "login.heading": "Connexion",
+    "login.email": "E-mail", "login.password": "Mot de passe", "login.submit": "Connexion",
+    "login.or": "Ou", "auth.google": "Se connecter avec Google",
+    "register.title": "Inscription — Job Agent", "register.heading": "Inscription",
+    "register.name": "Nom", "register.email": "E-mail", "register.password": "Mot de passe",
+    "register.submit": "Créer un compte",
+    "app.loading": "Chargement…",
+    # ---- logged-in app (profile form) ----
+    "form.name": 'Nom du profil (ex. « Senior Android »)',
+    "form.target_roles": "Postes visés (séparés par des virgules)",
+    "form.skills": "Compétences (séparées par des virgules)",
+    "form.experience": "Expérience (en bref)",
+    "form.languages": "Langues", "form.english": "Niveau d'anglais (CECR)",
+    "form.location": "Lieu préféré", "form.remote": "Préférence de télétravail",
+    "form.country": "Pays où vous vivez",
+    "form.relocate": "Je suis prêt·e à déménager à l'étranger",
+    "form.relocate_hint": ("Si désactivé, les postes liés à un autre pays (y compris les postes "
+                           "« remote » exigeant d'y résider) sont masqués."),
+    "form.salary": "Prétentions salariales", "form.min_match": "Correspondance min. %",
+    "form.save": "Enregistrer", "form.cancel": "Annuler", "form.fix": "Veuillez corriger :",
+    "form.new_profile": "Nouveau profil", "form.edit_profile": "Modifier le profil",
+    "form.delete_head": "Supprimer ce profil",
+    "form.delete_note": "Supprime le profil et ses correspondances. Action irréversible.",
+    "form.delete_btn": "Supprimer le profil",
+    "form.delete_confirm": "Supprimer ce profil et ses correspondances ? Action irréversible.",
+    "opt.remote": "télétravail", "opt.hybrid": "hybride", "opt.onsite": "sur site",
+    "opt.any": "indifférent",
+    "err.name_required": "Le nom du profil est obligatoire.",
+    "err.name_long": "Le nom du profil est trop long (255 caractères max).",
+    "err.min_match": "La correspondance minimale doit être un entier entre 0 et 100.",
+    "err.english": "Le niveau d'anglais doit être A2, B1, B2, C1 ou C2.",
+    "err.remote": "La préférence doit être télétravail, hybride, sur site ou indifférent.",
+    "err.salary_long": "Les prétentions salariales sont trop longues (64 caractères max).",
+    # ---- logged-in app (feed / gaps / control strip) ----
+    "gaps.covered": "couvertes", "gaps.to_check": "à vérifier",
+    "gaps.tap": "voir les détails", "gaps.you_cover": "Vous couvrez",
+    "gaps.not_in_profile": "Absent de votre profil",
+    "gaps.advantage": "Considérés comme un plus",
+    "gaps.verified": "Vérifié par IA",
+    "gaps.unused": "De votre profil, non demandé ici :",
+    "score.sem": "sémantique {n}%", "score.cov": "exigences {n}%",
+    "score.fresh": "fraîcheur ×{x}",
+    "app.hide": "Masquer", "app.hide_title": "Pas intéressé·e — masquer cette correspondance",
+    "app.age_today": "publiée aujourd'hui", "app.age_days": "il y a {n} jours",
+    "gaps.honest": ("Soyez honnête sur ces points en postulant — ou ajoutez-les à votre "
+                    "profil si vous les maîtrisez."),
+    "app.matches_ge": "Correspondances ≥", "app.min": "min.", "app.apply_thresh": "Appliquer",
+    "app.edit": "Modifier", "app.edit_title": "Modifier ce profil",
+    "app.search_now": "Rechercher", "app.new_tab": "+ Nouveau",
+    "app.searching": "⏳ Recherche…", "app.generating": "⏳ Génération…",
+    "app.gen_failed": "Échec de la génération :",
+    "app.search_done": ("Recherche terminée — {pool} offres suivies parcourues, "
+                        "{filt}<b>{found} correspondance(s)</b> au-dessus de votre seuil "
+                        "de {min}%."),
+    "app.filtered": "{n} écartées (séniorité/lieu), ",
+    "app.empty_head": "Pas encore de correspondance au-dessus du seuil",
+    "app.empty_body": "Lancez une recherche, baissez le seuil ou ajoutez une offre manuellement ci-dessous.",
+    "app.your_docs": "Vos documents", "app.apply": "Postuler",
+    "app.cv": "CV", "app.letter": "Lettre",
+    "app.cv_title": "Générer un CV sur mesure (utilise votre clé IA)",
+    "app.letter_title": "Générer une lettre de motivation (utilise votre clé IA)",
+    "app.add_posting": "Ajouter une offre manuellement (avancé)",
+    "app.job_url": "URL de l'offre", "app.apply_url": "URL de candidature (directe, si différente)",
+    "app.title": "Intitulé", "app.company": "Entreprise", "app.location": "Lieu",
+    "app.description": "Description / exigences (collez l'annonce)",
+    "app.score_it": "Noter", "app.not_found": "Introuvable.",
+    # ---- documents ----
+    "docs.kind_cv": "CV", "docs.kind_letter": "Lettre de motivation",
+    "docs.my": "Mes documents", "docs.document": "Document", "docs.job": "Offre",
+    "docs.created": "Créé", "docs.removed": "(offre supprimée)",
+    "docs.none": "Aucun document pour l'instant — générez-en un depuis une correspondance.",
+    "docs.for": "Pour :",
+    "docs.review_word": "Relisez et modifiez avant utilisation",
+    "docs.review_rest": ("La sortie de l'IA est un brouillon, le texte final vous appartient. "
+                         "Modifiez ci-dessous et enregistrez ; le PDF utilise toujours votre "
+                         "dernier texte."),
+    "docs.saved_word": "Enregistré.", "docs.saved_rest": "Le PDF utilise votre texte modifié.",
+    "docs.save": "Enregistrer les modifications", "docs.download": "⬇ Télécharger le PDF",
+    "docs.regen_in": "Régénérer en {lang}", "docs.other_for": "{kind} pour cette offre",
+    # ---- account / settings ----
+    "acct.heading": "Compte", "acct.joined": "inscrit le",
+    "acct.profiles": "{n} profil(s) de recherche.",
+    "acct.export": "Exporter mes données (JSON)",
+    "acct.status_head": "Statut de la recherche d'emploi",
+    "acct.paused_word": "En pause",
+    "acct.paused_rest": "vous avez indiqué avoir trouvé un emploi, nous ne cherchons donc plus pour vous.",
+    "acct.active_word": "Active",
+    "acct.active_rest": ("nous cherchons chaque jour et vous envoyons les nouvelles "
+                         "correspondances par e-mail (si vous avez été actif·ve ces 5 "
+                         "derniers jours)."),
+    "acct.resume": "Reprendre mes recherches",
+    "acct.pause": "🎉 J'ai trouvé un emploi — suspendre les recherches",
+    "acct.llm_ok": "Test de connexion réussi — votre clé est enregistrée (chiffrée).",
+    "acct.llm_removed": "Clé supprimée.",
+    "acct.delete_head": "Supprimer le compte",
+    "acct.delete_note": ("Supprime définitivement votre compte, vos profils, correspondances et "
+                         "candidatures. Action irréversible. Saisissez votre adresse e-mail "
+                         "pour confirmer."),
+    "acct.delete_confirm": "Supprimer définitivement votre compte et toutes vos données ?",
+    "acct.delete_btn": "Supprimer mon compte",
+    "acct.email_mismatch": "L'e-mail saisi ne correspond pas.",
+    "acct.not_deleted": "Votre compte n'a pas été supprimé.",
+    "acct.back": "Retour au compte",
+    "llm.head": "Génération IA (avec votre propre clé)",
+    "llm.note": ("La génération de CV et de lettres passe par votre compte LLM. Options "
+                 "gratuites recommandées : Google Gemini (aistudio.google.com) ou Groq "
+                 "(console.groq.com). Votre clé est stockée chiffrée, jamais réaffichée, et "
+                 "vous pouvez la retirer à tout moment."),
+    "llm.configured": "Configuré :", "llm.default_model": "modèle par défaut",
+    "llm.remove": "Retirer la clé", "llm.provider": "Fournisseur",
+    "llm.model": "Modèle (facultatif)", "llm.key": "Clé API",
+    "llm.key_ph": "collez votre clé API (inutile pour Ollama)",
+    "llm.no_key": " — aucune clé requise", "llm.test_save": "Tester &amp; enregistrer",
+    "llm.err_unknown": "Fournisseur inconnu.",
+    "llm.err_key_required": "Ce fournisseur exige une clé API.",
+    "llm.free_note": ("Génération gratuite : jusqu'à {n} documents/jour sans clé. Ajoutez "
+                      "votre propre clé ci-dessous pour une génération illimitée."),
+    "acct.llm_needed": ("Pour générer un CV ou une lettre, il nous faut un fournisseur d'IA — "
+                        "ajoutez une clé gratuite ci-dessous (Google AI Studio ou Groq, "
+                        "~2 minutes)."),
+    # ---- onboarding ----
+    "ob.head": "Démarrage rapide — créez votre profil",
+    "ob.sub": "Choisissez votre métier et nous vous proposerons les compétences typiques.",
+    "ob.step1": "Décrivez vos compétences", "ob.step2": "Nous trouvons les offres qui collent",
+    "ob.step3": "Vous postulez en un clic", "ob.how": "Comment ça marche",
+    "ob.profession": "Métier", "ob.choose": "Choisir…",
+    "ob.skills": "Compétences", "ob.tap": "(touchez pour basculer)",
+    "ob.select_first": "Choisissez un métier pour voir les compétences suggérées.",
+    "ob.more": "Ajouter d'autres compétences (séparées par des virgules)",
+    "ob.create": "Créer le profil",
+    "ob.full_form": "Utiliser plutôt le formulaire complet",
+    "ob.change_later": "vous pourrez tout modifier plus tard.",
+    "ob.welcome": "Bienvenue 👋",
+    "ob.welcome_sub": ("Aucun profil pour l'instant — créez votre premier profil de recherche "
+                       "en 30 secondes environ."),
+    "ob.title": "Démarrage rapide — Job Agent",
+    # ---- public SEO pages ----
+    "pub.jobs_title": "Emplois — Bulgarie & télétravail | Job Agent",
+    "pub.jobs_h1": "Emplois — Bulgarie & télétravail",
+    "pub.jobs_sub": ("Nous suivons les postes ouverts sur les sites d'offres et les pages "
+                     "carrières des entreprises, et notons chacun selon vos compétences."),
+    "pub.jobs_tracked": "postes ouverts suivis en ce moment",
+    "pub.recent": "Offres vues récemment",
+    "pub.byprof": "Parcourir par métier",
+    "pub.h1": "Emplois {occ} — Bulgarie & télétravail",
+    "pub.meta": "Postes {occ} ouverts en Bulgarie et à distance, notés selon vos compétences.",
+    "pub.tracked": "postes ouverts suivis en ce moment",
+    "pub.sample": "Offres vues récemment",
+    "pub.skills": "Compétences typiquement demandées par les employeurs",
+    "pub.cta_h": "Voyez lesquels VOUS correspondent",
+    "pub.cta_p": ("Créez un profil gratuit en ~30 secondes — nous notons chaque offre selon vos "
+                  "compétences et affichons vos correspondances avec un lien de candidature "
+                  "direct."),
+    "pub.cta_btn": "Commencer — c'est gratuit",
+    "pub.q1_h": "Comment fonctionne Job Agent ?",
+    "pub.q1_p": ("Vous décrivez vos compétences une seule fois. Nous parcourons les sources "
+                 "chaque jour, notons chaque offre selon votre profil et ne vous envoyons que "
+                 "les nouvelles correspondances."),
+    "pub.q2_h": "Est-ce gratuit ?",
+    "pub.q2_p": "Oui — créer un profil et voir vos correspondances est gratuit.",
+    "pub.expanding": ("Nous élargissons nos sources pour ce métier — en attendant, voici les "
+                      "dernières offres que nous suivons."),
+}

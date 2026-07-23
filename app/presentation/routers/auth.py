@@ -11,7 +11,7 @@ from ...data.activity_repo import set_lang as set_user_lang
 from ...core.config import settings
 from ..web import page, current_user, redirect, escape
 from ..seo import site_jsonld, abs_url
-from ..i18n import t, current_lang, LANGS
+from ..i18n import t, current_lang, LANGS, SWITCH_URLS
 
 router = APIRouter()
 
@@ -23,16 +23,21 @@ def _login_response(user_id: int):
     return resp
 
 
+# Language-prefixed landing paths: / is English, /{code} for every other language.
+_LANDING_PATHS = {code: ("/" if code == "en" else f"/{code}") for code in LANGS}
+
+
 def _landing(lang: str, path: str) -> str:
     """Public, indexable landing in the given language, with hreflang + site JSON-LD."""
     body = (f"<div class='card'><h2>{escape(t('landing.h1', lang))}</h2>"
             f"<p class='small'>{escape(t('landing.sub', lang))}</p>"
             f"<a class='btn' href='/register'>{escape(t('landing.get_started', lang))}</a> "
             f"<a class='btn gray' href='/login'>{escape(t('landing.login', lang))}</a></div>")
-    hreflang = [("en", abs_url("/")), ("bg", abs_url("/bg")), ("x-default", abs_url("/"))]
+    hreflang = ([(code, abs_url(p)) for code, p in _LANDING_PATHS.items()]
+                + [("x-default", abs_url("/"))])
     return page(body, title=t("landing.title", lang), description=t("landing.description", lang),
                 path=path, noindex=False, head_extra=site_jsonld(), lang=lang,
-                switch_urls={"en": "/", "bg": "/bg"}, hreflang=hreflang)
+                switch_urls=dict(_LANDING_PATHS), hreflang=hreflang)
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -55,11 +60,21 @@ def home(request: Request, db: Session = Depends(get_db)):
     return render_app(db, u, profiles[0], profiles, lang=current_lang(request))
 
 
-@router.get("/bg", response_class=HTMLResponse)
-def home_bg(request: Request, db: Session = Depends(get_db)):
-    if current_user(request, db):
-        return redirect("/")            # logged-in users go to their dashboard
-    return _landing("bg", "/bg")
+# One localized landing route per non-English language (/bg, /de, /fr, ...). Explicit
+# registrations, not a /{code} catch-all — a dynamic segment at the root would shadow
+# other top-level routes.
+def _make_landing_handler(code: str):
+    def localized_home(request: Request, db: Session = Depends(get_db)):
+        if current_user(request, db):
+            return redirect("/")        # logged-in users go to their dashboard
+        return _landing(code, _LANDING_PATHS[code])
+    localized_home.__name__ = f"home_{code}"
+    return localized_home
+
+
+for _code in LANGS:
+    if _code != "en":
+        router.get(f"/{_code}", response_class=HTMLResponse)(_make_landing_handler(_code))
 
 
 @router.get("/lang/{code}")
@@ -90,7 +105,7 @@ def register_form(request: Request):
             f"<p style='margin-top:12px'><button class='btn'>{escape(t('register.submit', lang))}</button></p></form>"
             f"<p class='small'>{escape(t('login.or', lang))} <a href='/auth/google'>{escape(t('auth.google', lang))}</a></p></div>")
     return page(body, title=t("register.title", lang), lang=lang,
-                switch_urls={"en": "/lang/en", "bg": "/lang/bg"})
+                switch_urls=SWITCH_URLS)
 
 
 @router.post("/register")
@@ -119,7 +134,7 @@ def login_form(request: Request, oauth_err: str | None = None):
             f"<p style='margin-top:12px'><button class='btn'>{escape(t('login.submit', lang))}</button></p></form>"
             f"<p class='small'>{escape(t('login.or', lang))} <a href='/auth/google'>{escape(t('auth.google', lang))}</a></p></div>")
     return page(body, title=t("login.title", lang), lang=lang,
-                switch_urls={"en": "/lang/en", "bg": "/lang/bg"})
+                switch_urls=SWITCH_URLS)
 
 
 @router.post("/login")

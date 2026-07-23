@@ -24,7 +24,7 @@ router = APIRouter()
 CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"]
 REMOTE_PREFS = ["remote", "hybrid", "onsite", "any"]
 
-SWITCH_URLS = {"en": "/lang/en", "bg": "/lang/bg"}   # header language switcher (cookie-based)
+from ..i18n import SWITCH_URLS   # header language switcher (cookie-based, all languages)
 
 
 # ---------- form + validation (shared by create and edit) ----------

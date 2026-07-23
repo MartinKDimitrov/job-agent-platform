@@ -15,7 +15,7 @@ from ..i18n import t, current_lang
 
 router = APIRouter()
 
-SWITCH_URLS = {"en": "/lang/en", "bg": "/lang/bg"}
+from ..i18n import SWITCH_URLS  # noqa: F811 — cookie-based switcher, all languages
 
 # Bulgaria-primary defaults (remote not neglected): remote jobs pass, and onsite jobs in these
 # cities pass; onsite abroad is filtered by the location hard filter.

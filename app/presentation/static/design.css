@@ -118,25 +118,17 @@ header .who {
   font-size: 14px;
   color: var(--muted);
 }
-header .langsw {
-  display: inline-flex;
+/* Language switcher: a compact native <select> (13 languages don't fit as links) */
+header select.langsw {
   border: 1px solid var(--line-strong);
   border-radius: 8px;
-  overflow: hidden;
   font-size: 13px;
   font-weight: 600;
-}
-header .langsw a, header .langsw span {
-  padding: 6px 10px;
   color: var(--muted);
-  min-width: 36px;
-  text-align: center;
+  background: var(--card);
+  padding: 6px 8px;
+  max-width: 130px;
   cursor: pointer;
-}
-header .langsw a:hover { background: var(--gray-soft); text-decoration: none; }
-header .langsw .active {
-  background: var(--navy);
-  color: #fff;
 }
 
 /* ---------- Cards ---------- */

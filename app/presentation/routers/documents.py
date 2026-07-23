@@ -14,7 +14,7 @@ from ..doc_template import render_document_html
 
 router = APIRouter()
 
-SWITCH_URLS = {"en": "/lang/en", "bg": "/lang/bg"}
+from ..i18n import SWITCH_URLS  # noqa: F811 — cookie-based switcher, all languages
 
 # Print titles follow the DOCUMENT's language (what the recipient reads), not the UI language.
 _KIND_TITLE = {"en": {"cv": "Curriculum Vitae", "cover_letter": "Cover Letter"},

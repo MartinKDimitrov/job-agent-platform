@@ -14,11 +14,17 @@ router = APIRouter()
 PRIVATE_PREFIXES = ["/profiles", "/account", "/sources", "/documents", "/onboarding",
                     "/login", "/register", "/auth"]
 from ...domain.taxonomy import OCCUPATIONS
+from ..i18n import LANGS
 
-# Public, indexable URLs: both landing languages + the profession pages (EN + BG variants).
-PUBLIC_PATHS = (["/", "/bg", "/jobs", "/bg/jobs"]
-                + [f"/jobs/{o['id']}" for o in OCCUPATIONS]
-                + [f"/bg/jobs/{o['id']}" for o in OCCUPATIONS])
+# Public, indexable URLs: every landing language + the profession pages in all languages
+# (English lives at the unprefixed path, other languages under /{lang}/...).
+def _lang_prefixed(tail: str) -> list[str]:
+    return [tail] + [f"/{code}{tail}" for code in LANGS if code != "en"]
+
+
+PUBLIC_PATHS = (["/"] + [f"/{code}" for code in LANGS if code != "en"]
+                + _lang_prefixed("/jobs")
+                + [p for o in OCCUPATIONS for p in _lang_prefixed(f"/jobs/{o['id']}")])
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
