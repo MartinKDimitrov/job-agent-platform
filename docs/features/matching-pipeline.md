@@ -117,12 +117,21 @@ requirements → retry big model / verify-fallback).
 **Phase 5 ✅ — recall** (hybrid 3-door + in-process vector cache; pgvector live on staging for the deploy-scale SQL path): hybrid candidates — title token OR vector proximity (threshold from
 eval + candidate-set size) OR at least one shared canonical skill (same generic-token
 stop-list as titles, or one popular skill floods the set); targeted dev.bg queries grouped
-by UNIQUE ROLE across users (one query per role per cycle), not per profile.
+by UNIQUE ROLE across users (one query per role per cycle), not per profile. Vector-door
+threshold calibrated on the LIVE cosine distribution (median ~0.81, p99 ~0.87, true role
+matches 0.88+): RECALL_MIN_COSINE=0.87 — the initial 0.80 sat below the E5 floor and
+admitted everything.
 
-**Phase 6 — observability & explainability**: component breakdown in the UI (semantic /
-coverage / freshness + posting age on the card) + "skills of yours this posting doesn't
-ask for"; feedback events (shown/opened/apply/hidden) — substrate for the applications
-dashboard and the learning loop; unknown-skill spike alarm in CrawlRun stats.
+**Phase 6 ✅ — observability & explainability**: component breakdown on the match card
+(semantic / requirements coverage / freshness — recomputed at render via the same domain
+functions as scoring, so it cannot drift) + muted "skills of yours this posting doesn't
+ask for" chips in the gaps panel (canonical-dictionary diff); feedback capture — 'shown'
+stamped cheaply as Match.first_shown_at on first render, deliberate acts in the
+feedback_events table: Apply goes through an internal /go redirect that logs `applied`
+before forwarding (substrate for the applications dashboard), a Hide button sets
+Match.hidden + logs `hidden` (future learning loop); unknown-skill counter from
+annotation lands in ingest stats/CrawlRun — a spike there means the market outgrew the
+skills dictionary.
 
 **Phase 7 — salary**: extract the value in step 3 BEFORE the money-line drop (range,
 currency, monthly/annual pitfalls), use as a SOFT signal only when both sides state it
