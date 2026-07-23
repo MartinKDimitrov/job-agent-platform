@@ -3,14 +3,15 @@ import hashlib
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
-from sqlalchemy import delete, select
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from ...data.db import get_db
-from ...data.models import Profile, Posting, Match, Document
+from ...data.models import Profile, Posting, Match, Document, FeedbackEvent
 from ...data.activity_repo import get_activity
-from ...domain.scoring import score
+from ...domain.scoring import score, coverage_ratio, semantic_pct
+from ...domain.skills import extract_skills
 from ...domain.extraction import extract_requirements
 from ...application.usecases.search import search_db
 from ...application.run_stats import RunStats
@@ -135,7 +136,46 @@ def _score_ring(sc: float) -> str:
             f"</svg><span class='num'>{pct}%</span></div>")
 
 
-def _gaps_block(covered, missing, lang: str = "en", verified: bool = False) -> str:
+_SCORED_KINDS = ("must", "nice")
+
+
+def _score_parts(p: Profile, m: Match, post: Posting, lang: str = "en") -> str:
+    """Phase 6 transparency: the components behind the ring — semantic similarity, weighted
+    requirement coverage, freshness. Recomputed at render from what's already stored
+    (vectors, covered/missing, dates) — no schema change, and it can't drift from scoring
+    because it calls the same domain functions."""
+    from ...application.usecases.search import posting_freshness
+    parts = []
+    if p.embedding is not None and post.embedding is not None:
+        sem = round(semantic_pct(p.embedding, post.embedding) * 100)
+        parts.append(t("score.sem", lang).format(n=sem))
+    pairs = ([(r, True) for r in (m.covered or []) if _req_kind(r) in _SCORED_KINDS]
+             + [(r, False) for r in (m.missing or []) if _req_kind(r) in _SCORED_KINDS])
+    if pairs:
+        parts.append(t("score.cov", lang).format(n=round(coverage_ratio(pairs) * 100)))
+    fresh = posting_freshness(post)
+    if fresh < 1.0:
+        parts.append(t("score.fresh", lang).format(x=f"{fresh:.2f}"))
+    if not parts:
+        return ""
+    return f"<div class='small score-parts'>{escape(' · '.join(parts))}</div>"
+
+
+def _unused_skills(p: Profile, post: Posting) -> list[str]:
+    """Profile skills this posting doesn't mention — the canonical-dictionary diff. Shown
+    muted in the gaps panel so the user sees what of theirs is NOT driving this match."""
+    mine = set(extract_skills(p.skills or ""))
+    if not mine:
+        return []
+    theirs = set(extract_skills(f"{post.title} {post.description or ''}"))
+    for r in post.requirements or []:
+        if isinstance(r, dict):
+            theirs.update(r.get("skills") or [])
+    return sorted(mine - theirs)
+
+
+def _gaps_block(covered, missing, lang: str = "en", verified: bool = False,
+                unused: list[str] | None = None) -> str:
     """Why a posting scored as it did — calm by default (owner feedback: the red chips were too
     intrusive). Collapsed: '✓ N covered · ⚠ N to check'. Click expands a tidy two-column panel
     with the FULL requirement texts (covered vs missing). Transparency on demand."""
@@ -167,12 +207,17 @@ def _gaps_block(covered, missing, lang: str = "en", verified: bool = False) -> s
     # nice-to-haves get their own subheading so the dimmer bullets are self-explanatory
     nice_block = (f"<h6 class='subhead'>{escape(t('gaps.advantage', lang))}</h6><ul>{nice_list}</ul>"
                   if nice_list else "")
+    unused_block = ""
+    if unused:
+        chips_html = "".join(f"<span class='chip unused'>{escape(s)}</span>" for s in unused[:8])
+        unused_block = (f"<div class='unused-skills small'>"
+                        f"{escape(t('gaps.unused', lang))} {chips_html}</div>")
     return f"""<details class='gaps'>
     <summary><span class='chips'>{chips}</span>
     <span class='small'>{escape(t('gaps.tap', lang))}</span></summary>
     <div class='gaps-detail'>{cov_col}
     <div class='col warn'><h5>⚠ {escape(t('gaps.not_in_profile', lang))}</h5>{must_block}{nice_block}
-    <p class='small'>{escape(t('gaps.honest', lang))}</p></div></div></details>"""
+    <p class='small'>{escape(t('gaps.honest', lang))}</p></div></div>{unused_block}</details>"""
 
 
 # ---------- routes (order matters: /profiles/new before /profiles/{pid}) ----------
@@ -391,9 +436,15 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
                      + "<span class='sep'>·</span>".join(links) + "</div>")
 
     busy = _busy_js(lang)
-    apply_btn = (f"<a class='btn green' href='{escape(post.apply_url or post.url)}' "
-                 f"target='_blank'>{icon('plane')}{escape(t('app.apply', lang))}</a>"
+    # Apply goes through OUR redirect (/go) so the click lands in feedback_events — the
+    # substrate for the applications dashboard and the learning loop. Same tab-out behavior.
+    apply_btn = (f"<a class='btn green' href='/profiles/{p.id}/matches/{m.id}/go' "
+                 f"target='_blank' rel='noopener'>{icon('plane')}{escape(t('app.apply', lang))}</a>"
                  if (post.apply_url or post.url) else "")
+    hide_btn = (f"<form method='post' action='/profiles/{p.id}/matches/{m.id}/hide' "
+                f"style='display:inline;margin-left:auto'>"
+                f"<button class='btn gray small' title=\"{escape(t('app.hide_title', lang))}\">"
+                f"✕ {escape(t('app.hide', lang))}</button></form>")
     gen = (f"<form method='post' action='/profiles/{p.id}/postings/{post.id}/generate' style='display:inline' {busy}>"
            f"<input type='hidden' name='kind' value='cv'>"
            f"<button class='btn gray small' title=\"{escape(t('app.cv_title', lang))}\">{icon('doc')}{escape(t('app.cv', lang))}</button></form>"
@@ -402,8 +453,10 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
            f"<button class='btn gray small' title=\"{escape(t('app.letter_title', lang))}\">{icon('mail')}{escape(t('app.letter', lang))}</button></form>")
     return (f"<div class='match-card'>{_score_ring(m.score)}<div class='body'>"
             f"<div class='title'>{escape(post.title)}</div>{meta_html}"
-            f"{_gaps_block(m.covered, m.missing, lang, verified=bool(m.llm_verified))}{docs_html}"
-            f"<div class='actions'>{apply_btn}{gen}</div></div></div>")
+            f"{_score_parts(p, m, post, lang)}"
+            f"{_gaps_block(m.covered, m.missing, lang, verified=bool(m.llm_verified), unused=_unused_skills(p, post))}"
+            f"{docs_html}"
+            f"<div class='actions'>{apply_btn}{gen}{hide_btn}</div></div></div>")
 
 
 def render_app(db: Session, u, active: Profile, profiles: list[Profile],
@@ -449,9 +502,17 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
 
     q = (select(Match, Posting).join(Posting, Match.posting_id == Posting.id)
          .where(Match.profile_id == p.id, Match.score >= p.min_match,
-                Posting.is_live.is_(True))     # retired (>1 month old) postings never show
+                Match.hidden.is_(False),       # user said "not this one" — stays hidden
+                Posting.is_live.is_(True))     # retired postings never show
          .order_by(Match.score.desc()))
     pairs = db.execute(q).all()
+    # 'shown' feedback, tracked cheaply: first render stamps the match (no event rows —
+    # only deliberate acts land in feedback_events)
+    unseen_ids = [m.id for m, _ in pairs if m.first_shown_at is None]
+    if unseen_ids:
+        db.execute(update(Match).where(Match.id.in_(unseen_ids))
+                   .values(first_shown_at=datetime.utcnow()))
+        db.commit()
     # documents per posting, one query
     docs_by_post: dict[int, list[Document]] = {}
     for d in db.execute(select(Document).where(Document.user_id == u.id)
@@ -502,6 +563,56 @@ def profile_view(pid: int, request: Request, db: Session = Depends(get_db),
                           .order_by(Profile.created_at)).scalars().all()
     return render_app(db, u, p, profiles, pool=pool,
                       filtered=filtered, found=found, gen_err=gen_err, lang=lang)
+
+
+# ---------- feedback events (Phase 6): the substrate for the applications dashboard ----------
+def _own_match(db: Session, u, pid: int, mid: int):
+    """(profile, match, posting) when the match belongs to this user's profile, else None."""
+    p = db.get(Profile, pid)
+    if not p or p.user_id != u.id:
+        return None
+    m = db.get(Match, mid)
+    if not m or m.profile_id != p.id:
+        return None
+    return p, m, db.get(Posting, m.posting_id)
+
+
+@router.get("/profiles/{pid}/matches/{mid}/go")
+def match_go(pid: int, mid: int, request: Request, db: Session = Depends(get_db)):
+    """Apply-click redirect: log the 'applied' intent, then send the user to the real
+    apply URL. Every click logs (the dashboard reads the latest per posting)."""
+    u = current_user(request, db)
+    if not u:
+        return redirect("/login")
+    own = _own_match(db, u, pid, mid)
+    if own is None:
+        return redirect("/")
+    p, m, post = own
+    target = (post.apply_url or post.url) if post else ""
+    if not target:
+        return redirect(f"/profiles/{p.id}")
+    db.add(FeedbackEvent(user_id=u.id, profile_id=p.id, posting_id=m.posting_id,
+                         event="applied"))
+    db.commit()
+    return RedirectResponse(target, status_code=302)
+
+
+@router.post("/profiles/{pid}/matches/{mid}/hide")
+def match_hide(pid: int, mid: int, request: Request, db: Session = Depends(get_db)):
+    """'Not this one' — hide the match from the feed and log the negative signal (future
+    learning loop: repeated hides of a pattern should lower similar matches)."""
+    u = current_user(request, db)
+    if not u:
+        return redirect("/login")
+    own = _own_match(db, u, pid, mid)
+    if own is None:
+        return redirect("/")
+    p, m, _post = own
+    m.hidden = True
+    db.add(FeedbackEvent(user_id=u.id, profile_id=p.id, posting_id=m.posting_id,
+                         event="hidden"))
+    db.commit()
+    return redirect(f"/profiles/{p.id}")
 
 
 @router.post("/profiles/{pid}/postings")

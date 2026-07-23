@@ -111,7 +111,7 @@ def test_search_now_button_flow(auth_client, monkeypatch):
     assert "Search complete" in body
     assert "Senior Android Engineer" in body         # relevant match shown
     assert "Account Executive" not in body           # irrelevant: in the index, but no Match
-    assert "https://x/1" in body                     # apply link present
+    assert "/go" in body                             # apply goes via the feedback redirect
 
 
 def test_profile_sources_receive_profile_and_merge(monkeypatch):

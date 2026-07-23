@@ -403,7 +403,12 @@ tr:last-child td { border-bottom: 0; }
 .match-card .meta .m { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; }
 .match-card .meta .m .icon { width: 14px; height: 14px; stroke-width: 1.75; color: var(--muted); }
 .match-card .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.match-card .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.match-card .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+/* Phase 6: component breakdown under the meta line — quiet, informational */
+.match-card .score-parts { color: var(--muted); margin: -8px 0 12px; font-size: 12.5px; }
+/* Phase 6: profile skills the posting doesn't ask for — muted chips inside the panel */
+.unused-skills { margin-top: 10px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip.unused { background: var(--card); color: var(--muted); border: 1px dashed var(--line-strong); font-size: 11.5px; }
 
 /* Match card: collapsed gaps (calm by default; details expand on tap) */
 .gaps { margin: 0 0 14px; }

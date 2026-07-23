@@ -61,6 +61,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "gaps.not_in_profile": "Not in your profile",
         "gaps.advantage": "Considered an advantage",
         "gaps.verified": "AI-checked",
+        "gaps.unused": "From your profile, not asked for here:",
+        "score.sem": "semantic {n}%", "score.cov": "requirements {n}%",
+        "score.fresh": "freshness ×{x}",
+        "app.hide": "Hide", "app.hide_title": "Not interested — hide this match",
         "app.age_today": "posted today", "app.age_days": "{n} days ago",
         "gaps.honest": ("Be honest about these when applying — or add them to your profile "
                         "if you have them."),
@@ -204,6 +208,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "gaps.not_in_profile": "Не е в профила ти",
         "gaps.advantage": "Считат се за предимство",
         "gaps.verified": "AI проверено",
+        "gaps.unused": "От профила ти, не се изискват тук:",
+        "score.sem": "семантика {n}%", "score.cov": "изисквания {n}%",
+        "score.fresh": "свежест ×{x}",
+        "app.hide": "Скрий", "app.hide_title": "Не ме интересува — скрий това съвпадение",
         "app.age_today": "публикувана днес", "app.age_days": "преди {n} дни",
         "gaps.honest": ("Бъди честен за тези при кандидатстване — или ги добави в профила си, "
                         "ако ги имаш."),

@@ -107,6 +107,8 @@ class Match(Base):
     posting_id: Mapped[int] = mapped_column(ForeignKey("postings.id", ondelete="CASCADE"), index=True)
     score: Mapped[float] = mapped_column(Float, default=0.0)
     llm_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # coverage LLM-checked
+    first_shown_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False)        # user said 'not this'
     covered: Mapped[list | None] = mapped_column(JSON, nullable=True)
     missing: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -164,6 +166,20 @@ class UserLLMConfig(Base):
     provider: Mapped[str] = mapped_column(String(32))            # gemini / groq / ollama / ...
     encrypted_key: Mapped[str] = mapped_column(Text, default="")  # empty for keyless (ollama)
     model: Mapped[str] = mapped_column(String(128), default="")   # empty -> provider default
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class FeedbackEvent(Base):
+    """High-signal user actions on matches (Phase 6): the substrate for the applications
+    dashboard and the Phase-5 learning loop. 'shown' is tracked cheaply as
+    Match.first_shown_at; rows here are only the deliberate acts (applied / hidden).
+    New table -> no migration."""
+    __tablename__ = "feedback_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"))
+    posting_id: Mapped[int] = mapped_column(ForeignKey("postings.id", ondelete="CASCADE"))
+    event: Mapped[str] = mapped_column(String(16))            # applied / hidden
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
