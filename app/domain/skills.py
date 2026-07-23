@@ -115,6 +115,21 @@ _ALIASES: dict[str, tuple[str, ...]] = {
     "splunk": (), "kibana": (), "datadog": (), "argocd": ("argo cd",), "helm": (),
     "openshift": (), "cloudformation": (), "logstash": (), "gitlab": (),
     "english": ("английски", "english language"),
+    # skills-v1.2 (2026-07-24): second unknown-candidates round from the in-session lane
+    "oauth": ("oauth2", "oauth 2.0", "openid connect", "oidc"),
+    "jwt": (),
+    "networking": ("network protocols", "tcp/ip"),
+    "nosql": (),
+    "redux": ("redux toolkit",),
+    "troubleshooting": ("root cause analysis", "rca", "debugging"),
+    "prompt engineering": ("prompting",),
+    "system design": ("software architecture", "solution architecture"),
+    "incident response": ("incident management", "on-call"),
+    "automation": (),
+    "multithreading": ("multi-threading", "concurrency", "multiprocessing"),
+    "mvvm": (), "manual testing": ("ръчно тестване",), "postman": (),
+    "etl": ("elt", "etl/elt"),
+    "german": ("немски", "deutsch"), "french": ("френски",), "spanish": ("испански",),
 }
 
 # reverse index: alias -> canonical (canonical maps to itself)
@@ -155,4 +170,6 @@ RECALL_GENERIC_SKILLS = frozenset({
     "jira", "html", "css", "docker", "design patterns", "microservices",
     # v1.1: near-universal in JDs — coverage yes, relevance no
     "english", "algorithms", "data structures", "distributed systems",
+    # v1.2
+    "networking", "troubleshooting", "automation", "system design", "nosql", "oauth", "jwt",
 })
