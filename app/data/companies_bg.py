@@ -719,10 +719,7 @@ BG_COMPANIES: list[dict] = [
     {"name": "Altınbaş Diamond", "industry": "Retail", "website": ""},
     {"name": "NAOS", "industry": "Retail", "website": ""},
     {"name": "Podem Crane", "industry": "Manufacturing", "website": ""},
-]
-
-# Backwards-compatible name list (the detection CLI and older callers use plain names).
-BG_COMPANY_NAMES = [c["name"] for c in BG_COMPANIES    # --- wave 6 (2026-07-24): fifth owner review batch — same rules.
+    # --- wave 6 (2026-07-24): fifth owner review batch — same rules.
     {"name": "KWS Bulgaria", "industry": "Agriculture", "website": "https://www.kws.com"},
     {"name": "Selena ES", "industry": "Distribution", "website": ""},
     {"name": "Humanic Bulgaria", "industry": "Retail", "website": "https://www.humanic.net"},
@@ -868,3 +865,6 @@ BG_COMPANY_NAMES = [c["name"] for c in BG_COMPANIES    # --- wave 6 (2026-07-24)
     {"name": "TIS Groups", "industry": "Distribution", "website": ""},
     {"name": "Furnit", "industry": "Manufacturing", "website": ""},
 ]
+
+# Backwards-compatible name list (the detection CLI and older callers use plain names).
+BG_COMPANY_NAMES = [c["name"] for c in BG_COMPANIES]
