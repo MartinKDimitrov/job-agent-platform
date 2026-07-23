@@ -1288,6 +1288,19 @@ BG_COMPANIES: list[dict] = [
     {"name": "Vineo", "industry": "Food", "website": ""},
     {"name": "Планта Сана", "industry": "Agriculture", "website": ""},
     {"name": "Супермаркети Кристи", "industry": "Retail", "website": ""},
+    # --- wave 10 (2026-07-24): ninth owner review batch — same rules.
+    {"name": "VitaPharm", "industry": "Pharma", "website": ""},
+    {"name": "Urban Market", "industry": "Retail", "website": ""},
+    {"name": "B&A Group", "industry": "Services", "website": ""},
+    {"name": "Дъмбо", "industry": "Retail", "website": ""},
+    {"name": "USAGI", "industry": "Food", "website": ""},
+    {"name": "Dileso", "industry": "Retail", "website": ""},
+    {"name": "JP Systems", "industry": "Manufacturing", "website": ""},
+    {"name": "Delby Trading", "industry": "Distribution", "website": ""},
+    {"name": "Vaninikom", "industry": "IT", "website": ""},
+    {"name": "CareDirect", "industry": "BPO", "website": ""},
+    {"name": "Space Pharma", "industry": "Pharma", "website": ""},
+    {"name": "L'Ambre", "industry": "Retail", "website": ""},
 ]
 
 # Backwards-compatible name list (the detection CLI and older callers use plain names).
