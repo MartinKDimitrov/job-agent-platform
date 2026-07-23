@@ -17,3 +17,4 @@ numpy
 
 # Tests (run without the SSH tunnel — use a temp SQLite DB, see tests/conftest.py)
 pytest
+pgvector

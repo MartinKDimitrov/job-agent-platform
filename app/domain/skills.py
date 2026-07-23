@@ -130,3 +130,11 @@ def is_known(s: str) -> bool:
 def extract_skills(text: str) -> set[str]:
     """All canonical skills mentioned in free text (profile skills field, requirement text)."""
     return {_CANON[m.group(1).lower()] for m in _ALIAS_RE.finditer(text or "")}
+
+
+# Skills too common to signal RELEVANCE on their own — the recall stop-list (a 'git' or
+# 'sql' overlap must not flood the candidate set; they still count for COVERAGE).
+RECALL_GENERIC_SKILLS = frozenset({
+    "git", "sql", "rest api", "agile", "oop", "unit testing", "ci/cd", "linux", "bash",
+    "jira", "html", "css", "docker", "design patterns", "microservices",
+})

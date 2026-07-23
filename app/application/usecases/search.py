@@ -77,16 +77,15 @@ def _profile_search_terms(profile) -> list[str]:
     return terms[:3]
 
 
-def _dev_bg_targeted(profile) -> list[RawPosting]:
+def _dev_bg_targeted(terms: list[str]) -> list[RawPosting]:
     """dev.bg's global feed only covers ~6 recent days; its search feed reaches everything.
-    Query it with the profile's own target roles so a Business Analyst gets BA postings and an
-    Android dev gets the Android ones (this was the 'always the same offers' bug)."""
-    terms = _profile_search_terms(profile)
+    Queried per UNIQUE role term (grouped across all active profiles — 500 users with
+    'android developer' cost ONE query per cycle, not 500)."""
     if not terms:
         return []
     return dev_bg.fetch(search_terms=terms, pages=0)   # pages=0: skip the global feed here
 
-# Profile-aware targeted sources, run per Search-now (and per profile in the daily digest).
+# Role-term-targeted sources: each receives the DEDUPLICATED term list for the whole run.
 PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted)]
 
 
@@ -221,10 +220,12 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
         raw_postings = fetch_all(boards, stats=stats)
     raw_postings = list(raw_postings) + _registry_postings(db, stats=stats)
     seen_urls = {rp.url for rp in raw_postings if rp.url}
-    for profile in profiles:
+    # role terms grouped across ALL profiles: one targeted query per unique term per run
+    terms = sorted({t for profile in profiles for t in _profile_search_terms(profile)})
+    if terms:
         for name, src in PROFILE_SOURCES:
             try:
-                targeted = [rp for rp in src(profile) if rp.url not in seen_urls]
+                targeted = [rp for rp in src(terms) if rp.url not in seen_urls]
             except Exception as e:  # noqa: BLE001 — a broken source must not kill the run
                 log.warning("targeted source %s failed: %s", name, e)
                 if stats is not None:
@@ -242,6 +243,8 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
     near_dups = merge_near_duplicates(db)
     unseen = retire_unseen_board_postings(db)
     taken_down = probe_taken_down_urls(db)
+    from .. import vector_cache
+    vector_cache.invalidate()             # the index changed — recall reloads lazily
     if stats is not None:
         stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
                   annotated=ann["annotated"], retired=retired, near_dups=near_dups,
@@ -401,9 +404,22 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     id_titles = db.execute(select(Posting.id, Posting.title)
                            .where(Posting.is_live.is_(True))).all()
     pool = len(id_titles)
-    relevant_ids = [pid for pid, title in id_titles
-                    if not keywords
-                    or keywords & set(_TOKEN_RE.findall((title or "").lower()))]
+    # HYBRID RECALL (Phase 5): titles alone cut recall — 'Backend' never sees 'Platform
+    # Engineer'. A posting is a candidate through ANY of three doors:
+    token_ids = {pid for pid, title in id_titles
+                 if not keywords or keywords & set(_TOKEN_RE.findall((title or "").lower()))}
+    from ...domain.skills import RECALL_GENERIC_SKILLS, extract_skills
+    from .. import vector_cache
+    vector_ids = vector_cache.similar_posting_ids(
+        db, profile.embedding, settings.recall_min_cosine)
+    profile_recall_skills = extract_skills(profile.skills or "") - RECALL_GENERIC_SKILLS
+    skill_ids = vector_cache.postings_sharing_skills(db, profile_recall_skills)
+    relevant_ids = list(token_ids | vector_ids | skill_ids)
+    if len(relevant_ids) > settings.recall_max_candidates:
+        # guard rail: keep the lexically/skill-matched, trim the loosest vector extras
+        core = token_ids | skill_ids
+        extras = [pid for pid in vector_ids if pid not in core]
+        relevant_ids = list(core) + extras[:max(0, settings.recall_max_candidates - len(core))]
     existing_by_post = {m.posting_id: m for m in db.execute(
         select(Match).where(Match.profile_id == profile.id)).scalars()}
     scored = filtered = matched = 0

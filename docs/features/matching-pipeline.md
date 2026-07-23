@@ -114,7 +114,7 @@ same normalized company AND title similarity — reworded reposts only, never
 Finance-vs-Healthcare false merges); LOW-extraction escalation (long description but <3
 requirements → retry big model / verify-fallback).
 
-**Phase 5 — recall**: hybrid candidates — title token OR vector proximity (threshold from
+**Phase 5 ✅ — recall** (hybrid 3-door + in-process vector cache; pgvector live on staging for the deploy-scale SQL path): hybrid candidates — title token OR vector proximity (threshold from
 eval + candidate-set size) OR at least one shared canonical skill (same generic-token
 stop-list as titles, or one popular skill floods the set); targeted dev.bg queries grouped
 by UNIQUE ROLE across users (one query per role per cycle), not per profile.

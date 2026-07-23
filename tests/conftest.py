@@ -42,9 +42,11 @@ def _sqlite_fk_pragma(dbapi_con, _record):
 
 @pytest.fixture(autouse=True)
 def fresh_db():
-    """Give every test an empty schema."""
+    """Give every test an empty schema (and a cold recall cache — it is process-global)."""
+    from app.application import vector_cache
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    vector_cache.invalidate()
     yield
 
 

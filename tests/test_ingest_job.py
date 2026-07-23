@@ -110,13 +110,13 @@ def test_run_ingest_targets_active_profiles_only(monkeypatch):
     _mock(monkeypatch, sample=[])
     seen = []
     monkeypatch.setattr(crawl, "PROFILE_SOURCES",
-                        [("t", lambda profile: seen.append(profile.target_roles) or [])])
+                        [("t", lambda terms: seen.extend(terms) or [])])
     from tests.test_jobs import _user
     with SessionLocal() as db:
         _user(db, "active@test.local")
         _user(db, "paused@test.local", found_job=True)
         run_ingest(db)
-    assert seen == ["Android"]                                # only the active user's profile
+    assert seen == ["android"]                # terms of the ACTIVE user's profile only
 
 
 def test_embed_version_drives_lazy_reembed(monkeypatch):

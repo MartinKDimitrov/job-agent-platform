@@ -115,13 +115,13 @@ def test_search_now_button_flow(auth_client, monkeypatch):
 
 
 def test_profile_sources_receive_profile_and_merge(monkeypatch):
-    # Targeted sources get the PROFILE (so dev.bg search uses the user's target roles) and
-    # their results merge into the batch — this fixed 'a Business Analyst sees Android offers'.
+    # Targeted sources get the DEDUPLICATED role terms (grouped across profiles) and their
+    # results merge into the batch — this fixed 'a Business Analyst sees Android offers'.
     _mock(monkeypatch, sample=[])
-    seen_profiles = []
+    seen_terms = []
 
-    def fake_targeted(profile):
-        seen_profiles.append(profile.target_roles)
+    def fake_targeted(terms):
+        seen_terms.append(list(terms))
         return [RawPosting("rss", "t1", "Business Analyst", "BulBank", location="Remote",
                            url="https://dev.bg/j/ba", apply_url="https://dev.bg/j/ba",
                            description="Requirements:\n- Requirements analysis experience")]
@@ -131,7 +131,7 @@ def test_profile_sources_receive_profile_and_merge(monkeypatch):
         p = _make_profile_row(db, target_roles="Business Analyst",
                               skills="Requirements Analysis, SQL", min_match=0)
         res = run_search(db, p)
-        assert seen_profiles == ["Business Analyst"]
+        assert seen_terms == [["business analyst"]]
         assert res["scored"] == 1
         m = db.execute(select(Match).where(Match.profile_id == p.id)).scalars().one()
         assert db.get(Posting, m.posting_id).title == "Business Analyst"
@@ -147,7 +147,7 @@ def test_targeted_results_survive_the_cap(monkeypatch):
     targeted_hit = RawPosting("rss", "t9", "Android Developer", "A1 Bulgaria", location="Remote",
                               url="https://dev.bg/j/a1", apply_url="https://dev.bg/j/a1",
                               description="Requirements:\n- Kotlin and Java")
-    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [("t", lambda profile: [targeted_hit])])
+    monkeypatch.setattr(crawl, "PROFILE_SOURCES", [("t", lambda terms: [targeted_hit])])
     with SessionLocal() as db:
         p = _make_profile_row(db, target_roles="Android", min_match=0)
         run_search(db, p, limit=10)

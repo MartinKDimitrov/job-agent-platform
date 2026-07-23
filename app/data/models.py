@@ -1,5 +1,12 @@
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import JSON as _JSON
+
+# pgvector on Postgres (binary, SQL cosine, HNSW-indexable — installed on staging);
+# plain JSON on SQLite so the hermetic test suite keeps working unchanged.
+EmbeddingType = Vector(384).with_variant(_JSON(), "sqlite")
+
 from sqlalchemy import (Boolean, DateTime, Float, ForeignKey, Integer, String,
                         Text, JSON, UniqueConstraint)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -37,7 +44,7 @@ class Profile(Base):
     remote_pref: Mapped[str] = mapped_column(String(32), default="remote")  # remote/hybrid/onsite/any
     salary_expectation: Mapped[str] = mapped_column(String(64), default="")
     min_match: Mapped[int] = mapped_column(Integer, default=65)
-    embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)  # cached E5 vector
+    embedding: Mapped[list | None] = mapped_column(EmbeddingType, nullable=True)  # E5 query vec
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="profiles")
@@ -81,7 +88,7 @@ class Posting(Base):
     requirements: Mapped[list | None] = mapped_column(JSON, nullable=True)  # extracted list
     annotation_version: Mapped[str] = mapped_column(String(16), default="")  # annotate-vN
     annotation_fp: Mapped[str] = mapped_column(String(64), default="")       # reqs fingerprint
-    embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)     # E5 vector (ingest-time)
+    embedding: Mapped[list | None] = mapped_column(EmbeddingType, nullable=True)  # passage vec
     embedding_version: Mapped[str] = mapped_column(String(32), default="")  # input+mode stamp
     is_live: Mapped[bool] = mapped_column(Boolean, default=True)
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
