@@ -72,12 +72,18 @@ def run_entries(entries: list[dict], delay: float = 1.0, force: bool = False) ->
             careers = find_careers_url(e.get("website", ""))
             res = detect_verified(name, careers_url=careers)
             if res:
-                ats, slug = res
+                ats, slug, via = res
+                # via='guess' = a name-matching board found by slug guessing — three live
+                # rounds of same-name strangers (Alta/Joya/Karma/NATIONAL...) made these
+                # HUMAN-REVIEW-ONLY: stored but inactive until the review confirms identity
                 upsert_company(db, name, country=e.get("country", "EU"),
                                industry=e.get("industry", ""),
                                website=e.get("website", ""), careers_url=careers,
-                               ats=ats, ats_slug=slug)
-                print(f"  ✓ {name} [{e.get('country')}]: {ats}/{slug}", flush=True)
+                               ats=ats, ats_slug=slug, active=(via == "careers"))
+                mark = "✓" if via == "careers" else "؟"
+                print(f"  {mark} {name} [{e.get('country')}]: {ats}/{slug}"
+                      f"{'' if via == 'careers' else '  (guess — pending review)'}",
+                      flush=True)
                 found += 1
             else:
                 c = upsert_company(db, name, country=e.get("country", "EU"),

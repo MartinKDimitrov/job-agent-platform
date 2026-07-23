@@ -235,13 +235,16 @@ def names_match(expected: str, reported: str) -> bool:
     return ta <= tb or tb <= ta
 
 
-def detect_verified(name: str, careers_url: str = "") -> tuple[str, str] | None:
-    """detect() with the identity gate. Careers-page boards are near-authoritative, but the
-    page can also link SOMEONE ELSE'S board (remote.com's customer story handed us
-    greenhouse/openly) — so even those must corroborate identity: the board's reported name
-    matches, OR the slug itself is the company's name (covers display-name rebrands like
-    Intercom's board reporting 'Fin'), OR the ATS has no name API. Guessed slugs always
-    need a matching reported name."""
+def detect_verified(name: str, careers_url: str = "") -> tuple[str, str, str] | None:
+    """detect() with the identity gate; returns (ats, slug, via) where via is 'careers' or
+    'guess'. Careers-page boards are near-authoritative, but the page can also link SOMEONE
+    ELSE'S board (remote.com's customer story handed us greenhouse/openly) — so even those
+    must corroborate identity: the board's reported name matches, OR the slug itself is the
+    company's name (covers display-name rebrands like Intercom's board reporting 'Fin'), OR
+    the ATS has no name API. Guessed slugs always need a matching reported name — and the
+    CALLER must treat via='guess' as pending human review: three live rounds proved that a
+    matching brand word ('Alta', 'Joya', 'Karma', 'NATIONAL'...) is still no proof of being
+    the same organization."""
     if careers_url:
         found = scan_careers_page(careers_url)
         if found:
@@ -250,7 +253,7 @@ def detect_verified(name: str, careers_url: str = "") -> tuple[str, str] | None:
                 reported = board_display_name(ats, slug) if ats in _NAME_APIS else None
                 if (reported is None or names_match(name, reported)
                         or names_match(name, slug.replace("-", " "))):
-                    return ats, slug
+                    return ats, slug, "careers"
                 log.info("careers page of %s links %s/%s but the board reports %r — "
                          "someone else's board, skipped", name, ats, slug, reported)
             else:
@@ -262,7 +265,7 @@ def detect_verified(name: str, careers_url: str = "") -> tuple[str, str] | None:
                 continue
             reported = board_display_name(ats, slug)
             if reported and names_match(name, reported):
-                return ats, slug
+                return ats, slug, "guess"
             log.info("identity mismatch for %s: guessed %s/%s, board reports %r — skipped",
                      name, ats, slug, reported)
     return None
