@@ -26,12 +26,16 @@ canonical one). Long fields are clamped to column limits.
 **4. Embed** (`domain/scoring.embed`). One multilingual E5 vector per posting, stored on the
 row (`postings.embedding`). Profiles cache their vector the same way.
 
-**5. Annotate requirements with canonical skills** *(being built — approved 2026-07-23)*.
-One LLM call per posting (platform key, background only): each must/nice requirement gets
-`skills: [...]` — the canonical skills that satisfy it ("native Android development" →
-`android, android sdk, kotlin|java`). User-independent knowledge, computed once, fingerprinted
-against the requirements text so unchanged postings are never re-annotated. This is what
-makes per-user verification instant and shared across users with similar qualifications.
+**5. Annotate requirements with canonical skills** (annotate-v1). One LLM call per posting
+(PLATFORM key only — user keys never touch shared data; background only): each must/nice
+requirement gets `skills: [...]` (canonical, lowercase; each listed skill ALONE satisfies
+the requirement) and `weight: 1-5` (importance in THIS posting — Kotlin ★★★★★ vs XML ★).
+Posting-level `annotation_version` + `annotation_fp` (hash of the requirement texts):
+unchanged postings are never re-annotated, and bumping the version lazily re-annotates
+only affected postings when the model/logic changes. This is what makes per-user coverage
+deterministic (skills ∩ annotation — instant, shared across users with similar
+qualifications) and demotes the per-user LLM verification to a fallback for postings the
+annotator hasn't reached.
 
 **6. Hygiene.** `retire_stale_postings` (>30 days by source date → `is_live=False`, every
 surface hides them), `retire_unseen_board_postings` (registry-board postings unseen 48h =
@@ -76,5 +80,19 @@ pages show titles/counts only — descriptions and apply links stay behind regis
 | Change | What recomputes |
 |---|---|
 | profile edited | its vector + all its matches (cleared, next search rebuilds + re-verifies) |
-| posting re-extracted (extractor release) | its requirements → annotation refingerprint; matches rescore on next search |
+| posting re-extracted (extractor release) | its requirements → annotation fp mismatch → re-annotated; matches rescore on next search |
+| annotate-vN bumped (new model/logic) | lazy re-annotation of every posting on its next ingest touch |
 | nothing changed | nothing — vectors, requirements, annotations and verifications are all cached |
+
+## Agreed evolution (owner discussion, 2026-07-23 — in priority order)
+
+1. ✅ (this doc) annotation with version/fingerprint + per-requirement weights
+2. hybrid candidate recall: title-token match OR stored-vector similarity above a threshold
+   (the lexical gate alone cuts recall — "Backend" must see "Software Developer")
+3. structured years-of-experience: extract `min_years` per posting + profile years; SOFT
+   penalty, not a hard reject (JD year demands are often aspirational)
+4. second embedding for the TITLE (role identity: QA vs Android share a stack) — also feeds
+   the semantic recall of (2)
+5. skills ontology: v1 synonyms/aliases (k8s=kubernetes…), v2 hierarchy via ESCO (Phase 4)
+6. coverage floor (reject below N% must-coverage); dynamic blend weights deliberately
+   deferred to the Phase-5 learning loop (tuning without outcome data is guesswork)
