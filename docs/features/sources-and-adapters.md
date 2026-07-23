@@ -1,27 +1,42 @@
 # Sources & Adapters
 
-**What it does:** fetches job postings from multiple sources, each through its own **isolated
+**What it does:** fetches job postings from many sources, each through its own **isolated
 adapter module** producing the normalized `RawPosting`. A change to one source can never break
-another (hard rule). Verified live sources:
+another (hard rule). Live platforms:
 
 | Adapter | Kind | Notes |
 |---|---|---|
-| `greenhouse.py` | ATS API | public board API; `absolute_url` is the canonical apply URL |
+| `greenhouse.py` | ATS API | public board API (`?content=true`); `absolute_url` canonical |
 | `lever.py` | ATS API | public postings API; `applyUrl` canonical |
 | `ashby.py` | ATS API | public job-board API; `isRemote` annotated into location |
-| `dev_bg.py` | RSS | official WordPress job feed (per-category, hourly); BG IT market |
-| `jobtiger.py` | sitemap+HTML | robots-permitted job pages, explicit `ClaudeBot Crawl-Delay: 30` honoured (skip-known-before-fetch, page cap, injected sleep); JSON-LD JobPosting parsing; **all professions**; daily job only |
-| `remoteok.py` | JSON | global remote board; element [0] is a legal notice (skipped) |
-| `wwr.py` | RSS | WeWorkRemotely; title "Company: Role" split |
+| `workable.py` | ATS API | POST v3 list + v2 detail (the v1 widget is dead); description / requirements / benefits are SEPARATE fields — benefits never enter the text; paced detail GETs |
+| `smartrecruiters.py` | ATS API | offset-paginated list + per-posting detail; marketing/benefits sections skipped; **probe requires totalFound>0** — the API answers 200 for ANY slug (105 phantom boards once, rolled back) |
+| `recruitee.py` | ATS API | one GET per company (`{slug}.recruitee.com/api/offers/`); separate description/requirements |
+| `personio.py` | ATS XML | `{slug}.jobs.personio.de|com/xml`; named sections become plain-text headers |
+| `teamtailor.py` | RSS | `<careers-site>/jobs.rss` — works on CUSTOM domains (careers.mypos.com) |
+| `jsonld_careers.py` | generic HTML | robots-checked; schema.org JobPosting on/behind any careers page; companies activate via `python -m app.tools.probe_jsonld` |
+| `dev_bg.py` | RSS | global feed (recency window) + per-profile targeted search feed; company derived from URL slug vs guid/title (repost `-1-1` suffixes handled) |
+| `jobtiger.py` | sitemap+HTML | `ClaudeBot Crawl-Delay: 30` honoured; daily job only |
+| `remoteok.py` / `wwr.py` | JSON / RSS | global remote boards; run on every ingest |
 
-**Deliberately skipped:** jobs.bg (hard-403s everything incl. robots.txt — we don't scrape
-against a site's expressed will; partnership is the future path). Workable deferred (its
-widget API returned no jobs for any tested slug). Future candidates: zaplata.bg, rabota.bg,
-karieri.bg (robots-permitted, sitemaps available).
+**Company registry** (`companies` table: name, industry, website, careers_url, ats/slug,
+active — 165+ real BG employers over 19 industries): one adapter serves every company on the
+same platform. Tools:
+- `python -m app.tools.detect_companies [--force]` — probes name-derived slugs on all ATS;
+- `python -m app.tools.find_careers` — finds careers pages from websites (homepage link →
+  common paths, asset links filtered) and runs detection against them — how custom-domain
+  boards (myPOS→Teamtailor) are found;
+- **always verify a probe hit's identity** before crawling (feed/channel names, offices) —
+  greenhouse/bulgaria was capSpire, personio/kbc a Munich firm; phantom boards mislabel data.
 
-**Modules:** `data/sources/*.py` (one per source), `data/sources/base.py` (registry),
-`data/sources/http.py` (shared HTTP with browser-like headers where needed),
-`data/sources/seed_boards.py` (verified company slugs). Users can also list/add their own
-sources on the Sources screen (`presentation/routers/sources.py`).
+**Shared HTTP** (`data/sources/http.py`): browser-like headers, JSON GET/POST, `url_status`,
+and a **per-host 429 backoff cache** (Retry-After honoured, 15 min default) — one rate-limit
+answer silences the whole host instead of extending its penalty window (Workable sent a
+Retry-After of 8 hours once).
 
-**Tests:** `tests/test_adapters_*.py`, `tests/test_sources.py`.
+**Deliberately skipped:** jobs.bg (403s everything — we don't scrape against a site's
+expressed will), LinkedIn auto-search (ToS). The /sources page lists ONLY platforms an
+adapter actually crawls — no aspirational entries (owner rule; also: no demo data anywhere).
+
+**Tests:** `tests/test_adapters_*.py`, `tests/test_companies.py`, `tests/test_sources.py`,
+`tests/test_http_backoff.py`.

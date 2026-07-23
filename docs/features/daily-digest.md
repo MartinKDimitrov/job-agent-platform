@@ -1,10 +1,12 @@
 # Daily Digest
 
-**What it does:** once a day (cron: `python -m app.jobs`) the system fetches all sources
-**once**, then for every **active** user with profiles scores the batch and emails only the
-**new** matches above their threshold. Never re-notifies the same match (`DigestEntry` marks
-sent pairs). Users are skipped when they toggled **"I found a job"** or haven't been seen in
-the last **5 days** (`UserActivity.last_seen_at`, touched on authenticated requests).
+**What it does:** once a day (cron: `python -m app.jobs`) the system ingests all sources
+**once** (via `ingest_from_sources`, incl. registry boards + targeted queries), then for
+every **active** user with profiles runs the DB-first `search_db` and emails only the
+**new** matches above their threshold — live postings only, in the **user's language**
+(the EN/BG switcher persists to `UserActivity.lang`; the cron job has no cookies). Never
+re-notifies the same match (`DigestEntry`). Users are skipped when they toggled **"I found
+a job"** or haven't been seen in the last **5 days**.
 
 Email goes through SMTP when configured (`SMTP_HOST` etc. in env); otherwise dev-mode logs the
 message so the whole flow is exercisable without an email account. The slow JobTiger source

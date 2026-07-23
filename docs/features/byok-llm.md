@@ -40,7 +40,16 @@ browser's print dialog saves the styled PDF; at deploy time the same template ge
 server-side renderer (weasyprint) for one-click downloads. Regenerate controls (other
 language EN↔BG, other kind CV↔Letter) resolve the profile via the Match table.
 
-**Coming next:** 3.5 server-side Ollama fallback with daily limits + server-side PDF
-rendering (deploy phase); prompt eval harness after first real-world use.
+**Free lane (shipped):** users WITHOUT a key generate through the platform's shared provider
+(`SERVER_LLM_PROVIDER/_API_KEY/_MODEL` env — groq free tier now, ollama at deploy), capped at
+`FREE_DOCS_PER_DAY` (3) per user; hitting the cap explains itself and points to BYOK.
+With neither key nor lane, the CV/Letter buttons land on Account with an ask-for-key banner
+at exactly the moment the key is needed. BYOK users stay unlimited on their own provider.
+
+**Coverage verification (shipped):** the same provider chain powers the match verification
+pass (verify-v1, no doc-quota use) — see search-and-scoring.md.
+
+**Coming next:** requirement skill-annotation at ingest (one LLM call per POSTING, shared by
+all users — approved 2026-07-23); server-side PDF rendering at deploy; prompt eval harness.
 
 **Tests:** `tests/test_llm_providers.py`, `tests/test_byok_settings.py`, `tests/test_generate.py`.

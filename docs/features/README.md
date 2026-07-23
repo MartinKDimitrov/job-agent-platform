@@ -5,7 +5,8 @@ file in the same change that alters behaviour (required — see CLAUDE.md §5).
 
 - [auth-and-accounts.md](auth-and-accounts.md) — register/login, Google OAuth, GDPR export/delete, found-job pause
 - [onboarding.md](onboarding.md) — occupation-first light profile creation
-- [search-and-scoring.md](search-and-scoring.md) — the Search-now pipeline, hard filters, scoring
+- [matching-pipeline.md](matching-pipeline.md) — **the canonical end-to-end**: raw posting text → "this job is good for you"
+- [search-and-scoring.md](search-and-scoring.md) — DB-first search, hard filters, scoring, LLM verification
 - [sources-and-adapters.md](sources-and-adapters.md) — the job sources and the one-adapter-per-source rule
 - [dedup.md](dedup.md) — cross-source deduplication
 - [daily-digest.md](daily-digest.md) — daily background search + email notifications

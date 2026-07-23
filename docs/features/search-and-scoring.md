@@ -1,25 +1,42 @@
-# Search & Scoring
+# Search & Scoring (DB-first)
 
-**What it does:** "Search now" on a profile fetches postings from the fast sources, keeps ones
-whose title matches the profile's keywords (cheap pre-filter), ingests them (dedup), applies
-**hard filters** (a management role is dropped for an IC profile; junior roles for senior
-profiles; onsite roles in non-preferred locations for remote candidates), extracts structured
-requirements from each JD, scores each surviving posting against the profile, and shows
-matches ≥ the profile's threshold with covered/missing chips and a direct Apply link. The
-threshold (`min_match`, default 65%) is tunable inline from the list.
+**Model:** the index is WRITTEN in the background (ingest every `INGEST_EVERY_HOURS` via the
+in-app daemon thread, or cron `python -m app.jobs ingest`); "Search now" only READS it — no
+network on the user's path (test-guaranteed), sub-second over 1000+ postings. The canonical
+end-to-end walkthrough lives in **matching-pipeline.md**.
 
-**Scoring** = local E5 embeddings semantic similarity (free, CPU) blended with weighted
-requirement coverage (must-have > nice-to-have; responsibilities shown but not scored),
-falling back to keyword-only when the model is unavailable.
+**Ingest-time enrichment (once per posting, shared by all users):** requirement extraction
+(must/nice/resp/soft), one stored E5 vector, posted_at/last_seen_at bookkeeping, hygiene:
+- age rule: older than `POSTING_MAX_AGE_DAYS` (30) → retired from every surface;
+- takedown: registry-board postings unseen for 48h retire; window sources (dev.bg…) get a
+  budgeted 404 URL probe instead; re-seen postings resurrect unless past the age rule.
 
-**UI (one-page app):** the logged-in experience is a single screen — profile tabs + threshold + Search now in a sticky control strip, match cards with a circular score ring, gap chips, generated documents inline on each card, and the onboarding card as the empty state for brand-new users. Account actions live in the header dropdown menu.
+**Read side per profile** (`search_db`): exact-token title prefilter (generic tokens
+excluded) → hard filters, with retroactive deletion of matches that a NEWER filter rejects:
+- seniority (management vs IC, junior vs senior);
+- location (onsite/hybrid outside preferred locations);
+- **geo** (country restrictions incl. description phrases like "eligible to work in the US",
+  honoured unless the user ticked *willing to relocate*; EU-wide passes for EU residents);
+- **no-requirements rule**: zero extracted must/nice = blind scoring → never shown.
 
-**Modules**
-- `application/usecases/search.py` — the pipeline (`run_search`, `fetch_all`, `fetch_extra`,
-  source lists, per-source error isolation).
-- `domain/scoring.py`, `domain/extraction.py`, `domain/filters.py` — the pure logic.
-- `data/ingest.py` — persistence + dedup application.
-- `presentation/routers/profiles.py` — profile CRUD, search route, results view.
+**Scoring** — one formula everywhere (`domain.scoring.blend`):
+`0.35 × semantic + 0.65 × weighted coverage` (must 1.0 / nice 0.4 / resp,soft 0); semantic
+= rescaled E5 cosine of the stored vectors; sem-only capped at 60%. Covered/missing stored
+per Match for the UI panels.
 
-**Tests:** `tests/test_crawl.py`, `tests/test_scoring.py`, `tests/test_extraction.py`,
-`tests/test_filters.py`, `tests/test_profiles.py`.
+**LLM coverage verification** (verify-v1): top matches above the threshold get a budgeted
+(`VERIFY_TOP_N`), cached-forever, best-effort LLM re-labeling of hits ('api' ≠ GraphQL,
+'A2' ≠ fluent English); scores recompute through the SAME blend; "✦ AI-checked" chip.
+Provider chain: user BYOK → platform free lane → silent no-op.
+
+**UI (one-page app, EN/BG):** profile tabs + threshold tuner + Search now; match cards with
+score ring, covered / not-in-your-profile / considered-an-advantage panels, source badge,
+Apply + CV/Letter buttons.
+
+**Modules:** `application/usecases/search.py`, `ingest_job.py`, `verify_coverage.py`;
+`domain/scoring.py`, `extraction.py`, `filters.py`, `prompts/verify_v1.py`;
+`presentation/routers/profiles.py` (CRUD incl. country/relocate, feed).
+
+**Tests:** `tests/test_crawl.py`, `test_ingest_job.py`, `test_scoring.py`,
+`test_extraction.py`, `test_filters.py`, `test_posting_age.py`, `test_verify.py`,
+`test_profiles.py`.

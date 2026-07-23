@@ -24,7 +24,7 @@ the owner's own job search — see that project's `CLAUDE.md`).
 
 ---
 
-## 2. Current state (Phase 1 — foundation, built and running)
+## 2. Current state (Phases 1–3 done + Phase 2 sources expansion; 296 tests)
 
 Working:
 - **Auth** — register / login with email + password (bcrypt directly, JWT in an httpOnly cookie).
@@ -49,9 +49,29 @@ Working:
   700px, full-width buttons, 16px inputs to stop iOS zoom).
 - **DB** — PostgreSQL. Tables auto-create on startup (`init_db`).
 
-Not built yet: automatic fetching from sources (Phase 2), CV/cover-letter generator
-(Phase 3), multi-profession taxonomy + digest (Phase 4), email response monitor (Phase 5),
-SEO/GEO layer.
+- **DB-first search** — background ingest every 6h (in-app thread / `python -m app.jobs
+  ingest`) writes the index (1000+ live postings); "Search now" reads only (sub-second,
+  zero network — test-guaranteed). Enrichment at ingest: requirements, E5 vector,
+  posted/last-seen bookkeeping; hygiene: >30d age retire, board-unseen takedown (48h),
+  budgeted 404 URL probe; matches rejected by newer filters are cleaned retroactively.
+- **Sources** — 13 adapters (greenhouse/lever/ashby/workable/smartrecruiters/recruitee/
+  personio/teamtailor/jsonld_careers/dev_bg/jobtiger/remoteok/wwr) + company registry
+  (165+ BG firms, 19 industries) with ATS auto-detection and careers-page discovery; 429
+  backoff in the shared HTTP layer. Full map: docs/features/sources-and-adapters.md.
+- **Scoring & filters** — one blend formula (0.35 sem + 0.65 coverage, sem-only cap 60%);
+  must/nice/resp/soft extraction (EN+BG, typography/benefit/marketing traps handled);
+  hard filters: seniority, location, geo (country + relocate willingness), no-requirements
+  rule. LLM coverage verification (verify-v1): top-8/search, cached per match, BYOK→free
+  lane→no-op, "✦ AI-checked" chip. Canonical walkthrough: docs/features/matching-pipeline.md.
+- **Documents** — BYOK CV/letters (gemini/groq/ollama, encrypted keys) + platform FREE lane
+  (`SERVER_LLM_PROVIDER`, 3 docs/day/user) with ask-for-key-on-click UX; editable, A4 print.
+- **Digest** — daily, gated (found-job / 5-day inactivity), no re-notification, user's
+  language (UserActivity.lang).
+- **UI/i18n** — one-page app fully EN/BG (incl. onboarding, documents, account, digest
+  email, public SEO pages); ripple, full-screen loading, source badges.
+
+Next: requirement skill-annotation at ingest (approved — 1 LLM call per posting, shared
+across users), applications dashboard, ESCO full taxonomy, VPS deploy (+Alembic, SMTP).
 
 ---
 
