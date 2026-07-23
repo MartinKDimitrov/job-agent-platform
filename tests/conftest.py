@@ -19,6 +19,10 @@ os.environ["GOOGLE_CLIENT_SECRET"] = ""
 os.environ["INGEST_EVERY_HOURS"] = "0"
 # The takedown probe GETs real posting URLs (dev.bg...) — never from tests.
 os.environ["TAKEDOWN_PROBE_BUDGET"] = "0"
+# A local .env with the platform's free-lane LLM key would make tests call the REAL
+# provider (generation and coverage verification) — force the lane off.
+os.environ["SERVER_LLM_PROVIDER"] = ""
+os.environ["SERVER_LLM_API_KEY"] = ""
 
 import pytest
 from sqlalchemy import event

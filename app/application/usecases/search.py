@@ -368,9 +368,15 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         # usable for the caller (record_run etc.).
         db.rollback()
         log.info("concurrent search for profile %s — matches saved by the other run", profile.id)
+    # LLM double-check of the covered/missing split for the matches the user will actually
+    # see (budgeted, cached per match, silently skipped without any provider).
+    from .verify_coverage import verify_top_matches
+    ver = verify_top_matches(db, profile)
     if stats is not None:
-        stats.add(filtered=filtered, scored=scored, matched=matched)
-    return {"pool": pool, "filtered": filtered, "scored": scored, "matched": matched}
+        stats.add(filtered=filtered, scored=scored, matched=matched,
+                  llm_verified=ver["verified"])
+    return {"pool": pool, "filtered": filtered, "scored": scored, "matched": matched,
+            "llm_verified": ver["verified"]}
 
 
 def run_search(db: Session, profile, boards=None, limit: int | None = None,

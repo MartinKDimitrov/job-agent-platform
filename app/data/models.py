@@ -90,6 +90,7 @@ class Match(Base):
     profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"), index=True)
     posting_id: Mapped[int] = mapped_column(ForeignKey("postings.id", ondelete="CASCADE"), index=True)
     score: Mapped[float] = mapped_column(Float, default=0.0)
+    llm_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # coverage LLM-checked
     covered: Mapped[list | None] = mapped_column(JSON, nullable=True)
     missing: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

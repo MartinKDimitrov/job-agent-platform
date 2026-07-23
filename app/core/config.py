@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     server_llm_api_key: str = ""
     server_llm_model: str = ""
     free_docs_per_day: int = 3
+    # LLM coverage verification: how many top matches to double-check per search (0 = off).
+    # Verified matches are never re-checked, so the cost is one-time per match.
+    verify_top_n: int = 8
 
     # Public base URL, used for absolute canonical/OG URLs, robots.txt and sitemap.xml.
     # Set to the real domain in production (e.g. https://jobagent.example).

@@ -93,19 +93,39 @@ def score(profile_text: str, posting_text: str, requirements=None,
 
     pe = profile_vec if profile_vec is not None else embed(profile_text)
     se = posting_vec if posting_vec is not None else embed(posting_text)
-    if pe is not None and se is not None:
-        sem = _cosine(pe, se)          # ~0..1 for E5 normalized
-        sem_pct = max(0.0, min(1.0, (sem - 0.6) / 0.35))  # rescale typical 0.6..0.95 band
-        # Coverage dominates the blend: E5 similarity gives a high baseline for ANY tech text,
-        # which inflated scores like "45% with 1 of 26 requirements covered" (owner report).
-        # Semantic similarity refines; requirement coverage decides.
-        if kw_ratio is None:
-            # No requirement evidence at all (extractor found nothing) — similarity alone
-            # never claims above 60%, else a "0 covered" card can show an 86% ring.
-            base = min(sem_pct, 0.60)
-        else:
-            base = 0.35 * sem_pct + 0.65 * kw_ratio
-    else:
-        base = kw_ratio if kw_ratio is not None else 0.0
+    sem_pct = semantic_pct(pe, se)
+    return round(blend(sem_pct, kw_ratio) * 100), covered, missing
 
-    return round(base * 100), covered, missing
+
+def semantic_pct(profile_vec, posting_vec) -> float | None:
+    """Cosine similarity rescaled from E5's typical 0.6..0.95 band to 0..1 (None w/o vectors)."""
+    if profile_vec is None or posting_vec is None:
+        return None
+    sem = _cosine(profile_vec, posting_vec)
+    return max(0.0, min(1.0, (sem - 0.6) / 0.35))
+
+
+def blend(sem_pct: float | None, kw_ratio: float | None) -> float:
+    """The one scoring formula — also used by the LLM verification pass when it recomputes
+    a score from corrected coverage, so the two can never drift apart.
+    Coverage dominates: E5 similarity gives a high baseline for ANY tech text, which
+    inflated scores like '45% with 1 of 26 covered' (owner report). Without requirement
+    evidence, similarity alone never claims above 60%."""
+    if sem_pct is None:
+        return kw_ratio if kw_ratio is not None else 0.0
+    if kw_ratio is None:
+        return min(sem_pct, 0.60)
+    return 0.35 * sem_pct + 0.65 * kw_ratio
+
+
+def coverage_ratio(requirements_with_hits) -> float | None:
+    """Weighted coverage from [({'text','kind'}, hit: bool)] pairs — the verifier's way to
+    recompute the ratio after the LLM corrects individual hits."""
+    w_cov = w_tot = 0.0
+    for r, hit in requirements_with_hits:
+        w = _KIND_WEIGHT.get(r.get("kind", "must"), 1.0)
+        if w > 0:
+            w_tot += w
+            if hit:
+                w_cov += w
+    return (w_cov / w_tot) if w_tot else None

@@ -135,7 +135,7 @@ def _score_ring(sc: float) -> str:
             f"</svg><span class='num'>{pct}%</span></div>")
 
 
-def _gaps_block(covered, missing, lang: str = "en") -> str:
+def _gaps_block(covered, missing, lang: str = "en", verified: bool = False) -> str:
     """Why a posting scored as it did — calm by default (owner feedback: the red chips were too
     intrusive). Collapsed: '✓ N covered · ⚠ N to check'. Click expands a tidy two-column panel
     with the FULL requirement texts (covered vs missing). Transparency on demand."""
@@ -151,6 +151,8 @@ def _gaps_block(covered, missing, lang: str = "en") -> str:
         chips += f"<span class='chip count'>✓ {len(cov_items)} {escape(t('gaps.covered', lang))}</span>"
     if n_missing:
         chips += f"<span class='chip warn'>⚠ {n_missing} {escape(t('gaps.to_check', lang))}</span>"
+    if verified and (cov_items or n_missing):
+        chips += f"<span class='chip ai'>✦ {escape(t('gaps.verified', lang))}</span>"
     if not chips:
         return ""
     if not n_missing:
@@ -394,7 +396,7 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
            f"<button class='btn gray small' title=\"{escape(t('app.letter_title', lang))}\">{icon('mail')}{escape(t('app.letter', lang))}</button></form>")
     return (f"<div class='match-card'>{_score_ring(m.score)}<div class='body'>"
             f"<div class='title'>{escape(post.title)}</div>{meta_html}"
-            f"{_gaps_block(m.covered, m.missing, lang)}{docs_html}"
+            f"{_gaps_block(m.covered, m.missing, lang, verified=bool(m.llm_verified))}{docs_html}"
             f"<div class='actions'>{apply_btn}{gen}</div></div></div>")
 
 
