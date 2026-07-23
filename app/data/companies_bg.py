@@ -33,7 +33,7 @@ BG_COMPANIES: list[dict] = [
     {"name": "Melon", "industry": "IT", "website": "https://www.melontech.com"},
     {"name": "MentorMate", "industry": "IT", "website": "https://mentormate.com"},
     {"name": "Milestone Systems", "industry": "IT", "website": "https://www.milestonesys.com"},
-    {"name": "Musala Soft", "industry": "IT", "website": "https://www.musala.com"},
+    {"name": "Avenga (Musala Soft)", "industry": "IT", "website": "https://www.musala.com"},
     {"name": "Nemetschek Bulgaria", "industry": "IT", "website": "https://nemetschek.bg"},
     {"name": "Netcompany Bulgaria", "industry": "IT", "website": "https://www.netcompany.com"},
     {"name": "OfficeRnD", "industry": "IT", "website": "https://www.officernd.com"},
@@ -134,8 +134,8 @@ BG_COMPANIES: list[dict] = [
     # --- BPO / shared services ---
     {"name": "TELUS Digital Bulgaria", "industry": "BPO", "website": "https://www.telusdigital.com"},
     {"name": "Concentrix Bulgaria", "industry": "BPO", "website": "https://www.concentrix.com"},
-    {"name": "Sutherland Bulgaria", "industry": "BPO", "website": "https://www.sutherlandglobal.com"},
-    {"name": "TTEC Bulgaria", "industry": "BPO", "website": "https://www.ttec.com"},
+    {"name": "Sutherland", "industry": "BPO", "website": "https://www.sutherlandglobal.com"},
+    {"name": "TTEC", "industry": "BPO", "website": "https://www.ttec.com"},
     {"name": "Cargill Bulgaria", "industry": "Shared services", "website": "https://www.cargill.com"},
     {"name": "Astrea Recruitment", "industry": "BPO", "website": "https://www.astreabg.com"},
     # --- largest employers by headcount (Капитал 100 / Forbes 1000, добавени 2026-07) ---
@@ -184,7 +184,7 @@ BG_COMPANIES: list[dict] = [
     {"name": "Reward Gateway", "industry": "IT", "website": ""},
     {"name": "ReceiptBank", "industry": "IT", "website": ""},
     {"name": "Telerik Academy", "industry": "Education", "website": ""},
-    {"name": "Uber Bulgaria", "industry": "IT", "website": ""},
+    {"name": "Uber", "industry": "IT", "website": ""},
 ]
 
 # Backwards-compatible name list (the detection CLI and older callers use plain names).
