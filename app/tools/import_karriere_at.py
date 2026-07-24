@@ -34,6 +34,9 @@ _NETWORK_HOSTS = ("karriere.at", "kcdn.at", "jobs.at", "itstellen.at", "financej
 
 _JOBS_RE = re.compile(r"(\d+)\s+offene[rn]?\s+Jobs?", re.I)
 _TITLE_RE = re.compile(r"<title>([^<|]+?)(?:\s*[-|]\s*[^<]*)?</title>", re.I)
+# some profile titles use ':' instead of '- City |' ("X GmbH: Karrierechancen, Kontaktdaten,
+# Fotos ...") — strip that marketing tail from the captured name
+_TITLE_TAIL_RE = re.compile(r"\s*:\s*Karrierechancen.*$", re.I)
 _HREF_RE = re.compile(r'href="(https?://[^"]+)"', re.I)
 _CAREERS_HINT = re.compile(r"karriere|career|jobs|stellen", re.I)
 
@@ -60,7 +63,7 @@ def parse_profile(html: str) -> dict | None:
     m = _TITLE_RE.search(html)
     if not m:
         return None
-    name = m.group(1).strip()
+    name = _TITLE_TAIL_RE.sub("", m.group(1)).strip()
     jobs = 0
     jm = _JOBS_RE.search(html)
     if jm:
