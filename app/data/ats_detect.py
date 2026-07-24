@@ -71,6 +71,14 @@ def _probe_personio(slug: str) -> bool:
     return False
 
 
+def _probe_workday(base_url: str) -> bool:
+    # base_url is the CXS base (…/wday/cxs/{tenant}/{site}); a real board answers the list POST
+    from .sources.http import post_json
+    j = post_json(f"{base_url.rstrip('/')}/jobs",
+                  {"appliedFacets": {}, "limit": 1, "offset": 0, "searchText": ""})
+    return isinstance(j, dict) and "jobPostings" in j
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
@@ -81,7 +89,14 @@ _PROBES: dict[str, callable] = {
     "smartrecruiters": _probe_smartrecruiters,
     "recruitee": _probe_recruitee,
     "personio": _probe_personio,
+    "workday": _probe_workday,
 }
+
+# Workday CXS host + site, from a myworkdayjobs URL anywhere on the careers page/SPA config.
+# e.g. https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/... ->
+#      host=nvidia.wd5.myworkdayjobs.com tenant=nvidia site=NVIDIAExternalCareerSite
+_WORKDAY_RE = re.compile(
+    r"https?://([\w-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[\w-]{2,5}/)?([\w-]+)", re.I)
 
 _CAREERS_PATTERNS = [
     ("greenhouse", re.compile(r"boards(?:-api)?\.greenhouse\.io/(?:v1/boards/)?([\w-]+)", re.I)),
@@ -121,6 +136,15 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
         m = pat.search(html)
         if m:
             return ats, m.group(1)
+    # Workday: the big-enterprise board. Its host+site appears in the careers page/SPA config;
+    # the board id is the whole CXS base URL (three parts — tenant, datacenter, site).
+    wd = _WORKDAY_RE.search(html)
+    if wd:
+        tenant, dc, site = wd.group(1), wd.group(2), wd.group(3)
+        # skip generic path words that aren't a real site slug
+        if site.lower() not in ("en-us", "en", "job", "jobs", "wday"):
+            base = f"https://{tenant}.{dc}.myworkdayjobs.com/wday/cxs/{tenant}/{site}"
+            return "workday", base
     # Teamtailor white-labels on the company's OWN domain (careers.mypos.com) — no external
     # link to match, but the page code is full of teamtailor fingerprints. The board id is
     # then the careers site's base URL itself; detect() verifies it via /jobs.rss.

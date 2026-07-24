@@ -220,10 +220,12 @@ def _registry_postings(db: Session, stats=None) -> list[RawPosting]:
     """Career pages from the company REGISTRY (ROADMAP 16б): every active company with a
     detected ATS board, fetched through the matching adapter. One adapter serves them all."""
     from ...data.company_repo import boards_for
+    from ...data.sources import workday
     adapters = {"greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch,
                 "workable": workable.fetch, "teamtailor": teamtailor.fetch,
                 "jsonld": jsonld_careers.fetch, "smartrecruiters": smartrecruiters.fetch,
-                "recruitee": recruitee.fetch, "personio": personio.fetch}
+                "recruitee": recruitee.fetch, "personio": personio.fetch,
+                "workday": workday.fetch}
     out: list[RawPosting] = []
     for ats, fetch_fn in adapters.items():
         count = 0
