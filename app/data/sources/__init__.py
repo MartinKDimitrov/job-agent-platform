@@ -12,3 +12,4 @@ from . import jobtech     # noqa: F401  (registers "jobtech" — Platsbanken SE,
 from . import arbeitsagentur  # noqa: F401  (registers "arbeitsagentur" — BA Jobsuche DE)
 from . import francetravail   # noqa: F401  (registers "francetravail" — FR, OAuth-gated)
 from . import workday         # noqa: F401  (registers "workday" — enterprise ATS, CXS API)
+from . import successfactors  # noqa: F401  (registers "successfactors" — SAP CSB HTML)

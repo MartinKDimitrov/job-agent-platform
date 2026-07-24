@@ -79,6 +79,12 @@ def _probe_workday(base_url: str) -> bool:
     return isinstance(j, dict) and "jobPostings" in j
 
 
+def _probe_successfactors(base_url: str) -> bool:
+    # base_url is the CSB host; its tile-search lists job-tile <li>s
+    body = fetch_text(f"{base_url.rstrip('/')}/tile-search-results/?q=")
+    return bool(body) and 'class="job-tile' in body
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
@@ -90,6 +96,7 @@ _PROBES: dict[str, callable] = {
     "recruitee": _probe_recruitee,
     "personio": _probe_personio,
     "workday": _probe_workday,
+    "successfactors": _probe_successfactors,
 }
 
 # Workday CXS host + site, from a myworkdayjobs URL anywhere on the careers page/SPA config.
@@ -145,6 +152,12 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
         if site.lower() not in ("en-us", "en", "job", "jobs", "wday"):
             base = f"https://{tenant}.{dc}.myworkdayjobs.com/wday/cxs/{tenant}/{site}"
             return "workday", base
+    # SuccessFactors CSB: the careers page IS the board (job-tile markup / tile-search on it).
+    # Board id = the careers site host itself; detect() verifies via the tile-search probe.
+    if 'class="job-tile' in html or "tile-search-results" in html:
+        from urllib.parse import urlparse
+        u = urlparse(careers_url)
+        return "successfactors", f"{u.scheme}://{u.netloc}"
     # Teamtailor white-labels on the company's OWN domain (careers.mypos.com) — no external
     # link to match, but the page code is full of teamtailor fingerprints. The board id is
     # then the careers site's base URL itself; detect() verifies it via /jobs.rss.
