@@ -58,4 +58,7 @@ def posted_of(ld: dict) -> datetime | None:
 
 def company_of(ld: dict) -> str:
     org = ld.get("hiringOrganization") or {}
-    return (org.get("name") if isinstance(org, dict) else str(org) or "").strip()
+    # a dict without a "name" key yields None here — guard BEFORE .strip() (operator
+    # precedence made the trailing `or ""` bind only to the else branch)
+    name = org.get("name") if isinstance(org, dict) else str(org)
+    return (name or "").strip()
