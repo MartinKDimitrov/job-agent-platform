@@ -70,8 +70,15 @@ def run_entries(entries: list[dict], delay: float = 1.0, force: bool = False) ->
                     and datetime.utcnow() - existing.detected_at < _RECHECK_AFTER))):
                 skipped += 1
                 continue
-            careers = find_careers_url(e.get("website", ""))
-            res = detect_verified(name, careers_url=careers)
+            try:
+                careers = find_careers_url(e.get("website", ""))
+                res = detect_verified(name, careers_url=careers)
+            except Exception as ex:  # noqa: BLE001 — one bad website must not abort the batch
+                print(f"  · {name}: detect error ({str(ex)[:50]})", flush=True)
+                db.rollback()
+                missed += 1
+                time.sleep(delay)
+                continue
             if res:
                 ats, slug, via = res
                 # via='guess' = a name-matching board found by slug guessing — three live

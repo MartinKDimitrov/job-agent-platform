@@ -77,7 +77,7 @@ def fetch_json(url: str, params: dict | None = None, timeout: float = DEFAULT_TI
         r = httpx.get(url, params=params, timeout=timeout, headers=headers, follow_redirects=True)
         r.raise_for_status()
         return r.json()
-    except (httpx.HTTPError, ValueError) as e:
+    except (httpx.HTTPError, ValueError, UnicodeError) as e:
         _handle_http_error(url, e)
         log.warning("fetch_json failed for %s: %s", url, e)
         return None
@@ -94,7 +94,7 @@ def post_json(url: str, body: dict, timeout: float = DEFAULT_TIMEOUT):
                        follow_redirects=True)
         r.raise_for_status()
         return r.json()
-    except (httpx.HTTPError, ValueError) as e:
+    except (httpx.HTTPError, ValueError, UnicodeError) as e:
         _handle_http_error(url, e)
         log.warning("post_json failed for %s: %s", url, e)
         return None
@@ -125,7 +125,7 @@ def fetch_text(url: str, params: dict | None = None, timeout: float = DEFAULT_TI
                       headers=_BROWSER_HEADERS, follow_redirects=True)
         r.raise_for_status()
         return r.text
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, UnicodeError) as e:
         _handle_http_error(url, e)
         log.warning("fetch_text failed for %s: %s", url, e)
         return None
