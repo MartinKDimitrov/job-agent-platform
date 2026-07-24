@@ -13,3 +13,4 @@ from . import arbeitsagentur  # noqa: F401  (registers "arbeitsagentur" — BA J
 from . import francetravail   # noqa: F401  (registers "francetravail" — FR, OAuth-gated)
 from . import workday         # noqa: F401  (registers "workday" — enterprise ATS, CXS API)
 from . import successfactors  # noqa: F401  (registers "successfactors" — SAP CSB HTML)
+from . import rexx            # noqa: F401  (registers "rexx" — German mid-market ATS, HTML)

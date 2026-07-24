@@ -85,6 +85,12 @@ def _probe_successfactors(base_url: str) -> bool:
     return bool(body) and 'class="job-tile' in body
 
 
+def _probe_rexx(list_url: str) -> bool:
+    # list_url is a rexx joblist URL; a real board with live postings has ?yid=N job anchors
+    body = fetch_text(list_url)
+    return bool(body) and bool(re.search(r"[?&]yid=\d+", body))
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
@@ -97,6 +103,7 @@ _PROBES: dict[str, callable] = {
     "personio": _probe_personio,
     "workday": _probe_workday,
     "successfactors": _probe_successfactors,
+    "rexx": _probe_rexx,
 }
 
 # Workday CXS host + site, from a myworkdayjobs URL anywhere on the careers page/SPA config.
@@ -104,6 +111,15 @@ _PROBES: dict[str, callable] = {
 #      host=nvidia.wd5.myworkdayjobs.com tenant=nvidia site=NVIDIAExternalCareerSite
 _WORKDAY_RE = re.compile(
     r"https?://([\w-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[\w-]{2,5}/)?([\w-]+)", re.I)
+
+# rexx systems (German mid-market ATS). A careers page links EITHER the tenant portal host
+# ({tenant}-portal.rexx-recruitment.com) OR a company-hosted joblist mirror
+# (career.{domain}/…/aktuelle-stellenangebote.html). NB: rexx-SYSTEMS.com is the vendor's own
+# site (brand link) — not a board — so match only rexx-RECRUITMENT.com / the joblist URL.
+_REXX_HOST_RE = re.compile(r"https?://([\w-]+\.rexx-recruitment\.com)", re.I)
+_REXX_LIST_RE = re.compile(
+    r"https?://[^\"'\s]+?/(?:stellenangebote/aktuelle-stellenangebote|"
+    r"(?:[\w/-]*?)job-openings/current-job-offers)\.html", re.I)
 
 _CAREERS_PATTERNS = [
     ("greenhouse", re.compile(r"boards(?:-api)?\.greenhouse\.io/(?:v1/boards/)?([\w-]+)", re.I)),
@@ -165,6 +181,15 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
         from urllib.parse import urlparse
         u = urlparse(careers_url)
         return "teamtailor", f"{u.scheme}://{u.netloc}"
+    # rexx systems: server-rendered joblist. Board id = a fetchable list URL — prefer the
+    # canonical tenant portal, else the company-hosted mirror linked on the careers page.
+    rx = _REXX_HOST_RE.search(html)
+    if rx:
+        return "rexx", f"https://{rx.group(1)}/stellenangebote.html"
+    rl = _REXX_LIST_RE.search(html)
+    if rl:
+        from urllib.parse import urldefrag
+        return "rexx", urldefrag(rl.group(0).replace("&amp;", "&"))[0]
     return None
 
 
