@@ -168,19 +168,38 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
     return None
 
 
-# hrefs that smell like a careers page, in both languages of our market
+# hrefs that smell like a careers page, in the languages of our market (BG, EN, DE).
+# NB: German "Karriere" has a double r — an earlier `karier` (single r) silently missed every
+# German careers link, the single biggest cause of DE careers pages going undiscovered.
 _CAREERS_HREF_RE = re.compile(
-    r"""href=["']([^"']*(?:career|karier|kariera|jobs|rabota|jobads|vacanc|join-us|
-    работа|кариер)[^"']*)["']""", re.I | re.X)
+    r"""href=["']([^"']*(?:career|karrier|karier|kariera|jobs|stellenangebote|stellenanzeigen|
+    berufe|rabota|jobads|vacanc|join-us|работа|кариер)[^"']*)["']""", re.I | re.X)
 # fallback paths tried directly on the site when the homepage names no careers link
-_CAREERS_PATHS = ("/careers", "/career", "/kariera", "/karieri", "/jobs", "/en/careers",
-                  "/bg/kariera", "/rabota-pri-nas", "/za-nas/karieri")
-_CAREERS_SIGNAL_RE = re.compile(r"карие|career|jobs|работ|позици|vacanc|apply", re.I)
+_CAREERS_PATHS = ("/careers", "/career", "/karriere", "/de/karriere", "/karriere/stellenangebote",
+                  "/stellenangebote", "/jobs", "/jobs-und-karriere", "/unternehmen/karriere",
+                  "/en/careers", "/en/career", "/kariera", "/karieri", "/jobs", "/bg/kariera",
+                  "/rabota-pri-nas", "/za-nas/karieri")
+# careers/jobs live on a subdomain (karriere.acme.de, jobs.acme.com) at least as often as on a
+# path — Preh, MAHLE, Woco and RINGSPANN all do this. Synthesised from the registrable domain.
+_CAREERS_SUBDOMAINS = ("karriere", "career", "careers", "jobs", "stellen")
+_CAREERS_SIGNAL_RE = re.compile(
+    r"карие|career|jobs|karrier|stellenangebot|stellenanzeige|offene stellen|bewerb|"
+    r"работ|позици|vacanc|apply", re.I)
+
+
+def _careers_subdomain_urls(website: str) -> list[str]:
+    """https://karriere.<domain>, https://jobs.<domain>, … from the site's registrable domain."""
+    from urllib.parse import urlparse
+    host = urlparse(website).netloc.lower()
+    if not host or host.replace(".", "").isdigit():   # skip bare IPs
+        return []
+    domain = host[4:] if host.startswith("www.") else host
+    return [f"https://{sub}.{domain}" for sub in _CAREERS_SUBDOMAINS]
 
 
 def find_careers_url(website: str) -> str:
-    """Find a company's careers page starting from its main site: follow the first
-    careers-looking link on the homepage, else try the common paths. Returns '' when
+    """Find a company's careers page starting from its main site: follow careers-looking links
+    on the homepage, then careers subdomains, then common paths (BG/EN/DE). Returns '' when
     nothing answers with a careers-looking page."""
     from urllib.parse import urljoin
     website = (website or "").strip().rstrip("/")
@@ -194,7 +213,9 @@ def find_careers_url(website: str) -> str:
         if re.search(r"\.(css|js|png|jpe?g|svg|woff2?|ico|pdf)(\?|$)", href, re.I):
             continue
         candidates.append(urljoin(website + "/", href))
-        break
+        if len(candidates) >= 5:   # a few real links beat betting everything on the first
+            break
+    candidates += _careers_subdomain_urls(website)
     candidates += [website + p for p in _CAREERS_PATHS]
     for url in dict.fromkeys(candidates):
         page = fetch_text(url)
