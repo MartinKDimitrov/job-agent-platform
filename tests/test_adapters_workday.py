@@ -55,6 +55,16 @@ def test_workday_scan_ignores_generic_path_words(monkeypatch):
     assert ats.scan_careers_page("https://acme.com/careers") is None
 
 
+def test_workday_tenant_identity_check():
+    # a careers page can link a subsidiary's Workday (Deutsche Börse -> ISS) — reject those
+    ok = "https://qiagen.wd502.myworkdayjobs.com/wday/cxs/qiagen/QIAGEN"
+    bad = "https://issgovernance.wd1.myworkdayjobs.com/wday/cxs/issgovernance/ISScareers"
+    assert ats._workday_tenant_ok("Qiagen", ok) is True
+    assert ats._workday_tenant_ok("Air Liquide", ok.replace("qiagen", "airliquidehr")) is True
+    assert ats._workday_tenant_ok("Pernod Ricard", ok.replace("qiagen", "pernodricard")) is True
+    assert ats._workday_tenant_ok("Deutsche Börse", bad) is False
+
+
 def test_workday_probe_checks_jobpostings(monkeypatch):
     from app.data.sources import http as _http
     monkeypatch.setattr("app.data.sources.http.post_json",

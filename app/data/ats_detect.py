@@ -259,6 +259,22 @@ def names_match(expected: str, reported: str) -> bool:
     return ta <= tb or tb <= ta
 
 
+def _workday_tenant_ok(name: str, cxs_base: str) -> bool:
+    """The Workday tenant should relate to the company: the company's squished name is a
+    substring of the tenant (or vice versa), tolerating common tenant suffixes like 'hr'.
+    'airliquide' ⊆ 'airliquidehr' ✓; 'deutscheborse' vs 'issgovernance' ✗."""
+    m = _WORKDAY_RE.search(cxs_base)
+    if not m:
+        return False
+    # plain squish (no phonetic normalization — _org_norm maps c->k etc., which breaks
+    # 'pernodricard' vs 'pernodrikard'); just lowercase + drop non-alphanumerics
+    tenant = re.sub(r"(hr|inc|corp|group|careers|global)$", "", m.group(1).lower())
+    squished = re.sub(r"[^a-z0-9]", "", name.lower())
+    if len(squished) < 4 or len(tenant) < 4:
+        return False
+    return squished in tenant or tenant in squished
+
+
 def detect_verified(name: str, careers_url: str = "") -> tuple[str, str, str] | None:
     """detect() with the identity gate; returns (ats, slug, via) where via is 'careers' or
     'guess'. Careers-page boards are near-authoritative, but the page can also link SOMEONE
@@ -274,6 +290,15 @@ def detect_verified(name: str, careers_url: str = "") -> tuple[str, str, str] | 
         if found:
             ats, slug = found
             if probe_slug(ats, slug):
+                # Workday has no name API, and a careers page can link a SUBSIDIARY's Workday
+                # (Deutsche Börse's page linked issgovernance/ISS) — so verify the tenant
+                # against the company name by substring overlap, not just trust the link.
+                if ats == "workday":
+                    if _workday_tenant_ok(name, slug):
+                        return ats, slug, "careers"
+                    log.info("careers page of %s links a workday tenant that doesn't match "
+                             "(%s) — subsidiary/partner board, skipped", name, slug)
+                    return None      # no slug-guess path for workday; stop here
                 reported = board_display_name(ats, slug) if ats in _NAME_APIS else None
                 if (reported is None or names_match(name, reported)
                         or names_match(name, slug.replace("-", " "))):
