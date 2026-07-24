@@ -19,6 +19,7 @@ from ..data.ats_detect import detect, detect_verified, find_careers_url
 from ..data.company_repo import upsert_company
 from ..data.companies_bg import BG_COMPANY_NAMES
 from ..data.companies_eu import EU_COMPANIES
+from ..data.companies_largecap import LARGECAP_COMPANIES
 from ..data.db import SessionLocal
 from ..data.models import Company
 
@@ -107,7 +108,13 @@ if __name__ == "__main__":
         country = sys.argv[sys.argv.index("--country") + 1]
         args = [a for a in args if a != country]
     force = "--force" in sys.argv
-    if "--eu" in sys.argv:
+    if "--largecap" in sys.argv:
+        entries = LARGECAP_COMPANIES
+        if "--country" in sys.argv:
+            entries = [e for e in entries if e["country"] == country]
+        print(f"probing {len(entries)} large-cap companies (force={force})...")
+        print(run_entries(entries, force=force))
+    elif "--eu" in sys.argv:
         print(f"probing {len(EU_COMPANIES)} EU companies (force={force})...")
         print(run_entries(EU_COMPANIES, force=force))
     else:
