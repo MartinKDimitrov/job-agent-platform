@@ -23,8 +23,14 @@ def run(delay: float = 1.0) -> dict:
             Company.careers_url != "", Company.ats == "")).scalars().all()
         print(f"probing {len(targets)} companies for JobPosting JSON-LD...")
         for c in targets:
-            posts = jsonld_careers.fetch(c.careers_url, company_name=c.name,
-                                         max_jobs=3, delay=0.3)
+            try:
+                posts = jsonld_careers.fetch(c.careers_url, company_name=c.name,
+                                             max_jobs=3, delay=0.3)
+            except Exception as e:  # noqa: BLE001 — one bad page must not abort the batch
+                print(f"  · {c.name}: probe error ({str(e)[:60]})")
+                empty += 1
+                time.sleep(delay)
+                continue
             if posts:
                 upsert_company(db, c.name, ats="jsonld", ats_slug=c.careers_url)
                 print(f"  ✓ {c.name}: {len(posts)}+ postings via {c.careers_url}")
