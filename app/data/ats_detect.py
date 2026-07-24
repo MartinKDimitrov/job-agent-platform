@@ -91,6 +91,12 @@ def _probe_rexx(list_url: str) -> bool:
     return bool(body) and bool(re.search(r"[?&]yid=\d+", body))
 
 
+def _probe_softgarden(board_url: str) -> bool:
+    # board_url is the tenant base; its public JSON feed lists jobs under dataFeedElement
+    j = fetch_json(f"{board_url.rstrip('/')}/jobs.feed.json", browser=True)
+    return isinstance(j, dict) and isinstance(j.get("dataFeedElement"), list)
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
@@ -104,6 +110,7 @@ _PROBES: dict[str, callable] = {
     "workday": _probe_workday,
     "successfactors": _probe_successfactors,
     "rexx": _probe_rexx,
+    "softgarden": _probe_softgarden,
 }
 
 # Workday CXS host + site, from a myworkdayjobs URL anywhere on the careers page/SPA config.
@@ -120,6 +127,10 @@ _REXX_HOST_RE = re.compile(r"https?://([\w-]+\.rexx-recruitment\.com)", re.I)
 _REXX_LIST_RE = re.compile(
     r"https?://[^\"'\s]+?/(?:stellenangebote/aktuelle-stellenangebote|"
     r"(?:[\w/-]*?)job-openings/current-job-offers)\.html", re.I)
+
+# softgarden (German mid-market ATS market leader). Tenants: {tenant}.career.softgarden.{de|com|io}
+# — a careers page either IS the board or links it. Board id = the tenant base URL.
+_SOFTGARDEN_RE = re.compile(r"https?://([\w.-]+\.career\.softgarden\.(?:de|com|io))", re.I)
 
 _CAREERS_PATTERNS = [
     ("greenhouse", re.compile(r"boards(?:-api)?\.greenhouse\.io/(?:v1/boards/)?([\w-]+)", re.I)),
@@ -190,6 +201,10 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
     if rl:
         from urllib.parse import urldefrag
         return "rexx", urldefrag(rl.group(0).replace("&amp;", "&"))[0]
+    # softgarden: careers page is or links a {tenant}.career.softgarden.* board
+    sg = _SOFTGARDEN_RE.search(html)
+    if sg:
+        return "softgarden", f"https://{sg.group(1)}"
     return None
 
 
