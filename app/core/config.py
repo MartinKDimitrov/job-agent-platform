@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Silent no-op until both are set. Covers DE/FR/IT/GB/ES/NL/PL in one source.
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
+    # Jooble — pan-European aggregator API (free key from jooble.org/api/about). The one
+    # aggregator that natively covers BG + the Baltics. Keyword-driven; silent no-op unless set.
+    jooble_api_key: str = ""
     # Absolute zombie cap: postings older than this retire outright (window sources where a
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
