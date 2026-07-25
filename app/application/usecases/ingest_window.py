@@ -109,20 +109,34 @@ def _default_profiles_fn(db: Session):
 
 def run_ingest_window(session_factory, *, batch: int | None = None,
                       total_minutes: int | None = None, profiles_fn=_default_profiles_fn,
-                      now: datetime | None = None, sleep=time.sleep, clock=None) -> dict:
+                      now: datetime | None = None, sleep=time.sleep, clock=None,
+                      guard: bool = True) -> dict:
     """Dispatch the whole nightly window: plan shards, then run each at its offset, isolated.
-    `sleep`/`clock`/`now` are injected so tests exercise the pacing without waiting."""
+    `sleep`/`clock`/`now` are injected so tests exercise the pacing without waiting. `guard`
+    skips the run if a previous ingest window is still in progress (overlap protection)."""
+    from .window_guard import acquire_window, release_window
     total = total_minutes or window_minutes()
     start = now or datetime.utcnow()
     clock = clock or datetime.utcnow
-    with session_factory() as db:
-        shards = plan_shards(db, batch=batch, total_minutes=total)
-    log.info("ingest window: %d shards across %d min", len(shards), total)
-    results = []
-    for sh in shards:
-        wait = (start + timedelta(minutes=sh.offset_min) - clock()).total_seconds()
-        if wait > 0:
-            sleep(wait)
-        results.append(_run_shard(session_factory, sh, profiles_fn))
-    ok = sum(1 for r in results if r.get("ok"))
-    return {"shards": len(shards), "ok": ok, "failed": len(results) - ok, "results": results}
+    marker = acquire_window(session_factory, "ingest_window", now=start) if guard else None
+    if guard and marker is None:
+        log.warning("ingest_window already running — skipping this start")
+        return {"skipped": True, "shards": 0, "ok": 0, "failed": 0, "results": []}
+    try:
+        with session_factory() as db:
+            shards = plan_shards(db, batch=batch, total_minutes=total)
+        log.info("ingest window: %d shards across %d min", len(shards), total)
+        results = []
+        for sh in shards:
+            wait = (start + timedelta(minutes=sh.offset_min) - clock()).total_seconds()
+            if wait > 0:
+                sleep(wait)
+            results.append(_run_shard(session_factory, sh, profiles_fn))
+        ok = sum(1 for r in results if r.get("ok"))
+        summary = RunStats()
+        summary.add(shards=len(shards), shards_ok=ok, shards_failed=len(results) - ok)
+        release_window(session_factory, marker, ok=True, stats=summary)
+        return {"shards": len(shards), "ok": ok, "failed": len(results) - ok, "results": results}
+    except Exception as e:  # noqa: BLE001 — release the marker before propagating
+        release_window(session_factory, marker, ok=False, error=str(e))
+        raise
