@@ -39,6 +39,21 @@ def test_fetch_page_noop_without_keys(monkeypatch):
     assert az.fetch_page("de", 1) == ([], 0)
 
 
+def test_fetch_page_failed_call_returns_none_not_empty(monkeypatch):
+    _keys(monkeypatch)
+    monkeypatch.setattr(az, "fetch_json", lambda url, params=None, **k: None)  # 503 etc.
+    posts, total = az.fetch_page("de", 1, category="it-jobs")
+    assert posts is None and total == 0        # distinct from ([], total) — not a drained page
+
+
+def test_fetch_page_empty_results_is_not_a_failure(monkeypatch):
+    _keys(monkeypatch)
+    monkeypatch.setattr(az, "fetch_json",
+                        lambda url, params=None, **k: {"count": 500, "results": []})
+    posts, total = az.fetch_page("de", 1, category="it-jobs")
+    assert posts == [] and total == 500        # genuinely empty page, call succeeded
+
+
 def test_categories_maps_tag_label(monkeypatch):
     _keys(monkeypatch)
     monkeypatch.setattr(az, "fetch_json", lambda url, params=None, **k: {
@@ -107,6 +122,27 @@ def test_run_bulk_resumes_from_cursor_and_respects_budget(monkeypatch):
     with SessionLocal() as db:
         row = db.query(AdzunaPull).filter_by(country="de").one()
         assert row.next_page == 5 and row.pulled == 20
+
+
+def test_run_bulk_does_not_mark_done_on_failed_call(monkeypatch):
+    """A transient 503 mid-slice must NOT retire the slice or advance the cursor."""
+    _keys(monkeypatch)
+    monkeypatch.setattr(ab.adzuna, "categories", lambda c: [("it-jobs", "IT")])
+
+    def fake(country, page, *, category=None, what=None, results_per_page=5):
+        if page == 1:                                     # page 1 ok (full), page 2 fails
+            j = _page(country, 1, 5, 9999)
+            posts = [p for p in (az._to_posting(country, it) for it in j["results"]) if p]
+            return posts, 9999
+        return None, 0                                    # 503 -> failure signal
+    monkeypatch.setattr(ab.adzuna, "fetch_page", fake)
+
+    ab.run_bulk(SessionLocal, call_budget=10, pages_per_slice=10, results_per_page=5,
+                countries=("de",), sleep=lambda *_: None)
+    with SessionLocal() as db:
+        row = db.query(AdzunaPull).filter_by(country="de").one()
+        # page 1 committed (cursor at 2), page-2 failure left it there, slice NOT done
+        assert row.next_page == 2 and not row.done and row.pulled == 5
 
 
 def test_run_bulk_noop_without_keys(monkeypatch):

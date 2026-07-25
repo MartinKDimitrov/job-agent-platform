@@ -93,6 +93,10 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
                                              results_per_page=results_per_page)
             calls += 1
             pages_this_slice += 1
+            if posts is None:
+                # the call failed (e.g. transient 503) — leave the cursor exactly where it is
+                # (retry this same page next run) and move on; NEVER mark the slice done here.
+                break
             with session_factory() as db:
                 row = db.get(AdzunaPull, slice_id)
                 res = persist_postings(db, posts)
