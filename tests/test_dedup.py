@@ -63,6 +63,24 @@ def test_within_batch_duplicate_collapses():
         assert res["added"] == 1 and res["deduped"] == 1
 
 
+def test_duplicate_content_hash_does_not_crash_ingest():
+    """No DB-level unique constraint on content_hash, so a concurrent-writer race can leave two
+    rows with the same hash. ingest() must tolerate that (touch the first) — not raise
+    MultipleResultsFound and abort the whole run."""
+    with SessionLocal() as db:
+        rp = _rp("rss", "https://race/1")
+        chash = rp.content_hash()
+        # simulate the race outcome directly: two persisted rows sharing a content_hash
+        db.add_all([
+            Posting(title="A", company="Acme", url="https://race/1", apply_url="https://race/1",
+                    description="d", content_hash=chash),
+            Posting(title="A", company="Acme", url="https://race/1b", apply_url="https://race/1b",
+                    description="d", content_hash=chash)])
+        db.commit()
+        res = ingest(db, [rp])                  # would raise MultipleResultsFound before the fix
+        assert res["skipped"] == 1 and res["added"] == 0
+
+
 def test_ats_duplicate_upgrades_apply_url():
     with SessionLocal() as db:
         ingest(db, [_rp("html", "https://jobtiger.bg/j/1")])
