@@ -59,6 +59,42 @@ def _to_posting(country: str, it: dict) -> RawPosting | None:
              "salary_min": it.get("salary_min"), "salary_max": it.get("salary_max")})
 
 
+def _auth() -> dict:
+    return {"app_id": settings.adzuna_app_id, "app_key": settings.adzuna_app_key,
+            "content-type": "application/json"}
+
+
+def categories(country: str = "de") -> list[tuple[str, str]]:
+    """(tag, label) of Adzuna's ~30 job categories — the slices that cover ALL professions."""
+    if not _configured():
+        return []
+    j = fetch_json(f"https://api.adzuna.com/v1/api/jobs/{country}/categories", params=_auth())
+    return ([(c.get("tag"), c.get("label")) for c in j.get("results") or []]
+            if isinstance(j, dict) else [])
+
+
+def fetch_page(country: str, page: int, *, category: str | None = None, what: str | None = None,
+               results_per_page: int = RESULTS_PER_PAGE) -> tuple[list[RawPosting], int]:
+    """One search page -> (postings, Adzuna's total count for the query). The unit the bulk
+    pull iterates; count sizes the plan/progress."""
+    if not _configured():
+        return [], 0
+    params = {**_auth(), "results_per_page": results_per_page}
+    if category:
+        params["category"] = category
+    if what:
+        params["what"] = what
+    j = fetch_json(_BASE.format(country=country, page=page), params=params)
+    if not isinstance(j, dict):
+        return [], 0
+    out = []
+    for it in j.get("results") or []:
+        rp = _to_posting(country, it)
+        if rp is not None:
+            out.append(rp)
+    return out, int(j.get("count") or 0)
+
+
 def fetch(search_terms: list[str] | None = None, countries=COUNTRIES, pages: int = 1,
           results_per_page: int = RESULTS_PER_PAGE, sleep=time.sleep) -> list[RawPosting]:
     """One call per (term × country × page). With no terms, pulls each country's recent feed."""

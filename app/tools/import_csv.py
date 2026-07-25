@@ -13,6 +13,7 @@ SuccessFactors) activates the ones on a supported ATS. Deduped against the regis
 from __future__ import annotations
 
 import csv
+import re
 import sys
 
 from ..data.company_repo import upsert_company
@@ -23,9 +24,17 @@ _NAME_COLS = ("company", "name", "company name", "organization", "organisation",
 _SITE_COLS = ("website", "domain", "url", "site", "web", "homepage", "company website")
 _COUNTRY_COLS = ("country", "countrycode", "country code", "geo", "location", "hq country")
 
+# Derrick exports annotate every header with a source tag, e.g. "name (SCBP)",
+# "website (SCBP)". Strip a trailing "(...)" so the column still matches.
+_TAG_RE = re.compile(r"\s*\([^)]*\)\s*$")
+
+
+def _norm_header(h: str) -> str:
+    return _TAG_RE.sub("", h.strip().lower())
+
 
 def _pick(header: list[str], candidates: tuple[str, ...]) -> int | None:
-    low = [h.strip().lower() for h in header]
+    low = [_norm_header(h) for h in header]
     for c in candidates:
         if c in low:
             return low.index(c)

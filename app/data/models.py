@@ -222,6 +222,23 @@ class CrawlRun(Base):
     stats: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
+class AdzunaPull(Base):
+    """Resumable cursor for the category×country bulk pull of Adzuna (all professions). One row
+    per (country, category) slice — the nightly job advances next_page and updates counts, so
+    progress is checkable/board-able any time and the pull resumes exactly where it stopped."""
+    __tablename__ = "adzuna_pull"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    country: Mapped[str] = mapped_column(String(4), index=True)
+    category: Mapped[str] = mapped_column(String(64))
+    label: Mapped[str] = mapped_column(String(128), default="")
+    next_page: Mapped[int] = mapped_column(Integer, default=1)      # page to fetch next
+    pulled: Mapped[int] = mapped_column(Integer, default=0)         # postings persisted from slice
+    total: Mapped[int] = mapped_column(Integer, default=0)          # Adzuna's count for the slice
+    done: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("country", "category", name="uq_adzuna_slice"),)
+
+
 class Application(Base):
     __tablename__ = "applications"
     id: Mapped[int] = mapped_column(primary_key=True)

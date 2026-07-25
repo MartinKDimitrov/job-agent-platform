@@ -5,6 +5,8 @@
     python -m app.jobs ingest_window    # sharded, paced nightly crawl (00:00–08:00); one cron
                                         # line — the process sleeps between country shards
     python -m app.jobs detect_window    # sharded, paced ATS detection over pending companies
+    python -m app.jobs adzuna_bulk [call_budget]  # drain ALL Adzuna professions, resumable
+    python -m app.jobs adzuna_status    # print bulk-pull progress (per country / slice)
 """
 import sys
 
@@ -12,6 +14,7 @@ from .application.usecases.digest import run_daily_digest      # noqa: F401  (re
 from .application.usecases.ingest_job import run_ingest        # noqa: F401  (re-export)
 from .application.usecases.ingest_window import run_ingest_window  # noqa: F401  (re-export)
 from .application.usecases.detect_window import run_detect_window  # noqa: F401  (re-export)
+from .application.usecases import adzuna_bulk                  # noqa: F401  (re-export)
 
 if __name__ == "__main__":
     from .data.db import SessionLocal
@@ -20,6 +23,13 @@ if __name__ == "__main__":
         print(run_ingest_window(SessionLocal))     # long-running: paces itself across the window
     elif mode == "detect_window":
         print(run_detect_window(SessionLocal))     # long-running: paced detection shards
+    elif mode == "adzuna_bulk":
+        budget = int(sys.argv[2]) if len(sys.argv) > 2 else adzuna_bulk.DEFAULT_CALL_BUDGET
+        print(adzuna_bulk.run_bulk(SessionLocal, call_budget=budget))
+    elif mode == "adzuna_status":
+        import json
+        with SessionLocal() as db:
+            print(json.dumps(adzuna_bulk.status(db), indent=2, ensure_ascii=False))
     elif mode == "ingest":
         with SessionLocal() as db:
             print(run_ingest(db))
