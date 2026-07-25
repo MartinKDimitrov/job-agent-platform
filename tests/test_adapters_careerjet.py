@@ -15,7 +15,8 @@ def _job(i, loc=None):
 
 def _with_key(monkeypatch):
     monkeypatch.setattr(cj.settings, "careerjet_api_key", "APIKEY", raising=False)
-    monkeypatch.setattr(cj.settings, "careerjet_user_ip", "", raising=False)
+    monkeypatch.setattr(cj.settings, "careerjet_user_ip", "1.2.3.4", raising=False)
+    monkeypatch.setattr(cj.settings, "site_url", "https://jobagent.example", raising=False)
 
 
 def test_silent_noop_without_key(monkeypatch):
@@ -35,9 +36,10 @@ def test_fetch_basic_auth_locale_and_dedups(monkeypatch):
     assert len(posts) == 2                               # url-namespaced id dedups job 1
     params, headers = calls[0]
     assert params["locale_code"] == "bg_BG" and params["keywords"] == "python"
-    assert params["user_ip"] == "8.8.8.8"               # required-param default applied
+    assert params["user_ip"] == "1.2.3.4"               # real configured caller IP (not 8.8.8.8)
     expected = "Basic " + base64.b64encode(b"APIKEY:").decode()
     assert headers["Authorization"] == expected         # API key as Basic-auth username
+    assert headers["Referer"] == "https://jobagent.example"   # v4 403s without a Referer
     p = posts[0]
     assert p.company == "Acme" and p.location == "Sofia, Bulgaria" and p.posted_at.year == 2026
     assert p.raw["salary_currency"] == "BGN" and p.raw["country"] == "BG"

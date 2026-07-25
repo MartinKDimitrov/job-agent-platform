@@ -21,7 +21,7 @@ from ...core.config import settings
 from ...domain.entities import RawPosting
 from ...domain.text import html_to_text
 from .base import register
-from .http import fetch_json
+from .http import fetch_json, fetch_text
 
 _API = "https://search.api.careerjet.net/v4/query"
 # our markets -> Careerjet locale codes (it covers BG natively, unlike Adzuna)
@@ -29,7 +29,8 @@ LOCALES = {"gb": "en_GB", "de": "de_DE", "fr": "fr_FR", "it": "it_IT", "es": "es
            "nl": "nl_NL", "pl": "pl_PL", "bg": "bg_BG"}
 PAGE_SIZE = 50
 CALL_DELAY = 0.3
-_UA = "JobAgent/0.1 (+https://localhost)"
+_UA = "Mozilla/5.0 (compatible; JobAgent/0.1; +https://localhost)"
+_outbound_ip: str | None = None            # cached per process
 
 
 def _configured() -> bool:
@@ -37,8 +38,21 @@ def _configured() -> bool:
 
 
 def _auth_header() -> dict:
+    # v4 wants: API key as Basic-auth username (empty password) AND a Referer header. Without a
+    # Referer the API 403s ("Undeclared referrer") even with a valid key.
     token = base64.b64encode(f"{settings.careerjet_api_key}:".encode()).decode()
-    return {"Authorization": f"Basic {token}"}
+    return {"Authorization": f"Basic {token}", "Referer": settings.site_url}
+
+
+def _user_ip() -> str:
+    """A REAL caller IP — v4 rejects placeholders like 8.8.8.8 ('Invalid user_ip'). Prefer the
+    configured value (should match the whitelisted server IP); else detect the outbound IP once."""
+    global _outbound_ip
+    if settings.careerjet_user_ip:
+        return settings.careerjet_user_ip
+    if _outbound_ip is None:
+        _outbound_ip = (fetch_text("https://api.ipify.org") or "").strip()
+    return _outbound_ip
 
 
 def _posted(val) -> datetime | None:
@@ -85,7 +99,7 @@ def fetch(search_terms: list[str] | None = None, countries=tuple(LOCALES), pages
         return []                                # key not set -> silent no-op
     terms = [t for t in (search_terms or [""]) if search_terms is None or t] or [""]
     headers = _auth_header()
-    user_ip = settings.careerjet_user_ip or "8.8.8.8"   # required; server-side geo default
+    user_ip = _user_ip()                                # required; a real IP (not a placeholder)
     out: list[RawPosting] = []
     seen: set[str] = set()
     for country in countries:
