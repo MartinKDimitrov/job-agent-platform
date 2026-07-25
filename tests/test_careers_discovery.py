@@ -54,3 +54,77 @@ def test_english_careers_still_found(monkeypatch):
 def test_nothing_found_returns_empty(monkeypatch):
     monkeypatch.setattr(ad, "fetch_text", _serve({"https://acme.com": "<h1>Shop</h1>"}))
     assert ad.find_careers_url("https://acme.com") == ""
+
+
+# ---- multilingual discovery: every market language must resolve, not just BG/EN/DE ----
+
+def test_french_recrutement_href(monkeypatch):
+    pages = {"https://acme.fr": '<a href="/recrutement">Recrutement</a>',
+             "https://acme.fr/recrutement": "Nos offres d'emploi — postuler / rejoignez-nous"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://acme.fr") == "https://acme.fr/recrutement"
+
+
+def test_french_carrieres_path_fallback(monkeypatch):
+    pages = {"https://acme.fr": "<h1>Accueil</h1>",
+             "https://acme.fr/carrieres": "Carrières — postulez à nos offres d'emploi"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://acme.fr") == "https://acme.fr/carrieres"
+
+
+def test_french_recrutement_subdomain(monkeypatch):
+    pages = {"https://www.acme.fr": "<h1>Produits</h1>",
+             "https://recrutement.acme.fr": "Recrutement — nos offres d'emploi"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://www.acme.fr") == "https://recrutement.acme.fr"
+
+
+def test_italian_lavora_con_noi(monkeypatch):
+    pages = {"https://acme.it": '<a href="/lavora-con-noi">Lavora con noi</a>',
+             "https://acme.it/lavora-con-noi": "Lavora con noi — posizioni aperte, candidati"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://acme.it") == "https://acme.it/lavora-con-noi"
+
+
+def test_spanish_empleo(monkeypatch):
+    pages = {"https://acme.es": '<a href="/empleo">Empleo</a>',
+             "https://acme.es/empleo": "Trabaja con nosotros — ofertas de empleo"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://acme.es") == "https://acme.es/empleo"
+
+
+def test_dutch_werken_bij(monkeypatch):
+    pages = {"https://acme.nl": '<a href="/werken-bij">Werken bij ACME</a>',
+             "https://acme.nl/werken-bij": "Werken bij ACME — bekijk onze vacatures"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://acme.nl") == "https://acme.nl/werken-bij"
+
+
+def test_polish_kariera(monkeypatch):
+    pages = {"https://acme.pl": '<a href="/kariera">Kariera</a>',
+             "https://acme.pl/kariera": "Kariera — praca, aplikuj już dziś"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://acme.pl") == "https://acme.pl/kariera"
+
+
+# ---- TLD/country gating: probe only the site's language(s) + EN, not every language ----
+
+def test_gating_fr_tld_skips_irrelevant_languages(monkeypatch):
+    tried = []
+
+    def rec(url, *a, **k):
+        tried.append(url)
+        return "<h1>Accueil</h1>" if url == "https://acme.fr" else None
+    monkeypatch.setattr(ad, "fetch_text", rec)
+    ad.find_careers_url("https://acme.fr")                       # .fr -> FR + EN
+    assert any(u.endswith("/recrutement") for u in tried)        # French paths tried
+    assert not any("/karjaar" in u or "/tyopaikat" in u or "/allasok" in u for u in tried)
+
+
+def test_gating_country_overrides_com_tld(monkeypatch):
+    # a German employer on a .com domain: country=DE must still trigger German probing
+    pages = {"https://www.mahle.com": "<h1>Home</h1>",
+             "https://karriere.mahle.com": "Karriere — offene Stellen"}
+    monkeypatch.setattr(ad, "fetch_text", _serve(pages))
+    assert ad.find_careers_url("https://www.mahle.com", country="DE") == \
+        "https://karriere.mahle.com"

@@ -208,39 +208,130 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
     return None
 
 
-# hrefs that smell like a careers page, in the languages of our market (BG, EN, DE).
-# NB: German "Karriere" has a double r — an earlier `karier` (single r) silently missed every
-# German careers link, the single biggest cause of DE careers pages going undiscovered.
+# ---- Careers-page discovery, tuned for EVERY language of our market -----------------------
+# The homepage careers LINK is the fast path (one regex on already-fetched HTML); paths and
+# subdomains are the fallback. So the href tokens must be comprehensive across languages — a
+# missing token silently loses a whole country's careers pages (German "Karriere" once did;
+# French /recrutement, /carrières too). A loose match only costs a candidate fetch — the SIGNAL
+# check on the fetched page is the real guard, so breadth here is cheap and safe.
 _CAREERS_HREF_RE = re.compile(
-    r"""href=["']([^"']*(?:career|karrier|karier|kariera|jobs|stellenangebote|stellenanzeigen|
-    berufe|rabota|jobads|vacanc|join-us|работа|кариер)[^"']*)["']""", re.I | re.X)
-# fallback paths tried directly on the site when the homepage names no careers link
-_CAREERS_PATHS = ("/careers", "/career", "/karriere", "/de/karriere", "/karriere/stellenangebote",
-                  "/stellenangebote", "/jobs", "/jobs-und-karriere", "/unternehmen/karriere",
-                  "/en/careers", "/en/career", "/kariera", "/karieri", "/jobs", "/bg/kariera",
-                  "/rabota-pri-nas", "/za-nas/karieri")
-# careers/jobs live on a subdomain (karriere.acme.de, jobs.acme.com) at least as often as on a
-# path — Preh, MAHLE, Woco and RINGSPANN all do this. Synthesised from the registrable domain.
-_CAREERS_SUBDOMAINS = ("karriere", "career", "careers", "jobs", "stellen")
+    r"""href=["']([^"']*(?:
+        career|jobs?|vacanc|opportunit|join-us|work-with-us|          # EN
+        karrier|karier|stellenangebot|stellenanzeig|stellen|berufe|   # DE
+        recrut|carriere|emploi|nous-rejoindre|rejoign|                # FR
+        lavora|lavoro|posizion|candidat|unisciti|                     # IT
+        empleo|carrera|trabaj|unete|                                  # ES
+        carreira|trabalhe|emprego|vagas|                              # PT
+        werken|vacature|                                              # NL
+        kariera|praca|dolacz|volna-mista|volne-pozicie|               # PL / CZ / SK
+        karriar|lediga-jobb|jobba|                                    # SE
+        ledige-stilling|                                              # DK / NO
+        tyopaik|rekrytoint|                                           # FI
+        carier|cariera|joburi|posturi|alatura|                        # RO
+        karjer|karjaar|vakances|tookohad|darbo-pasiulym|              # LV / EE / LT
+        allasok|csatlakozz|                                           # HU
+        rabota|работ|кариер|                                          # BG / RU
+        theseis|καριερ|θέσεις                                         # GR
+    )[^"']*)["']""", re.I | re.X)
+# Fallback paths & subdomains, GATED by the site's language (from the company's country, else
+# the domain TLD) + English — so a .fr site probes French+English paths, not Estonian/Finnish.
+# Keeps the miss case to ~a dozen probes instead of sweeping every language (~60). The homepage
+# href regex above stays language-agnostic (one cheap match on already-fetched HTML).
+_UNIVERSAL_PATHS = ("/careers", "/career", "/jobs")
+_LANG_PATHS = {
+    "EN": ("/vacancies", "/join-us", "/en/careers"),
+    "DE": ("/karriere", "/stellenangebote", "/jobs-und-karriere", "/de/karriere"),
+    "FR": ("/recrutement", "/carrieres", "/carriere", "/nous-rejoindre", "/emploi",
+           "/offres-d-emploi", "/fr/recrutement"),
+    "IT": ("/lavora-con-noi", "/lavoro", "/carriere", "/posizioni-aperte"),
+    "ES": ("/empleo", "/trabaja-con-nosotros", "/carreras"),
+    "PT": ("/carreiras", "/trabalhe-conosco", "/vagas"),
+    "NL": ("/werken-bij", "/vacatures"),
+    "PL": ("/kariera", "/praca", "/oferty-pracy"),
+    "SE": ("/jobba-hos-oss", "/lediga-jobb", "/karriar"),
+    "DK": ("/karriere", "/ledige-stillinger"),
+    "FI": ("/tyopaikat", "/rekrytointi"),
+    "RO": ("/cariere", "/joburi"),
+    "EE": ("/karjaar", "/tookohad"),
+    "LV": ("/karjera", "/vakances"),
+    "LT": ("/karjera", "/darbo-pasiulymai"),
+    "HU": ("/karrier", "/allasok"),
+    "BG": ("/kariera", "/rabota-pri-nas", "/za-nas/karieri"),
+    "GR": ("/kariera",),
+    "CZ": ("/kariera", "/volna-mista"),
+}
+_UNIVERSAL_SUBS = ("careers", "career", "jobs", "jobb")
+_LANG_SUBS = {
+    "DE": ("karriere", "stellen"), "FR": ("recrutement", "emploi", "carrieres"),
+    "NL": ("werkenbij", "vacatures"), "PL": ("kariera", "praca"), "IT": ("lavoro",),
+    "ES": ("empleo",), "BG": ("kariera",), "SE": ("jobb",),
+}
+# country (ISO-2) and domain TLD -> language group(s). Multilingual states get several.
+_COUNTRY_LANGS = {
+    "GB": ["EN"], "IE": ["EN"], "US": ["EN"], "DE": ["DE"], "AT": ["DE"],
+    "CH": ["DE", "FR", "IT"], "FR": ["FR"], "BE": ["NL", "FR"], "LU": ["FR", "DE"],
+    "IT": ["IT"], "ES": ["ES"], "PT": ["PT"], "NL": ["NL"], "PL": ["PL"], "SE": ["SE"],
+    "DK": ["DK"], "NO": ["DK"], "FI": ["FI"], "RO": ["RO"], "EE": ["EE"], "LV": ["LV"],
+    "LT": ["LT"], "HU": ["HU"], "BG": ["BG"], "GR": ["GR"], "CZ": ["CZ"], "SK": ["CZ"],
+}
+_TLD_LANGS = {
+    "fr": ["FR"], "de": ["DE"], "at": ["DE"], "ch": ["DE", "FR", "IT"], "it": ["IT"],
+    "es": ["ES"], "pt": ["PT"], "nl": ["NL"], "be": ["NL", "FR"], "pl": ["PL"], "se": ["SE"],
+    "dk": ["DK"], "no": ["DK"], "fi": ["FI"], "ro": ["RO"], "ee": ["EE"], "lv": ["LV"],
+    "lt": ["LT"], "hu": ["HU"], "bg": ["BG"], "gr": ["GR"], "cz": ["CZ"], "sk": ["CZ"],
+}
+# generic/unknown TLD (.com/.eu/.org…) with no country: probe the biggest markets, bounded.
+_DEFAULT_LANGS = ["EN", "DE", "FR"]
+
+
+def _langs_for(website: str, country: str | None) -> list[str]:
+    """Ordered language groups to probe: the company's country if known, else the domain TLD,
+    else a bounded default — always with EN appended (/careers, /en/… work almost everywhere)."""
+    from urllib.parse import urlparse
+    if country:
+        langs = list(_COUNTRY_LANGS.get(country.upper(), []))
+        if langs:
+            return langs + ["EN"] if "EN" not in langs else langs
+    host = urlparse(website).netloc.lower()
+    if host.endswith((".co.uk", ".uk")):
+        return ["EN"]
+    tld_langs = _TLD_LANGS.get(host.rsplit(".", 1)[-1], []) if "." in host else []
+    if tld_langs:
+        return tld_langs + ["EN"] if "EN" not in tld_langs else tld_langs
+    return list(_DEFAULT_LANGS)
+# a fetched page is a careers page when its text carries a careers signal in ANY market language
 _CAREERS_SIGNAL_RE = re.compile(
-    r"карие|career|jobs|karrier|stellenangebot|stellenanzeige|offene stellen|bewerb|"
-    r"работ|позици|vacanc|apply", re.I)
+    r"career|jobs?|vacanc|apply|"                                     # EN
+    r"karrier|stellenangebot|stellenanzeig|offene stellen|bewerb|"    # DE
+    r"recrut|carrièr|carriere|emploi|postul|candidat|rejoign|"        # FR
+    r"lavora con noi|lavoro|posizion|"                                # IT
+    r"empleo|carrera|trabaj|"                                         # ES
+    r"carreira|trabalhe|emprego|vaga|"                                # PT
+    r"werken bij|vacature|"                                           # NL
+    r"kariera|praca|aplikuj|"                                         # PL
+    r"lediga jobb|karriär|"                                           # SE
+    r"tyopaik|rekrytoint|"                                            # FI
+    r"carier|cariera|"                                                # RO
+    r"karjer|vakances|"                                               # LV / EE
+    r"работ|кариер|позици|"                                           # BG
+    r"θέσε|καριέρ", re.I)                                             # GR
 
 
-def _careers_subdomain_urls(website: str) -> list[str]:
-    """https://karriere.<domain>, https://jobs.<domain>, … from the site's registrable domain."""
+def _careers_subdomain_urls(website: str, subs) -> list[str]:
+    """https://karriere.<domain>, https://recrutement.<domain>, … from the registrable domain."""
     from urllib.parse import urlparse
     host = urlparse(website).netloc.lower()
     if not host or host.replace(".", "").isdigit():   # skip bare IPs
         return []
     domain = host[4:] if host.startswith("www.") else host
-    return [f"https://{sub}.{domain}" for sub in _CAREERS_SUBDOMAINS]
+    return [f"https://{sub}.{domain}" for sub in dict.fromkeys(subs)]
 
 
-def find_careers_url(website: str) -> str:
-    """Find a company's careers page starting from its main site: follow careers-looking links
-    on the homepage, then careers subdomains, then common paths (BG/EN/DE). Returns '' when
-    nothing answers with a careers-looking page."""
+def find_careers_url(website: str, country: str | None = None) -> str:
+    """Find a company's careers page: follow careers-looking links on the homepage (all market
+    languages — cheap), then careers subdomains and paths GATED to the site's language (from
+    `country` if known, else the domain TLD) plus English. Returns '' when nothing answers with
+    a careers-looking page."""
     from urllib.parse import urljoin
     website = (website or "").strip().rstrip("/")
     if not website:
@@ -255,8 +346,14 @@ def find_careers_url(website: str) -> str:
         candidates.append(urljoin(website + "/", href))
         if len(candidates) >= 5:   # a few real links beat betting everything on the first
             break
-    candidates += _careers_subdomain_urls(website)
-    candidates += [website + p for p in _CAREERS_PATHS]
+    langs = _langs_for(website, country)
+    subs = list(_UNIVERSAL_SUBS)
+    paths = list(_UNIVERSAL_PATHS)
+    for lg in langs:
+        subs += _LANG_SUBS.get(lg, ())
+        paths += _LANG_PATHS.get(lg, ())
+    candidates += _careers_subdomain_urls(website, subs)
+    candidates += [website + p for p in dict.fromkeys(paths)]
     for url in dict.fromkeys(candidates):
         page = fetch_text(url)
         if page and _CAREERS_SIGNAL_RE.search(page):
