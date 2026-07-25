@@ -23,7 +23,7 @@ from ...core.config import settings
 from ...data.models import Posting, Match
 from ...data.sources import (greenhouse, dev_bg, remoteok, wwr, lever, ashby, workable,
                              teamtailor, jsonld_careers, smartrecruiters, recruitee, personio,
-                             karriere_nrw)
+                             karriere_nrw, arbeitnow)
 from ...domain.entities import RawPosting
 from ...data.ingest import ingest
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS, LEVER_COMPANIES, ASHBY_COMPANIES
@@ -63,7 +63,8 @@ def _ashby_all() -> list[RawPosting]:
 # profile needs live (owner report: 'everything comes from dev.bg'). Lever/Ashby iterate a
 # company list (dozens of requests), so they stay in the daily background job.
 FAST_SOURCES = [("dev_bg", dev_bg.fetch), ("remoteok", remoteok.fetch), ("wwr", wwr.fetch),
-                ("karriere_nrw", karriere_nrw.fetch)]
+                ("karriere_nrw", karriere_nrw.fetch),
+                ("arbeitnow", arbeitnow.fetch)]
 EXTRA_SOURCES = [("lever", _lever_all), ("ashby", _ashby_all)]
 
 
