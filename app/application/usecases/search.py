@@ -216,31 +216,62 @@ def _enrich_new_postings(db: Session) -> int:
     return enriched
 
 
-def _registry_postings(db: Session, stats=None) -> list[RawPosting]:
-    """Career pages from the company REGISTRY (ROADMAP 16б): every active company with a
-    detected ATS board, fetched through the matching adapter. One adapter serves them all."""
+_registry_adapters_cache: dict | None = None
+
+
+def _registry_adapters() -> dict:
+    """ats -> adapter fetch fn. Built once (Workday/SF/rexx/softgarden imported lazily to keep
+    module load order simple); one adapter serves all boards on its platform."""
+    global _registry_adapters_cache
+    if _registry_adapters_cache is None:
+        from ...data.sources import workday, successfactors, rexx, softgarden
+        _registry_adapters_cache = {
+            "greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch,
+            "workable": workable.fetch, "teamtailor": teamtailor.fetch,
+            "jsonld": jsonld_careers.fetch, "smartrecruiters": smartrecruiters.fetch,
+            "recruitee": recruitee.fetch, "personio": personio.fetch,
+            "workday": workday.fetch, "successfactors": successfactors.fetch,
+            "rexx": rexx.fetch, "softgarden": softgarden.fetch}
+    return _registry_adapters_cache
+
+
+def registry_boards(db: Session, country: str | None = None) -> list[tuple[str, str, str]]:
+    """(ats, slug, name) for every active registry board (optionally one country) — the unit the
+    windowed ingest shards and batches over."""
     from ...data.company_repo import boards_for
-    from ...data.sources import workday, successfactors, rexx, softgarden
-    adapters = {"greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch,
-                "workable": workable.fetch, "teamtailor": teamtailor.fetch,
-                "jsonld": jsonld_careers.fetch, "smartrecruiters": smartrecruiters.fetch,
-                "recruitee": recruitee.fetch, "personio": personio.fetch,
-                "workday": workday.fetch, "successfactors": successfactors.fetch,
-                "rexx": rexx.fetch, "softgarden": softgarden.fetch}
-    out: list[RawPosting] = []
-    for ats, fetch_fn in adapters.items():
-        count = 0
-        for slug, name in boards_for(db, ats):
-            try:
-                posts = fetch_fn(slug, company_name=name)
-            except Exception as e:  # noqa: BLE001 — one dead board must not kill the run
-                log.warning("registry %s/%s failed: %s", ats, slug, e)
-                continue
-            out.extend(posts)
-            count += len(posts)
-        if stats is not None and count:
-            stats.source(f"registry_{ats}", fetched=count)
+    out: list[tuple[str, str, str]] = []
+    for ats in _registry_adapters():
+        out.extend((ats, slug, name) for slug, name in boards_for(db, ats, country=country))
     return out
+
+
+def fetch_registry_boards(boards: list[tuple[str, str, str]], stats=None) -> list[RawPosting]:
+    """Fetch an explicit (ats, slug, name) board list through the matching adapters, error-
+    isolated per board (one dead board never aborts a shard)."""
+    adapters = _registry_adapters()
+    out: list[RawPosting] = []
+    counts: dict[str, int] = {}
+    for ats, slug, name in boards:
+        fetch_fn = adapters.get(ats)
+        if fetch_fn is None:
+            continue
+        try:
+            posts = fetch_fn(slug, company_name=name)
+        except Exception as e:  # noqa: BLE001 — one dead board must not kill the run
+            log.warning("registry %s/%s failed: %s", ats, slug, e)
+            continue
+        out.extend(posts)
+        counts[ats] = counts.get(ats, 0) + len(posts)
+    if stats is not None:
+        for ats, n in counts.items():
+            if n:
+                stats.source(f"registry_{ats}", fetched=n)
+    return out
+
+
+def _registry_postings(db: Session, stats=None, country: str | None = None) -> list[RawPosting]:
+    """All registry career pages (optionally one country), fetched via the matching adapter."""
+    return fetch_registry_boards(registry_boards(db, country=country), stats=stats)
 
 
 def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=(),
@@ -269,7 +300,24 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
                 stats.source(name, fetched=len(targeted))
             raw_postings.extend(targeted)
             seen_urls.update(rp.url for rp in targeted if rp.url)
-    ing = ingest(db, raw_postings)
+    persisted = persist_postings(db, raw_postings, stats=stats)
+    maint = run_ingest_maintenance(db, stats=stats)
+    return {"fetched": persisted["fetched"], "added": persisted["added"], **maint}
+
+
+def persist_postings(db: Session, raw_postings, stats=None) -> dict:
+    """Persist + dedup a batch of fetched raw postings (the WRITE of one shard). No global
+    maintenance — that runs once per window in run_ingest_maintenance."""
+    ing = ingest(db, list(raw_postings))
+    if stats is not None:
+        stats.add(added=ing["added"], deduped=ing["deduped"])
+    return {"fetched": len(raw_postings), "added": ing["added"], "deduped": ing["deduped"]}
+
+
+def run_ingest_maintenance(db: Session, stats=None) -> dict:
+    """Global post-fetch upkeep — runs ONCE per window, after every shard has written: enrich
+    new postings (requirements + E5 vector), annotate, retire stale/unseen/taken-down, merge
+    near-duplicates, refresh the vector cache. Idempotent and shard-independent."""
     enriched = _enrich_new_postings(db)
     from .annotate import annotate_postings
     ann = annotate_postings(db)
@@ -280,13 +328,39 @@ def ingest_from_sources(db: Session, boards=None, raw_postings=None, profiles=()
     from .. import vector_cache
     vector_cache.invalidate()             # the index changed — recall reloads lazily
     if stats is not None:
-        stats.add(added=ing["added"], deduped=ing["deduped"], enriched=enriched,
-                  annotated=ann["annotated"], unknown_skills=ann.get("unknown_skills", 0),
-                  retired=retired, near_dups=near_dups,
-                  unseen_retired=unseen, taken_down=taken_down)
-    return {"fetched": len(raw_postings), "added": ing["added"], "enriched": enriched,
-            "annotated": ann["annotated"], "retired": retired, "near_dups": near_dups,
-            "unseen_retired": unseen, "taken_down": taken_down}
+        stats.add(enriched=enriched, annotated=ann["annotated"],
+                  unknown_skills=ann.get("unknown_skills", 0), retired=retired,
+                  near_dups=near_dups, unseen_retired=unseen, taken_down=taken_down)
+    return {"enriched": enriched, "annotated": ann["annotated"], "retired": retired,
+            "near_dups": near_dups, "unseen_retired": unseen, "taken_down": taken_down}
+
+
+def run_ingest_shard_boards(db: Session, boards: list[tuple[str, str, str]], stats=None) -> dict:
+    """Fetch + persist one explicit board batch — a single isolated shard of the windowed
+    ingest (no global maintenance)."""
+    return persist_postings(db, fetch_registry_boards(boards, stats=stats), stats=stats)
+
+
+def run_ingest_global(db: Session, profiles=(), stats=None) -> dict:
+    """The fixed (non-registry) sources as one 'global' shard: seed boards + fast/remote feeds
+    (fetch_all) and per-profile targeted queries. Registry boards are handled by country shards."""
+    raw = fetch_all(GREENHOUSE_BOARDS, stats=stats)
+    seen = {rp.url for rp in raw if rp.url}
+    terms = sorted({t for profile in profiles for t in _profile_search_terms(profile)})
+    if terms:
+        for name, src in PROFILE_SOURCES:
+            try:
+                targeted = [rp for rp in src(terms) if rp.url not in seen]
+            except Exception as e:  # noqa: BLE001 — a broken source must not kill the run
+                log.warning("targeted source %s failed: %s", name, e)
+                if stats is not None:
+                    stats.source(name, error=str(e)[:200])
+                continue
+            if stats is not None:
+                stats.source(name, fetched=len(targeted))
+            raw.extend(targeted)
+            seen.update(rp.url for rp in targeted if rp.url)
+    return persist_postings(db, raw, stats=stats)
 
 
 # Sources that show only a RECENT WINDOW — a posting dropping out of their feed proves

@@ -29,8 +29,19 @@ def upsert_company(db: Session, name: str, *, country: str = "BG", careers_url: 
     return c
 
 
-def boards_for(db: Session, ats: str) -> list[tuple[str, str]]:
-    """(slug, display name) pairs the ingest should crawl for one ATS."""
-    rows = db.execute(select(Company).where(
-        Company.ats == ats, Company.active.is_(True), Company.ats_slug != "")).scalars()
-    return [(c.ats_slug, c.name) for c in rows]
+def boards_for(db: Session, ats: str, country: str | None = None) -> list[tuple[str, str]]:
+    """(slug, display name) pairs the ingest should crawl for one ATS. `country` (ISO-2) limits
+    to one country's boards — the unit the sharded/windowed ingest schedules independently."""
+    q = select(Company).where(
+        Company.ats == ats, Company.active.is_(True), Company.ats_slug != "")
+    if country:
+        q = q.where(Company.country == country)
+    return [(c.ats_slug, c.name) for c in db.execute(q).scalars()]
+
+
+def board_countries(db: Session) -> list[str]:
+    """ISO-2 codes that have at least one active board — the countries the window shards over."""
+    rows = db.execute(select(Company.country).where(
+        Company.ats != "", Company.active.is_(True), Company.ats_slug != "")
+        .group_by(Company.country)).scalars()
+    return sorted(c for c in rows if c)

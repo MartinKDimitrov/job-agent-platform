@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # DB-first search: the in-app background ingester refreshes the posting index every
     # N hours (0 = disabled — tests and environments where cron runs `python -m app.jobs ingest`).
     ingest_every_hours: int = 0
+    # Windowed ingest (`python -m app.jobs ingest_window`): the daily crawl runs sharded by
+    # country and paced across [start_hour, end_hour) local, so it never runs as one long
+    # single-point-of-failure burst and spreads HTTP load. Big countries are sub-sharded into
+    # batches of `ingest_shard_batch` boards. Default window: 00:00–08:00.
+    ingest_window_start_hour: int = 0
+    ingest_window_end_hour: int = 8
+    ingest_shard_batch: int = 200
     # Absolute zombie cap: postings older than this retire outright (window sources where a
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
