@@ -107,6 +107,15 @@ def _arbeitsagentur_targeted(terms: list[str]) -> list[RawPosting]:
     return arbeitsagentur.fetch(search_terms=terms)
 
 
+def _adzuna_targeted(terms: list[str]) -> list[RawPosting]:
+    """Adzuna multi-country aggregator via the free API — one call per unique role term
+    x country per run. Silent no-op until ADZUNA_APP_ID/KEY land in .env."""
+    if not terms:
+        return []
+    from ...data.sources import adzuna
+    return adzuna.fetch(search_terms=terms)
+
+
 def _francetravail_targeted(terms: list[str]) -> list[RawPosting]:
     """France Travail via the free OAuth API — third EU board adapter. Silent no-op until
     FRANCETRAVAIL_CLIENT_ID/SECRET land in .env (register at francetravail.io)."""
@@ -120,7 +129,8 @@ def _francetravail_targeted(terms: list[str]) -> list[RawPosting]:
 PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted),
                    ("jobtech_targeted", _jobtech_targeted),
                    ("arbeitsagentur_targeted", _arbeitsagentur_targeted),
-                   ("francetravail_targeted", _francetravail_targeted)]
+                   ("francetravail_targeted", _francetravail_targeted),
+                   ("adzuna_targeted", _adzuna_targeted)]
 
 
 def _safe(name: str, fn, stats=None) -> list[RawPosting]:

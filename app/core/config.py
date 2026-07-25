@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # heavier per company (careers discovery + ATS probing, ~20–40 requests each), so its
     # shards are smaller. Schedule it on its own nights / offset from ingest.
     detect_shard_batch: int = 100
+
+    # Adzuna — multi-country job aggregator API (free trial keys from developer.adzuna.com).
+    # Silent no-op until both are set. Covers DE/FR/IT/GB/ES/NL/PL in one source.
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
     # Absolute zombie cap: postings older than this retire outright (window sources where a
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
