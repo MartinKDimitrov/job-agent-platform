@@ -226,14 +226,14 @@ def _registry_adapters() -> dict:
     module load order simple); one adapter serves all boards on its platform."""
     global _registry_adapters_cache
     if _registry_adapters_cache is None:
-        from ...data.sources import workday, successfactors, rexx, softgarden
+        from ...data.sources import workday, successfactors, rexx, softgarden, dvinci
         _registry_adapters_cache = {
             "greenhouse": greenhouse.fetch, "lever": lever.fetch, "ashby": ashby.fetch,
             "workable": workable.fetch, "teamtailor": teamtailor.fetch,
             "jsonld": jsonld_careers.fetch, "smartrecruiters": smartrecruiters.fetch,
             "recruitee": recruitee.fetch, "personio": personio.fetch,
             "workday": workday.fetch, "successfactors": successfactors.fetch,
-            "rexx": rexx.fetch, "softgarden": softgarden.fetch}
+            "rexx": rexx.fetch, "softgarden": softgarden.fetch, "dvinci": dvinci.fetch}
     return _registry_adapters_cache
 
 

@@ -97,6 +97,13 @@ def _probe_softgarden(board_url: str) -> bool:
     return isinstance(j, dict) and isinstance(j.get("dataFeedElement"), list)
 
 
+def _probe_dvinci(board_url: str) -> bool:
+    # board_url is the tenant base; its /de/jobs list carries /de/jobs/{id}/ links server-side
+    b = board_url.rstrip("/")
+    body = fetch_text(f"{b}/de/jobs") or fetch_text(f"{b}/en/jobs")
+    return bool(body) and bool(re.search(r"/(?:de|en)/jobs/\d+/", body))
+
+
 # ats name -> "does this slug host a live board there?"
 _PROBES: dict[str, callable] = {
     "greenhouse": _probe_greenhouse,
@@ -111,6 +118,7 @@ _PROBES: dict[str, callable] = {
     "successfactors": _probe_successfactors,
     "rexx": _probe_rexx,
     "softgarden": _probe_softgarden,
+    "dvinci": _probe_dvinci,
 }
 
 # Workday CXS host + site, from a myworkdayjobs URL anywhere on the careers page/SPA config.
@@ -131,6 +139,8 @@ _REXX_LIST_RE = re.compile(
 # softgarden (German mid-market ATS market leader). Tenants: {tenant}.career.softgarden.{de|com|io}
 # — a careers page either IS the board or links it. Board id = the tenant base URL.
 _SOFTGARDEN_RE = re.compile(r"https?://([\w.-]+\.career\.softgarden\.(?:de|com|io))", re.I)
+# d.vinci (German mid-market ATS): tenants at {tenant}.dvinci-hr.com; careers pages link the board.
+_DVINCI_RE = re.compile(r"https?://([\w-]+\.dvinci-hr\.com)", re.I)
 
 _CAREERS_PATTERNS = [
     ("greenhouse", re.compile(r"boards(?:-api)?\.greenhouse\.io/(?:v1/boards/)?([\w-]+)", re.I)),
@@ -205,6 +215,10 @@ def scan_careers_page(careers_url: str) -> tuple[str, str] | None:
     sg = _SOFTGARDEN_RE.search(html)
     if sg:
         return "softgarden", f"https://{sg.group(1)}"
+    # d.vinci: careers page links a {tenant}.dvinci-hr.com board (server-rendered + JSON-LD)
+    dv = _DVINCI_RE.search(html)
+    if dv:
+        return "dvinci", f"https://{dv.group(1)}"
     return None
 
 
