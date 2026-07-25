@@ -15,3 +15,4 @@ from . import workday         # noqa: F401  (registers "workday" — enterprise 
 from . import successfactors  # noqa: F401  (registers "successfactors" — SAP CSB HTML)
 from . import rexx            # noqa: F401  (registers "rexx" — German mid-market ATS, HTML)
 from . import softgarden      # noqa: F401  (registers "softgarden" — DE ATS, JSON feed)
+from . import karriere_nrw    # noqa: F401  (registers "karriere_nrw" — NRW public sector OpenData)
