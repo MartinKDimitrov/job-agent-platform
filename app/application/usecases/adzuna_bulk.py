@@ -14,10 +14,11 @@ fans out across professions/countries instead of sinking into one huge category 
 """
 from __future__ import annotations
 
+import html as _html
 import time
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from ...data.models import AdzunaPull
 from ...data.sources import adzuna
@@ -67,10 +68,14 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
     ensure_slices(session_factory, countries)
 
     with session_factory() as db:
+        # least-pulled first so the budget fans out; ties break by (category, country) so a run
+        # spreads one profession across ALL markets before deepening — the board fills broadly,
+        # not one-country-at-a-time.
         pending = db.execute(
             select(AdzunaPull.id).where(AdzunaPull.done.is_(False),
                                         AdzunaPull.country.in_(countries))
-            .order_by(AdzunaPull.pulled.asc(), AdzunaPull.id.asc())).scalars().all()
+            .order_by(AdzunaPull.pulled.asc(), AdzunaPull.category.asc(),
+                      AdzunaPull.country.asc())).scalars().all()
 
     calls = added = touched = 0
     for slice_id in pending:
@@ -138,3 +143,151 @@ def status(db) -> dict:
              "updated_at": r.updated_at.isoformat() if r.updated_at else None}
             for r in rows],
     }
+
+
+_FLAG = {"DE": "🇩🇪", "FR": "🇫🇷", "IT": "🇮🇹", "GB": "🇬🇧", "ES": "🇪🇸", "NL": "🇳🇱", "PL": "🇵🇱"}
+
+
+def _bar(pct: float, tone: str = "accent") -> str:
+    pct = max(0.0, min(100.0, pct))
+    return (f'<div class="bar"><span class="fill {tone}" style="width:{pct:.1f}%"></span></div>')
+
+
+def render_board(st: dict, *, generated_at: datetime | None = None) -> str:
+    """Self-contained progress board (theme-aware, no external assets) rendered from status().
+    Regenerated on demand and by the nightly pull, so the fields advance as the cursors do."""
+    gen = (generated_at or datetime.utcnow()).strftime("%Y-%m-%d %H:%M UTC")
+    pulled, est, pct = st["pulled"], st["est_total"], st["pct"]
+    countries = sorted(st["by_country"].items())
+
+    cards = []
+    for iso, c in countries:
+        cpct = round(100 * c["pulled"] / c["total"], 1) if c["total"] else 0.0
+        cards.append(
+            f'<div class="cc"><div class="cc-h">{_FLAG.get(iso, "")} <b>{iso}</b>'
+            f'<span class="muted">{c["done"]}/{c["slices"]} slices</span></div>'
+            f'<div class="cc-n">{c["pulled"]:,}<span class="muted"> / {c["total"]:,}</span></div>'
+            f'{_bar(cpct)}</div>')
+
+    rows = []
+    for s in st["slices_detail"]:
+        spct = round(100 * s["pulled"] / s["total"], 1) if s["total"] else 0.0
+        tone = "done" if s["done"] else ("accent" if s["pulled"] else "idle")
+        badge = "done" if s["done"] else ("live" if s["pulled"] else "queued")
+        rows.append(
+            f'<tr><td>{_FLAG.get(s["country"], "")} {s["country"]}</td>'
+            f'<td>{_html.escape(s["label"] or s["category"])}</td>'
+            f'<td class="num">{s["pulled"]:,}</td>'
+            f'<td class="num muted">{s["total"]:,}</td>'
+            f'<td class="pgcell">{_bar(spct, tone)}</td>'
+            f'<td><span class="pill {badge}">{badge}</span></td></tr>')
+
+    return _BOARD_TMPL.format(
+        gen=gen, pulled=f"{pulled:,}", est=f"{est:,}", pct=f"{pct:.1f}",
+        pct_bar=_bar(pct), slices=st["slices"], slices_done=st["slices_done"],
+        cards="\n".join(cards), rows="\n".join(rows))
+
+
+_BOARD_TMPL = """<title>Adzuna Bulk Pull — All Professions</title>
+<style>
+  :root {{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#111823; --muted:#5b6675; --line:#e5e8ee;
+    --accent:#0e7c7b; --accent-soft:#d3ecec; --done:#1f9d55; --done-soft:#d6f0e0;
+    --idle:#c3c9d3; --amber:#b7791f;
+  }}
+  @media (prefers-color-scheme:dark) {{
+    :root {{
+      --bg:#0d1117; --panel:#161b22; --ink:#e8edf3; --muted:#8b96a5; --line:#232a34;
+      --accent:#2dd4bf; --accent-soft:#123b3a; --done:#3fb950; --done-soft:#123a22;
+      --idle:#30363d; --amber:#d29922;
+    }}
+  }}
+  :root[data-theme="light"] {{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#111823; --muted:#5b6675; --line:#e5e8ee;
+    --accent:#0e7c7b; --accent-soft:#d3ecec; --done:#1f9d55; --done-soft:#d6f0e0;
+    --idle:#c3c9d3; --amber:#b7791f;
+  }}
+  :root[data-theme="dark"] {{
+    --bg:#0d1117; --panel:#161b22; --ink:#e8edf3; --muted:#8b96a5; --line:#232a34;
+    --accent:#2dd4bf; --accent-soft:#123b3a; --done:#3fb950; --done-soft:#123a22;
+    --idle:#30363d; --amber:#d29922;
+  }}
+  * {{ box-sizing:border-box; }}
+  body {{ margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; }}
+  .wrap {{ max-width:1100px; margin:0 auto; padding:32px 24px 64px; }}
+  .top {{ display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+    flex-wrap:wrap; margin-bottom:4px; }}
+  h1 {{ font-size:22px; margin:0; letter-spacing:-.01em; }}
+  .sub {{ color:var(--muted); font-size:13px; }}
+  .hero {{ background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:24px; margin:20px 0 24px; }}
+  .big {{ font-size:44px; font-weight:700; letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums; }}
+  .big span {{ font-size:22px; color:var(--muted); font-weight:500; }}
+  .herometa {{ display:flex; gap:28px; flex-wrap:wrap; margin-top:14px; color:var(--muted);
+    font-size:13px; }}
+  .herometa b {{ color:var(--ink); font-variant-numeric:tabular-nums; }}
+  .bar {{ position:relative; height:8px; background:var(--idle); border-radius:6px;
+    overflow:hidden; margin-top:10px; }}
+  .fill {{ position:absolute; inset:0 auto 0 0; border-radius:6px; }}
+  .fill.accent {{ background:var(--accent); }}
+  .fill.done {{ background:var(--done); }}
+  .fill.idle {{ background:transparent; }}
+  .grid {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px;
+    margin-bottom:28px; }}
+  .cc {{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }}
+  .cc-h {{ display:flex; align-items:center; gap:6px; font-size:13px; }}
+  .cc-h .muted {{ margin-left:auto; }}
+  .cc-n {{ font-size:22px; font-weight:700; margin-top:6px; font-variant-numeric:tabular-nums; }}
+  .muted {{ color:var(--muted); font-weight:400; font-size:13px; }}
+  h2 {{ font-size:14px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    margin:0 0 10px; }}
+  .tablewrap {{ overflow-x:auto; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; }}
+  table {{ width:100%; border-collapse:collapse; font-size:13.5px; }}
+  th,td {{ text-align:left; padding:9px 14px; border-bottom:1px solid var(--line);
+    white-space:nowrap; }}
+  th {{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+    position:sticky; top:0; background:var(--panel); }}
+  tr:last-child td {{ border-bottom:none; }}
+  td.num {{ text-align:right; font-variant-numeric:tabular-nums; }}
+  td.pgcell {{ width:180px; }}
+  td.pgcell .bar {{ margin:0; }}
+  .pill {{ font-size:11px; padding:2px 9px; border-radius:20px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.03em; }}
+  .pill.done {{ background:var(--done-soft); color:var(--done); }}
+  .pill.live {{ background:var(--accent-soft); color:var(--accent); }}
+  .pill.queued {{ background:var(--idle); color:var(--muted); }}
+</style>
+<div class="wrap">
+  <div class="top">
+    <h1>Adzuna Bulk Pull <span class="sub">· all professions</span></h1>
+    <div class="sub">updated {gen}</div>
+  </div>
+  <div class="hero">
+    <div class="big">{pulled}<span> / {est} live postings</span></div>
+    {pct_bar}
+    <div class="herometa">
+      <div><b>{pct}%</b> of visible catalogue pulled</div>
+      <div><b>{slices_done}</b> / <b>{slices}</b> slices drained</div>
+      <div>30 categories × 7 countries · resumable cursor</div>
+    </div>
+  </div>
+  <div class="grid">
+    {cards}
+  </div>
+  <h2>Per slice — category × country</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Country</th><th>Category</th><th>Pulled</th><th>Catalogue</th>
+        <th>Progress</th><th>State</th></tr></thead>
+      <tbody>
+        {rows}
+      </tbody>
+    </table>
+  </div>
+</div>
+"""
+

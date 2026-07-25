@@ -30,6 +30,13 @@ if __name__ == "__main__":
         import json
         with SessionLocal() as db:
             print(json.dumps(adzuna_bulk.status(db), indent=2, ensure_ascii=False))
+    elif mode == "adzuna_board":
+        out = sys.argv[2] if len(sys.argv) > 2 else "adzuna_board.html"
+        with SessionLocal() as db:
+            html = adzuna_bulk.render_board(adzuna_bulk.status(db))
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(html)
+        print(f"wrote {out}")
     elif mode == "ingest":
         with SessionLocal() as db:
             print(run_ingest(db))

@@ -129,3 +129,18 @@ def test_status_reports_progress(monkeypatch):
     assert st["pulled"] == 100 and st["est_total"] == 330
     assert st["pct"] == round(100 * 100 / 330, 1)
     assert st["by_country"]["DE"]["pulled"] == 80 and st["by_country"]["FR"]["pulled"] == 20
+
+
+def test_render_board_reflects_status():
+    st = {"slices": 2, "slices_done": 1, "pulled": 80, "est_total": 200, "pct": 40.0,
+          "by_country": {"DE": {"pulled": 80, "total": 200, "slices": 2, "done": 1}},
+          "slices_detail": [
+              {"country": "DE", "category": "it-jobs", "label": "IT & Telecoms",
+               "pulled": 50, "total": 200, "next_page": 2, "done": False, "updated_at": None},
+              {"country": "DE", "category": "sales", "label": "Sales",
+               "pulled": 30, "total": 30, "next_page": 2, "done": True, "updated_at": None}]}
+    html = ab.render_board(st)
+    assert "Adzuna Bulk Pull" in html and "40.0%" in html
+    assert "IT &amp; Telecoms" in html          # label HTML-escaped
+    assert "1</b> / <b>2</b> slices" in html
+    assert "queued" not in html or "live" in html  # non-empty slice shows a live/done pill
