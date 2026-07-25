@@ -125,6 +125,15 @@ def _jooble_targeted(terms: list[str]) -> list[RawPosting]:
     return jooble.fetch(search_terms=terms)
 
 
+def _careerjet_targeted(terms: list[str]) -> list[RawPosting]:
+    """Careerjet global aggregator (90+ countries incl. BG) via the free v4 API — one call per
+    role term × locale. No-op until CAREERJET_API_KEY lands in .env."""
+    if not terms:
+        return []
+    from ...data.sources import careerjet
+    return careerjet.fetch(search_terms=terms)
+
+
 def _francetravail_targeted(terms: list[str]) -> list[RawPosting]:
     """France Travail via the free OAuth API — third EU board adapter. Silent no-op until
     FRANCETRAVAIL_CLIENT_ID/SECRET land in .env (register at francetravail.io)."""
@@ -140,7 +149,8 @@ PROFILE_SOURCES = [("dev_bg_targeted", _dev_bg_targeted),
                    ("arbeitsagentur_targeted", _arbeitsagentur_targeted),
                    ("francetravail_targeted", _francetravail_targeted),
                    ("adzuna_targeted", _adzuna_targeted),
-                   ("jooble_targeted", _jooble_targeted)]
+                   ("jooble_targeted", _jooble_targeted),
+                   ("careerjet_targeted", _careerjet_targeted)]
 
 
 def _safe(name: str, fn, stats=None) -> list[RawPosting]:

@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # Jooble — pan-European aggregator API (free key from jooble.org/api/about). The one
     # aggregator that natively covers BG + the Baltics. Keyword-driven; silent no-op unless set.
     jooble_api_key: str = ""
+    # Careerjet — global aggregator (90+ countries incl. BG), v4 API with Basic auth (free
+    # publisher key from careerjet.com/partners/api). Silent no-op until the key is set.
+    # user_ip is a required API param; default is a server-side geo placeholder, overridable.
+    careerjet_api_key: str = ""
+    careerjet_user_ip: str = ""
     # Absolute zombie cap: postings older than this retire outright (window sources where a
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
