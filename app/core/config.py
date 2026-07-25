@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     ingest_window_start_hour: int = 0
     ingest_window_end_hour: int = 8
     ingest_shard_batch: int = 200
+    # Detection (`python -m app.jobs detect_window`) reuses the same nightly window but is
+    # heavier per company (careers discovery + ATS probing, ~20–40 requests each), so its
+    # shards are smaller. Schedule it on its own nights / offset from ingest.
+    detect_shard_batch: int = 100
     # Absolute zombie cap: postings older than this retire outright (window sources where a
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
