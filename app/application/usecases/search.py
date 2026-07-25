@@ -122,7 +122,7 @@ def _jooble_targeted(terms: list[str]) -> list[RawPosting]:
     if not terms:
         return []
     from ...data.sources import jooble
-    return jooble.fetch(search_terms=terms)
+    return jooble.fetch(search_terms=terms, max_terms=settings.jooble_max_terms)
 
 
 def _careerjet_targeted(terms: list[str]) -> list[RawPosting]:

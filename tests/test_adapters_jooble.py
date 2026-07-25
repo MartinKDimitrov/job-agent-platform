@@ -35,6 +35,19 @@ def test_fetch_posts_key_in_url_and_dedups(monkeypatch):
     assert p.external_id == "jooble:1" and p.apply_url == "https://jooble/1"
 
 
+def test_max_terms_caps_requests(monkeypatch):
+    """The 500-request free tier must not be blown — max_terms bounds calls per run."""
+    _with_key(monkeypatch)
+    calls = []
+
+    def fake(url, body, **k):
+        calls.append(body.get("keywords"))
+        return {"jobs": [_job(1)]}
+    monkeypatch.setattr(jb, "post_json", fake)
+    jb.fetch(search_terms=["a", "b", "c", "d", "e"], max_terms=2, sleep=lambda *_: None)
+    assert calls == ["a", "b"]                           # only the first 2 terms queried
+
+
 def test_short_snippet_dropped(monkeypatch):
     _with_key(monkeypatch)
     bad = {"id": 9, "title": "T", "link": "https://x/9", "company": "Y", "location": "Z",

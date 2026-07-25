@@ -39,7 +39,10 @@ class Settings(BaseSettings):
     adzuna_app_key: str = ""
     # Jooble — pan-European aggregator API (free key from jooble.org/api/about). The one
     # aggregator that natively covers BG + the Baltics. Keyword-driven; silent no-op unless set.
+    # Free tier is capped at 500 requests TOTAL, and we spend one per role term per run, so cap
+    # the terms queried per run to keep the quota alive (raise once the limit is lifted).
     jooble_api_key: str = ""
+    jooble_max_terms: int = 25
     # Careerjet — global aggregator (90+ countries incl. BG), v4 API with Basic auth (free
     # publisher key from careerjet.com/partners/api). Silent no-op until the key is set.
     # user_ip is a required API param; default is a server-side geo placeholder, overridable.

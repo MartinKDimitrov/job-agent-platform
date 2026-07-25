@@ -55,11 +55,15 @@ def _to_posting(it: dict) -> RawPosting | None:
 
 
 def fetch(search_terms: list[str] | None = None, location: str = "", pages: int = DEFAULT_PAGES,
-          sleep=time.sleep) -> list[RawPosting]:
-    """One POST per (term × page). With no terms, pulls Jooble's recent feed for `location`."""
+          max_terms: int | None = None, sleep=time.sleep) -> list[RawPosting]:
+    """One POST per (term × page). With no terms, pulls Jooble's recent feed for `location`.
+    `max_terms` caps the terms queried this run — Jooble's free tier allows only 500 requests
+    TOTAL, so an unbounded per-term sweep would exhaust the quota; keep runs small."""
     if not _configured():
         return []                                # key not set -> silent no-op
     terms = [t for t in (search_terms or [""]) if search_terms is None or t] or [""]
+    if max_terms is not None and max_terms >= 0:
+        terms = terms[:max_terms]
     url = _API.format(key=settings.jooble_api_key)
     out: list[RawPosting] = []
     seen: set[str] = set()
