@@ -145,6 +145,36 @@ def test_run_bulk_does_not_mark_done_on_failed_call(monkeypatch):
         assert row.next_page == 2 and not row.done and row.pulled == 5
 
 
+def test_run_drain_stops_when_all_slices_done(monkeypatch):
+    """Loop batches until every slice drains — a slice with one short page drains in one batch."""
+    _keys(monkeypatch)
+    monkeypatch.setattr(ab.adzuna, "categories", lambda c: [("it-jobs", "IT")])
+
+    def fake(country, page, *, category=None, what=None, results_per_page=5):
+        j = _page(country, page, 2, 2)                    # 2 < 5 -> short page -> drains at once
+        posts = [p for p in (az._to_posting(country, it) for it in j["results"]) if p]
+        return posts, 2
+    monkeypatch.setattr(ab.adzuna, "fetch_page", fake)
+
+    out = ab.run_drain(SessionLocal, batch_budget=5, max_calls=100, countries=("de",),
+                       batch_pause=0, log=lambda *_: None, sleep=lambda *_: None)
+    assert out["slices_done"] == out["slices"] and out["batches"] >= 1
+    with SessionLocal() as db:
+        assert db.query(AdzunaPull).filter_by(done=True).count() == 1
+
+
+def test_run_drain_backs_off_on_stall(monkeypatch):
+    """A 503 storm (every call fails -> adds nothing) must stop the loop, not hammer forever."""
+    _keys(monkeypatch)
+    monkeypatch.setattr(ab.adzuna, "categories", lambda c: [("it-jobs", "IT")])
+    monkeypatch.setattr(ab.adzuna, "fetch_page",
+                        lambda *a, **k: (None, 0))        # every call fails
+    out = ab.run_drain(SessionLocal, batch_budget=5, max_calls=10000, stall_runs=3,
+                       countries=("de",), batch_pause=0, log=lambda *_: None, sleep=lambda *_: None)
+    assert out["stalled"] is True and out["added"] == 0
+    assert out["calls"] < 10000                           # bailed on stall, nowhere near the cap
+
+
 def test_run_bulk_noop_without_keys(monkeypatch):
     monkeypatch.setattr(az.settings, "adzuna_app_id", "", raising=False)
     monkeypatch.setattr(az.settings, "adzuna_app_key", "", raising=False)

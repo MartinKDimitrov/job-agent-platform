@@ -77,7 +77,7 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
             .order_by(AdzunaPull.pulled.asc(), AdzunaPull.category.asc(),
                       AdzunaPull.country.asc())).scalars().all()
 
-    calls = added = touched = 0
+    calls = added = touched = failed = 0
     for slice_id in pending:
         if calls >= call_budget:
             break
@@ -96,6 +96,7 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
             if posts is None:
                 # the call failed (e.g. transient 503) — leave the cursor exactly where it is
                 # (retry this same page next run) and move on; NEVER mark the slice done here.
+                failed += 1
                 break
             with session_factory() as db:
                 row = db.get(AdzunaPull, slice_id)
@@ -116,7 +117,8 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
             sleep(adzuna.CALL_DELAY)
         if touched_this:
             touched += 1
-    return {"configured": True, "calls": calls, "added": added, "slices_touched": touched}
+    return {"configured": True, "calls": calls, "added": added, "slices_touched": touched,
+            "failed": failed}
 
 
 def status(db) -> dict:
@@ -147,6 +149,50 @@ def status(db) -> dict:
              "updated_at": r.updated_at.isoformat() if r.updated_at else None}
             for r in rows],
     }
+
+
+def run_drain(session_factory, *, batch_budget: int = DEFAULT_CALL_BUDGET, max_calls: int = 5000,
+              stall_runs: int = 3, batch_pause: float = 2.0, board_path: str | None = None,
+              countries=COUNTRIES, log=print, sleep=time.sleep) -> dict:
+    """Run batches back-to-back until every slice is drained OR the trial quota throttles us.
+
+    Adzuna serves full pages arbitrarily deep, so a slice only drains after its whole count is
+    paged — full drain is thousands of calls, quota-bounded. This loops run_bulk, stopping on:
+    all slices done; ``max_calls`` safety cap; or ``stall_runs`` consecutive batches that add
+    nothing (a 503/quota storm — back off rather than hammer the key). Rewrites the board file
+    after each batch when ``board_path`` is set (publishing stays a manual step)."""
+    total_calls = total_added = batches = 0
+    stalled = 0
+    while total_calls < max_calls:
+        res = run_bulk(session_factory, call_budget=batch_budget, countries=countries, sleep=sleep)
+        if not res.get("configured"):
+            return {"configured": False, "batches": batches, "calls": 0, "added": 0}
+        batches += 1
+        total_calls += res["calls"]
+        total_added += res["added"]
+        with session_factory() as db:
+            st = status(db)
+            if board_path:
+                try:
+                    with open(board_path, "w", encoding="utf-8") as fh:
+                        fh.write(render_board(st))
+                except OSError:
+                    pass
+        log(f"batch {batches}: +{res['added']} postings, {res['calls']} calls "
+            f"({res.get('failed', 0)} failed) | pulled={st['pulled']} "
+            f"done={st['slices_done']}/{st['slices']}")
+        if res["calls"] == 0 or st["slices_done"] >= st["slices"]:
+            break                                     # nothing pending / everything drained
+        stalled = stalled + 1 if res["added"] == 0 else 0
+        if stalled >= stall_runs:
+            log(f"stalled {stalled} batches (quota/503) — backing off")
+            break
+        sleep(batch_pause)
+    with session_factory() as db:
+        st = status(db)
+    return {"configured": True, "batches": batches, "calls": total_calls, "added": total_added,
+            "stalled": stalled >= stall_runs, "slices_done": st["slices_done"],
+            "slices": st["slices"], "pulled": st["pulled"]}
 
 
 _FLAG = {"DE": "🇩🇪", "FR": "🇫🇷", "IT": "🇮🇹", "GB": "🇬🇧", "ES": "🇪🇸", "NL": "🇳🇱", "PL": "🇵🇱"}

@@ -26,6 +26,11 @@ if __name__ == "__main__":
     elif mode == "adzuna_bulk":
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else adzuna_bulk.DEFAULT_CALL_BUDGET
         print(adzuna_bulk.run_bulk(SessionLocal, call_budget=budget))
+    elif mode == "adzuna_drain":
+        # keep pulling batches until every slice drains or the quota throttles us
+        cap = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
+        board = sys.argv[3] if len(sys.argv) > 3 else None
+        print(adzuna_bulk.run_drain(SessionLocal, max_calls=cap, board_path=board))
     elif mode == "adzuna_status":
         import json
         with SessionLocal() as db:
