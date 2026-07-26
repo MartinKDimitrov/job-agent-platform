@@ -1,0 +1,323 @@
+<title>Job Agent Platform — цялостна имплементация</title>
+<style>
+  :root{
+    --bg:#f5f7f8; --surface:#ffffff; --surface-2:#eef3f5; --border:#dbe3e7;
+    --ink:#111a1f; --ink-2:#4a565e; --ink-3:#7c888f;
+    --accent:#0c8d7e; --accent-ink:#0a6b60; --accent-soft:#dcefec;
+    --done:#12925a; --now:#c47a12; --now-soft:#f7ead2; --later:#859299; --track:#e4ebee;
+    --spine:#cdd8dd;
+    --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace; --maxw:1000px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0b1214; --surface:#111a1d; --surface-2:#17232a; --border:#233238;
+    --ink:#e8eef0; --ink-2:#9fafb5; --ink-3:#6a7a81;
+    --accent:#2bb6a4; --accent-ink:#63d6c6; --accent-soft:#0f2b27;
+    --done:#33c07d; --now:#e0a23c; --now-soft:#2a2213; --later:#7c8b93; --track:#1d2c31;
+    --spine:#2a3a40;}}
+  :root[data-theme="dark"]{
+    --bg:#0b1214; --surface:#111a1d; --surface-2:#17232a; --border:#233238;
+    --ink:#e8eef0; --ink-2:#9fafb5; --ink-3:#6a7a81;
+    --accent:#2bb6a4; --accent-ink:#63d6c6; --accent-soft:#0f2b27;
+    --done:#33c07d; --now:#e0a23c; --now-soft:#2a2213; --later:#7c8b93; --track:#1d2c31;
+    --spine:#2a3a40;}
+  :root[data-theme="light"]{
+    --bg:#f5f7f8; --surface:#ffffff; --surface-2:#eef3f5; --border:#dbe3e7;
+    --ink:#111a1f; --ink-2:#4a565e; --ink-3:#7c888f;
+    --accent:#0c8d7e; --accent-ink:#0a6b60; --accent-soft:#dcefec;
+    --done:#12925a; --now:#c47a12; --now-soft:#f7ead2; --later:#859299; --track:#e4ebee;
+    --spine:#cdd8dd;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:40px 22px 72px}
+  .mono{font-family:var(--font-mono)}
+  header.top{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:26px}
+  .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 10px}
+  h1{font-size:clamp(25px,3.8vw,36px);line-height:1.1;margin:0 0 10px;font-weight:690;letter-spacing:-.02em;text-wrap:balance}
+  .sub{color:var(--ink-2);font-size:15px;margin:0;max-width:64ch}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:22px 0 4px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 14px}
+  .stat .v{font-size:24px;font-weight:690;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .stat .l{color:var(--ink-2);font-size:12px;margin-top:6px}
+
+  /* progress meter */
+  .meter{margin:26px 0 6px}
+  .meter .lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ink-2);margin-bottom:8px}
+  .meter .lbl b{color:var(--ink);font-weight:640}
+  .seg{display:flex;gap:4px;height:12px}
+  .seg span{flex:1;border-radius:3px;background:var(--track)}
+  .seg span.d{background:var(--done)}
+  .seg span.n{background:linear-gradient(90deg,var(--accent),var(--now))}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:20px 0 6px;font-size:12px;color:var(--ink-2)}
+  .legend b{font-weight:600;color:var(--ink)}
+  .k{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .dot.d{background:var(--done)} .dot.n{background:var(--now)} .dot.l{background:var(--later)}
+
+  /* timeline */
+  .tl{position:relative;margin-top:30px}
+  .station{position:relative;display:grid;grid-template-columns:28px 1fr;gap:16px;padding-bottom:18px}
+  .rail{position:relative;display:flex;justify-content:center}
+  .rail::before{content:"";position:absolute;top:2px;bottom:-18px;width:2px;background:var(--spine)}
+  .station:last-child .rail::before{display:none}
+  .node{position:relative;z-index:1;width:16px;height:16px;border-radius:50%;margin-top:3px;background:var(--surface);border:3px solid var(--later)}
+  .node.d{border-color:var(--done);background:var(--done)}
+  .node.n{border-color:var(--now);background:var(--now);box-shadow:0 0 0 5px var(--now-soft)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 18px;margin-bottom:2px}
+  .card.now{border-color:var(--now);box-shadow:0 0 0 1px var(--now) inset}
+  .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:3px}
+  .chead h2{font-size:16.5px;font-weight:670;margin:0;letter-spacing:-.01em}
+  .phaseno{font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:670;padding:2px 9px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;letter-spacing:.02em}
+  .pill.done{color:var(--done);background:color-mix(in srgb,var(--done) 13%,transparent);border:1px solid color-mix(in srgb,var(--done) 30%,transparent)}
+  .pill.part{color:var(--now);background:color-mix(in srgb,var(--now) 12%,transparent);border:1px solid color-mix(in srgb,var(--now) 30%,transparent)}
+  .pill.now{color:#fff;background:var(--now);border:1px solid var(--now)}
+  .pill.next{color:var(--later);background:var(--surface-2);border:1px solid var(--border)}
+  .desc{color:var(--ink-2);font-size:13.5px;margin:2px 0 12px}
+  .items{display:flex;flex-wrap:wrap;gap:6px}
+  .it{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:4px 9px;color:var(--ink-2)}
+  .it .m{font-weight:700;font-size:12px;line-height:1}
+  .it.ok{color:var(--ink)} .it.ok .m{color:var(--done)}
+  .it.wait .m{color:var(--later)}
+  .it.go{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)} .it.go .m{color:var(--accent-ink)}
+  .ai{margin-left:auto;display:flex;gap:5px;font-size:14px}
+  .ai span{opacity:.9}
+  @media (max-width:560px){.ai{margin-left:0;width:100%}}
+
+  .aibar{margin-top:34px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px}
+  .aibar h3{margin:0 0 4px;font-size:14px;font-weight:660}
+  .aibar p{margin:0 0 12px;font-size:13px;color:var(--ink-2)}
+  .aibar .row{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--border);font-size:13px}
+  .aibar .row:first-of-type{border-top:0}
+  .aibar .cost{font-family:var(--font-mono);font-size:12px;color:var(--done)}
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--border);color:var(--ink-3);font-size:12.5px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Job Agent Platform · карта на изграждането · 26 юли 2026</p>
+    <h1>От идея до продукт — цялата имплементация</h1>
+    <p class="sub">Потребителят описва уменията си → платформата <b>сама</b> намира отворени
+      позиции в цяла Европа и дава директен apply-линк. Ето целия път: какво е построено, къде
+      сме сега и какво предстои.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="v">25 496</div><div class="l">обяви (23 541 live)</div></div>
+      <div class="stat"><div class="v">11 613</div><div class="l">работодатели</div></div>
+      <div class="stat"><div class="v">26</div><div class="l">адаптера (14 ATS + 12 борси)</div></div>
+      <div class="stat"><div class="v">7</div><div class="l">агрегатора · 13 UI езика</div></div>
+      <div class="stat"><div class="v">468</div><div class="l">теста ✓</div></div>
+    </div>
+
+    <div class="meter">
+      <div class="lbl"><span>Прогрес по етапи</span><span><b>4</b> завършени · <b>2</b> в ход · <b>3</b> предстоят</span></div>
+      <div class="seg">
+        <span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span>
+        <span class="n"></span><span class="n"></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="k"><span class="dot d"></span> завършено</span>
+      <span class="k"><span class="dot n"></span> в ход / частично</span>
+      <span class="k"><span class="dot l"></span> предстои</span>
+      <span style="margin-left:auto">AI: 🧠 embeddings · 🔍 extraction · ✍️ generative · ⚙️ чист код</span>
+    </div>
+  </header>
+
+  <div class="tl">
+
+    <!-- 1 -->
+    <div class="station">
+      <div class="rail"><div class="node d"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Фаза 0–1</span><h2>Основа на продукта</h2>
+          <span class="pill done">✓ готово</span><span class="ai">⚙️</span></div>
+        <p class="desc">Акаунти, профили, лек onboarding и цялата уеб-основа за реални потребители.</p>
+        <div class="items">
+          <span class="it ok"><span class="m">✓</span> Auth (email+JWT, Google OAuth)</span>
+          <span class="it ok"><span class="m">✓</span> Профили + валидация</span>
+          <span class="it ok"><span class="m">✓</span> Onboarding: occupation-first таксономия (BG)</span>
+          <span class="it ok"><span class="m">✓</span> GDPR експорт/изтриване</span>
+          <span class="it ok"><span class="m">✓</span> SEO (meta/robots/sitemap/schema.org)</span>
+          <span class="it ok"><span class="m">✓</span> i18n · 13 езика</span>
+          <span class="it ok"><span class="m">✓</span> Mobile shell · Postgres</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="station">
+      <div class="rail"><div class="node d"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Фаза 2 · сърцето</span><h2>Автоматично намиране на обяви</h2>
+          <span class="pill done">✓ готово</span><span class="ai">⚙️</span></div>
+        <p class="desc">Конвейерът, който намира, дедуплицира и поддържа жив индекс от обяви — без
+          мрежа на потребителския път (търсенето чете само нашия индекс, &lt;1s).</p>
+        <div class="items">
+          <span class="it ok"><span class="m">✓</span> Adapter framework + норм. схема</span>
+          <span class="it ok"><span class="m">✓</span> 14 ATS адаптера (Workday…d.vinci)</span>
+          <span class="it ok"><span class="m">✓</span> 12 борси/агрегатора</span>
+          <span class="it ok"><span class="m">✓</span> Cross-source dedup (кирилица↔латиница)</span>
+          <span class="it ok"><span class="m">✓</span> Company registry + ATS автодетекция</span>
+          <span class="it ok"><span class="m">✓</span> Многоезично careers-откриване + TLD-gating</span>
+          <span class="it ok"><span class="m">✓</span> DB-first search · orchestrator/scheduler</span>
+          <span class="it ok"><span class="m">✓</span> Шардиран нощен конвейер + guard</span>
+          <span class="it ok"><span class="m">✓</span> Наблюдаемост (CrawlRun / metrics)</span>
+          <span class="it ok"><span class="m">✓</span> Liveness / takedown проби</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="station">
+      <div class="rail"><div class="node d"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Скор · verify-v1 / annotate-v1</span><h2>Интелигентност: matching &amp; scoring</h2>
+          <span class="pill done">✓ готово</span><span class="ai">🧠 🔍</span></div>
+        <p class="desc">Семантичен скор, който казва „покрито / липсва" и подрежда обявите по
+          реална близост до профила — почти без разход (локални embeddings).</p>
+        <div class="items">
+          <span class="it ok"><span class="m">✓</span> E5 семантичен скор (локално)</span>
+          <span class="it ok"><span class="m">✓</span> Hybrid recall (токен ∨ вектор ∨ умение)</span>
+          <span class="it ok"><span class="m">✓</span> Анотация на изисквания (annotate-v1)</span>
+          <span class="it ok"><span class="m">✓</span> LLM верификация на покритие (verify-v1)</span>
+          <span class="it ok"><span class="m">✓</span> Каноничен речник на умения</span>
+          <span class="it ok"><span class="m">✓</span> Must-gate · ★5 таван · freshness decay</span>
+          <span class="it ok"><span class="m">✓</span> Near-dup merge · заплата (меко)</span>
+          <span class="it ok"><span class="m">✓</span> Feedback събития (applied/hidden)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="station">
+      <div class="rail"><div class="node d"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Фаза 3 · BYOK</span><h2>Генериране на документи</h2>
+          <span class="pill done">✓ готово</span><span class="ai">✍️</span></div>
+        <p class="desc">CV и мотивационни писма по обявата — единственият „скъп" AI, и той е за
+          сметка на потребителя (BYOK) с безплатна платформена лента.</p>
+        <div class="items">
+          <span class="it ok"><span class="m">✓</span> Style profile (тон, CEFR)</span>
+          <span class="it ok"><span class="m">✓</span> BYOK ключове (шифровани) + тест</span>
+          <span class="it ok"><span class="m">✓</span> Версионирани промптове (v2)</span>
+          <span class="it ok"><span class="m">✓</span> CV генератор (BG+EN, без измислени умения)</span>
+          <span class="it ok"><span class="m">✓</span> Cover letter генератор</span>
+          <span class="it ok"><span class="m">✓</span> docx/pdf · безпл. лента + локален fallback</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 · NOW -->
+    <div class="station">
+      <div class="rail"><div class="node n"></div></div>
+      <div class="card now">
+        <div class="chead"><span class="phaseno">EU разширяване</span><h2>Агрегаторска широчина + BG/Балтика</h2>
+          <span class="pill now">● тук сме</span><span class="ai">⚙️ 🧠</span></div>
+        <p class="desc">Пивот: вместо да гоним фирми една по една, четем големите EU агрегатори през
+          официални API — същите обяви като Indeed/StepStone, но легитимно. Adzuna се източва на
+          порции за <b>всички професии</b>.</p>
+        <div class="items">
+          <span class="it go"><span class="m">▸</span> Adzuna bulk pull ≈17.8k / ~298k (тече)</span>
+          <span class="it ok"><span class="m">✓</span> Jooble — жив (пан-EU · BG+Балтика)</span>
+          <span class="it ok"><span class="m">✓</span> Careerjet — жив (90 държави · BG)</span>
+          <span class="it ok"><span class="m">✓</span> Arbeitnow · Arbeitsagentur · France Travail</span>
+          <span class="it ok"><span class="m">✓</span> karriere.nrw (публичен сектор)</span>
+          <span class="it go"><span class="m">▸</span> Bulk discovery (директории тип karriere.at)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 · partial -->
+    <div class="station">
+      <div class="rail"><div class="node n"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Фаза 4</span><h2>Multi-user · произволни професии · digest</h2>
+          <span class="pill part">◐ частично</span><span class="ai">⚙️ 🧠</span></div>
+        <p class="desc">Дневната „жива" стойност за клиента и разширяване отвъд IT профилите.</p>
+        <div class="items">
+          <span class="it ok"><span class="m">✓</span> Дневен digest имейл (+ found_job / inactivity гейтове)</span>
+          <span class="it ok"><span class="m">✓</span> Onboarding таксономия (Етап 1)</span>
+          <span class="it wait"><span class="m">○</span> Auth hardening (reset/verify)</span>
+          <span class="it wait"><span class="m">○</span> Пълна ESCO таксономия (не-IT)</span>
+          <span class="it wait"><span class="m">○</span> Профил-темплейти · публични landing</span>
+          <span class="it wait"><span class="m">○</span> Години опит per умение · learning-time</span>
+          <span class="it wait"><span class="m">○</span> Езиков сигнал в скора · GEO слой</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 -->
+    <div class="station">
+      <div class="rail"><div class="node"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Фаза 5</span><h2>Отговори &amp; учене</h2>
+          <span class="pill next">⏳ следва</span><span class="ai">🔍 🧠</span></div>
+        <p class="desc">Системата се самоподобрява: колкото повече потребители и реални изходи,
+          толкова по-точен скор.</p>
+        <div class="items">
+          <span class="it wait"><span class="m">○</span> Response Monitor (Gmail/IMAP авто-статуси)</span>
+          <span class="it wait"><span class="m">○</span> Learning loop (implicit/explicit/outcome)</span>
+          <span class="it wait"><span class="m">○</span> „Наех се през тази обява" → ground truth</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8 -->
+    <div class="station">
+      <div class="rail"><div class="node"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">След пускането</span><h2>Recruiter-страна + монетизация</h2>
+          <span class="pill next">⏳ по-късно</span><span class="ai">⚙️</span></div>
+        <p class="desc">Двустранен пазар: работодател подава обява → пращаме съвпадащи кандидати
+          над негов праг. Планираната платена функционалност — след като има маса кандидати.</p>
+        <div class="items">
+          <span class="it wait"><span class="m">○</span> Recruiter акаунти + обратен matching</span>
+          <span class="it wait"><span class="m">○</span> Opt-in видимост + GDPR основание</span>
+          <span class="it wait"><span class="m">○</span> Ad-ready layout · CMP/cookie consent</span>
+          <span class="it wait"><span class="m">○</span> Продуктова аналитика (PostHog)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9 -->
+    <div class="station">
+      <div class="rail"><div class="node n"></div></div>
+      <div class="card">
+        <div class="chead"><span class="phaseno">Cross-cutting</span><h2>Ops / инфраструктура</h2>
+          <span class="pill part">◐ частично</span><span class="ai">⚙️</span></div>
+        <p class="desc">Работи паралелно с всичко останало.</p>
+        <div class="items">
+          <span class="it ok"><span class="m">✓</span> Clean Architecture (core/domain/data/app)</span>
+          <span class="it ok"><span class="m">✓</span> 468 теста (hermetic SQLite)</span>
+          <span class="it ok"><span class="m">✓</span> pgvector HNSW на staging</span>
+          <span class="it wait"><span class="m">○</span> Deployment (VPS) · Alembic миграции</span>
+          <span class="it wait"><span class="m">○</span> Sentry + PostHog · CI (Pipelines)</span>
+          <span class="it wait"><span class="m">○</span> Lovable — полиран UI/дизайн</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AI cost strategy -->
+  <div class="aibar">
+    <h3>Стратегия за AI разхода — защо ядрото е почти безплатно</h3>
+    <p>„Намери → валидирай → оцени → покажи Apply" върви на локални embeddings + чист код.
+      Единственият платен AI е при документите — и той е BYOK.</p>
+    <div class="row"><span>🧠</span><span>Embeddings — скор, dedup, таксономия</span><span class="cost">~0 · само CPU</span></div>
+    <div class="row"><span>🔍</span><span>Extraction — изисквания, профил от CV</span><span class="cost">нисък · малък модел</span></div>
+    <div class="row"><span>✍️</span><span>Generative — CV / cover letter</span><span class="cost">BYOK · за сметка на потребителя</span></div>
+    <div class="row"><span>⚙️</span><span>Всичко останало — regex / SQL / parsing</span><span class="cost">0</span></div>
+  </div>
+
+  <footer>
+    Статус към 26 юли 2026 (staging, само реални данни). Числата за обяви растат — Adzuna drain
+    тече. Източник на етапите: <span class="mono">ROADMAP.md</span> · референции
+    <span class="mono">ARCHITECTURE.md</span>, <span class="mono">DECISIONS.md</span>,
+    <span class="mono">docs/features/</span>.
+  </footer>
+</div>
