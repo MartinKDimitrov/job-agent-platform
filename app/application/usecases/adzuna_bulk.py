@@ -195,6 +195,56 @@ def run_drain(session_factory, *, batch_budget: int = DEFAULT_CALL_BUDGET, max_c
             "slices": st["slices"], "pulled": st["pulled"]}
 
 
+def run_recency_refresh(session_factory, *, call_budget: int = 300, max_pages_per_slice: int = 3,
+                        results_per_page: int = RESULTS_PER_PAGE, countries=COUNTRIES,
+                        sleep=time.sleep) -> dict:
+    """Cheap steady-state maintenance — catch only the NEW postings, not re-drain the catalogue.
+
+    The bulk pull (run_bulk/run_drain) is for the one-time fill. Once a market is seeded, this
+    is what runs nightly: for every country×category it pages Adzuna **sorted by date** (newest
+    first) and stops the moment a page adds nothing new — i.e. we've reached jobs we already have
+    (content_hash dedup makes re-seen postings a cheap SKIP). So a slice usually costs 1 page,
+    a few when there's a burst. Independent of the drain cursor (works even on drained slices);
+    enrichment/retirement stay in run_ingest_maintenance, run separately.
+    """
+    if not adzuna._configured():
+        return {"configured": False, "calls": 0, "added": 0, "slices": 0}
+
+    ensure_slices(session_factory, countries)
+    with session_factory() as db:
+        slices = db.execute(
+            select(AdzunaPull.country, AdzunaPull.category)
+            .where(AdzunaPull.country.in_(countries))
+            .order_by(AdzunaPull.category.asc(), AdzunaPull.country.asc())).all()
+
+    calls = added = failed = touched = 0
+    for country, category in slices:
+        if calls >= call_budget:
+            break
+        for page in range(1, max_pages_per_slice + 1):
+            if calls >= call_budget:
+                break
+            posts, _total = adzuna.fetch_page(country, page, category=category,
+                                              results_per_page=results_per_page, sort_by="date")
+            calls += 1
+            if posts is None:                     # failed call — skip this slice this run
+                failed += 1
+                break
+            with session_factory() as db:
+                res = persist_postings(db, posts)
+                db.commit()
+            added += res["added"]
+            if res["added"]:
+                touched += 1
+            # newest-first: a page with no NEW jobs means we've met what we already have -> stop.
+            # a short page means the slice ran out.
+            if res["added"] == 0 or len(posts) < results_per_page:
+                break
+            sleep(adzuna.CALL_DELAY)
+    return {"configured": True, "calls": calls, "added": added, "failed": failed,
+            "slices": len(slices), "slices_with_new": touched}
+
+
 _FLAG = {"DE": "🇩🇪", "FR": "🇫🇷", "IT": "🇮🇹", "GB": "🇬🇧", "ES": "🇪🇸", "NL": "🇳🇱", "PL": "🇵🇱"}
 
 

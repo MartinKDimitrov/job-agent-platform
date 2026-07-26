@@ -6,6 +6,7 @@
                                         # line — the process sleeps between country shards
     python -m app.jobs detect_window    # sharded, paced ATS detection over pending companies
     python -m app.jobs adzuna_bulk [call_budget]  # drain ALL Adzuna professions, resumable
+    python -m app.jobs adzuna_recent [call_budget]  # nightly: catch only NEW postings (date-sort)
     python -m app.jobs adzuna_status    # print bulk-pull progress (per country / slice)
 """
 import sys
@@ -31,6 +32,10 @@ if __name__ == "__main__":
         cap = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
         board = sys.argv[3] if len(sys.argv) > 3 else None
         print(adzuna_bulk.run_drain(SessionLocal, max_calls=cap, board_path=board))
+    elif mode == "adzuna_recent":
+        # cheap nightly maintenance: catch only NEW postings (date-sorted, stop at first-seen)
+        budget = int(sys.argv[2]) if len(sys.argv) > 2 else 300
+        print(adzuna_bulk.run_recency_refresh(SessionLocal, call_budget=budget))
     elif mode == "adzuna_status":
         import json
         with SessionLocal() as db:

@@ -175,6 +175,47 @@ def test_run_drain_backs_off_on_stall(monkeypatch):
     assert out["calls"] < 10000                           # bailed on stall, nowhere near the cap
 
 
+def test_fetch_page_passes_sort_by(monkeypatch):
+    _keys(monkeypatch)
+    seen = {}
+
+    def fake(url, params=None, **k):
+        seen.update(params or {})
+        return _page("de", 1, 1, 10)
+    monkeypatch.setattr(az, "fetch_json", fake)
+    az.fetch_page("de", 1, category="it-jobs", sort_by="date")
+    assert seen.get("sort_by") == "date"
+
+
+def test_recency_stops_at_first_seen_page(monkeypatch):
+    """Date-sorted: page until a page adds nothing new, then stop — cheap steady-state."""
+    _keys(monkeypatch)
+    monkeypatch.setattr(ab.adzuna, "categories", lambda c: [("it-jobs", "IT")])
+
+    # page 1 = 5 brand-new, page 2 = the SAME 5 (all already-seen -> 0 new) -> stop after page 2
+    p1 = _page("de", 1, 5, 500)
+    p2 = _page("de", 1, 5, 500)                          # identical ids/titles -> dupes on 2nd persist
+
+    def fake(country, page, *, category=None, what=None, results_per_page=5, sort_by=None):
+        assert sort_by == "date"
+        j = p1 if page == 1 else p2
+        posts = [p for p in (az._to_posting(country, it) for it in j["results"]) if p]
+        return posts, 500
+    monkeypatch.setattr(ab.adzuna, "fetch_page", fake)
+
+    out = ab.run_recency_refresh(SessionLocal, call_budget=50, results_per_page=5,
+                                 max_pages_per_slice=5, countries=("de",), sleep=lambda *_: None)
+    assert out["added"] == 5 and out["calls"] == 2       # page1 added 5, page2 added 0 -> stopped
+    assert out["slices_with_new"] == 1
+
+
+def test_recency_noop_without_keys(monkeypatch):
+    monkeypatch.setattr(az.settings, "adzuna_app_id", "", raising=False)
+    monkeypatch.setattr(az.settings, "adzuna_app_key", "", raising=False)
+    out = ab.run_recency_refresh(SessionLocal, countries=("de",), sleep=lambda *_: None)
+    assert out["configured"] is False and out["calls"] == 0
+
+
 def test_run_bulk_noop_without_keys(monkeypatch):
     monkeypatch.setattr(az.settings, "adzuna_app_id", "", raising=False)
     monkeypatch.setattr(az.settings, "adzuna_app_key", "", raising=False)
