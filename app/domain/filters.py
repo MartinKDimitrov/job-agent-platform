@@ -153,9 +153,30 @@ _ONSITE_ONLY_RE = re.compile(
     r"fully (?:in[- ])?office|само (?:на място|в офис)|присъствие в офиса|"
     r"без (?:възможност за )?дистанционна)\b", re.I)
 
+# Hybrid = part-office. Not "remote", so a remote-only seeker shouldn't get these. The signal
+# often lives only in the DESCRIPTION (dev.bg's feed carries no location field, so location is
+# empty and location_ok can't judge). Full-remote phrasing overrides — a posting that ALSO
+# offers 100% remote is fine for a remote seeker, so it's not flagged.
+_HYBRID_RE = re.compile(
+    r"\bhybrid\b|хибрид|"
+    r"\d+\s*days?\s*(?:a\s*week\s*|per\s*week\s*|in\s*|from\s*|at\s*)+(?:the\s*)?office|"
+    r"дни\s*(?:в|от)\s*офиса", re.I)
+_FULLY_REMOTE_RE = re.compile(
+    r"\b(?:fully|100\s*%|completely|entirely)[-\s]remote\b|\bremote[-\s]first\b|"
+    r"изцяло\s*дистанционно|напълно\s*дистанционно", re.I)
+
 
 def onsite_only(description: str) -> bool:
     return bool(_ONSITE_ONLY_RE.search(description or ""))
+
+
+def is_hybrid(text: str) -> bool:
+    """A hybrid (part-office) posting — office presence required some days, so NOT remote. A
+    posting that also states full/100% remote isn't flagged (a remote seeker takes that option)."""
+    text = text or ""
+    if _FULLY_REMOTE_RE.search(text):
+        return False
+    return bool(_HYBRID_RE.search(text))
 
 
 def location_ok(profile, location: str) -> bool:
@@ -186,8 +207,11 @@ def passes_hard_filters(profile, title: str, location: str, description: str = "
     """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority'."""
     if not location_ok(profile, location):
         return False, "location"
-    # a "remote"-labeled posting whose text says otherwise is an onsite posting
-    if (profile.remote_pref or "").lower() == "remote" and onsite_only(description):
+    # a "remote"-labeled posting whose text says otherwise is an onsite/hybrid posting. The
+    # hybrid signal often lives ONLY in the description (dev.bg has no location field), so
+    # location_ok can't see it — catch it here for a remote-only seeker.
+    if (profile.remote_pref or "").lower() == "remote" and (
+            onsite_only(description) or is_hybrid(f"{location} {description}")):
         return False, "location"
     if not geo_ok(profile, location, description):
         return False, "location"

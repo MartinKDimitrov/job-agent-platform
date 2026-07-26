@@ -1,5 +1,5 @@
 """Hard filters: seniority (management/IC, junior/senior), location and geo compatibility."""
-from app.domain.filters import geo_ok, location_ok, seniority_ok, passes_hard_filters
+from app.domain.filters import geo_ok, location_ok, seniority_ok, passes_hard_filters, is_hybrid
 
 
 class P:
@@ -79,6 +79,40 @@ def test_passes_hard_filters_reasons():
     assert ok is False and reason == "location"
     ok, reason = passes_hard_filters(ic_remote, "Senior Android Engineer", "Remote - EU")
     assert ok is True and reason == ""
+
+
+# ---- hybrid (owner report: a HYBRID dev.bg posting reached a REMOTE-only filter) ----
+def test_is_hybrid_detects_and_respects_full_remote():
+    assert is_hybrid("Hybrid role, 2 days a week in the office") is True
+    assert is_hybrid("Хибриден модел на работа") is True
+    assert is_hybrid("3 days in the office, rest from home") is True
+    assert is_hybrid("Fully remote team; we dropped hybrid last year") is False   # full-remote wins
+    assert is_hybrid("Remote-first company") is False
+    assert is_hybrid("Great engineering culture, strong mentorship") is False     # no signal
+
+
+def test_remote_profile_drops_hybrid_posting_signalled_in_description():
+    # the reported case: dev.bg posting has empty location, "hybrid" only in the description
+    ic_remote = P(target_roles="Android", remote_pref="remote", location_pref="")
+    ok, reason = passes_hard_filters(
+        ic_remote, "Senior Android Developer", "",
+        "We work in a hybrid model — 2 days a week in the office in Sofia.")
+    assert ok is False and reason == "location"
+
+
+def test_remote_profile_keeps_posting_offering_full_remote():
+    ic_remote = P(target_roles="Android", remote_pref="remote", location_pref="")
+    ok, reason = passes_hard_filters(
+        ic_remote, "Senior Android Developer", "",
+        "Hybrid or fully remote — your choice.")
+    assert ok is True and reason == ""
+
+
+def test_hybrid_ignored_for_non_remote_seekers():
+    hybrid_ok = P(target_roles="Android", remote_pref="hybrid", location_pref="")
+    ok, _ = passes_hard_filters(hybrid_ok, "Senior Android Developer", "",
+                                "Hybrid, 2 days a week in the office.")
+    assert ok is True                     # a hybrid seeker is fine with a hybrid posting
 
 
 # ---- geo restrictions (owner report: "Remote" posting actually required moving to the UK) ----
