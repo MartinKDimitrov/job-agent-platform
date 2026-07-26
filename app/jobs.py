@@ -39,8 +39,10 @@ if __name__ == "__main__":
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else 300
         print(adzuna_bulk.run_recency_refresh(SessionLocal, call_budget=budget))
     elif mode == "aggregator_fallback":
-        # keep collecting via Careerjet + Jooble when Adzuna is rate-limited
-        print(aggregator_fallback.run_aggregator_fallback(SessionLocal))
+        # collect via Careerjet + Jooble; optional single source: aggregator_fallback [careerjet|jooble]
+        src = sys.argv[2] if len(sys.argv) > 2 else None
+        sources = (src,) if src else ("careerjet", "jooble")
+        print(aggregator_fallback.run_aggregator_fallback(SessionLocal, sources=sources))
     elif mode == "aggregator_board":
         # render a per-profession collection board for one source: aggregator_board <source> [path]
         src = sys.argv[2] if len(sys.argv) > 2 else "careerjet"

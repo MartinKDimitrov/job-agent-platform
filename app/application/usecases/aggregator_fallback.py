@@ -50,34 +50,37 @@ def _record(db, source: str, term: str, fetched: int, added: int) -> None:
 
 
 def run_aggregator_fallback(session_factory, *, terms: list[str] | None = None,
-                            careerjet_terms: int = 15, jooble_terms: int = 6,
-                            sleep=time.sleep) -> dict:
+                            careerjet_terms: int = 20, jooble_terms: int = 6,
+                            sources=("careerjet", "jooble"), sleep=time.sleep) -> dict:
     """Sweep Careerjet (primary) + Jooble (capped) over profession keywords and persist.
 
     ``careerjet_terms`` / ``jooble_terms`` bound how many keywords each source queries this run —
-    Jooble stays small to protect its 500-request lifetime cap. Records per-term tallies for the
-    boards. Returns per-source added counts.
+    Jooble stays small to protect its 500-request lifetime cap. ``sources`` selects which to run,
+    so each can be launched as its own parallel process (safe now that content_hash is UNIQUE).
+    Records per-term tallies for the boards. Returns per-source added counts.
     """
     terms = terms or PROFESSION_TERMS
     cj_added = jb_added = cj_terms = jb_terms = 0
 
-    for term in terms[:max(0, careerjet_terms)]:                 # Careerjet — term × all locales
-        posts = careerjet.fetch(search_terms=[term], sleep=sleep)
-        cj_terms += 1
-        with session_factory() as db:
-            res = persist_postings(db, posts)
-            _record(db, "careerjet", term, res["fetched"], res["added"])
-            db.commit()
-        cj_added += res["added"]
+    if "careerjet" in sources:
+        for term in terms[:max(0, careerjet_terms)]:             # Careerjet — term × all locales
+            posts = careerjet.fetch(search_terms=[term], sleep=sleep)
+            cj_terms += 1
+            with session_factory() as db:
+                res = persist_postings(db, posts)
+                _record(db, "careerjet", term, res["fetched"], res["added"])
+                db.commit()
+            cj_added += res["added"]
 
-    for term in terms[:max(0, jooble_terms)]:                    # Jooble — sparing (500 cap)
-        posts = jooble.fetch(search_terms=[term], sleep=sleep)
-        jb_terms += 1
-        with session_factory() as db:
-            res = persist_postings(db, posts)
-            _record(db, "jooble", term, res["fetched"], res["added"])
-            db.commit()
-        jb_added += res["added"]
+    if "jooble" in sources:
+        for term in terms[:max(0, jooble_terms)]:                # Jooble — sparing (500 cap)
+            posts = jooble.fetch(search_terms=[term], sleep=sleep)
+            jb_terms += 1
+            with session_factory() as db:
+                res = persist_postings(db, posts)
+                _record(db, "jooble", term, res["fetched"], res["added"])
+                db.commit()
+            jb_added += res["added"]
 
     return {"careerjet_added": cj_added, "jooble_added": jb_added,
             "careerjet_terms": cj_terms, "jooble_terms": jb_terms,

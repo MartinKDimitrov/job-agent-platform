@@ -100,7 +100,9 @@ class Posting(Base):
     salary_period: Mapped[str | None] = mapped_column(String(8), nullable=True)  # month/year
     salary_raw: Mapped[str | None] = mapped_column(String(64), nullable=True)    # as written
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
-    content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    # UNIQUE so concurrent writers (parallel Adzuna/Careerjet/Jooble) can't both insert the same
+    # posting — the DB rejects the racing INSERT and ingest() catches it and touches instead.
+    content_hash: Mapped[str] = mapped_column(String(64), default="", unique=True, index=True)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # source date
     first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   # by a fetch
