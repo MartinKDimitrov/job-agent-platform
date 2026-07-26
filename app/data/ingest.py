@@ -46,8 +46,12 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
 
     for rp in postings:
         chash = rp.content_hash()
+        # .first(), not scalar_one_or_none(): there's no DB-level unique constraint on
+        # content_hash, so concurrent writers (bulk pulls + a manual ingest) can race the
+        # SELECT-then-INSERT and leave two rows with the same hash. A duplicate must NOT crash
+        # the whole ingest (MultipleResultsFound) — touch the first match and move on.
         existing = db.execute(
-            select(Posting).where(Posting.content_hash == chash)).scalar_one_or_none()
+            select(Posting).where(Posting.content_hash == chash).limit(1)).scalars().first()
         if existing is not None:
             # cheap backfill: rows ingested before posted_at existed learn their source date
             # the next time the source shows them (age filter needs it)

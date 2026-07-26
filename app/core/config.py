@@ -21,6 +21,33 @@ class Settings(BaseSettings):
     # DB-first search: the in-app background ingester refreshes the posting index every
     # N hours (0 = disabled — tests and environments where cron runs `python -m app.jobs ingest`).
     ingest_every_hours: int = 0
+    # Windowed ingest (`python -m app.jobs ingest_window`): the daily crawl runs sharded by
+    # country and paced across [start_hour, end_hour) local, so it never runs as one long
+    # single-point-of-failure burst and spreads HTTP load. Big countries are sub-sharded into
+    # batches of `ingest_shard_batch` boards. Default window: 00:00–08:00.
+    ingest_window_start_hour: int = 0
+    ingest_window_end_hour: int = 8
+    ingest_shard_batch: int = 200
+    # Detection (`python -m app.jobs detect_window`) reuses the same nightly window but is
+    # heavier per company (careers discovery + ATS probing, ~20–40 requests each), so its
+    # shards are smaller. Schedule it on its own nights / offset from ingest.
+    detect_shard_batch: int = 100
+
+    # Adzuna — multi-country job aggregator API (free trial keys from developer.adzuna.com).
+    # Silent no-op until both are set. Covers DE/FR/IT/GB/ES/NL/PL in one source.
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    # Jooble — pan-European aggregator API (free key from jooble.org/api/about). The one
+    # aggregator that natively covers BG + the Baltics. Keyword-driven; silent no-op unless set.
+    # Free tier is capped at 500 requests TOTAL, and we spend one per role term per run, so cap
+    # the terms queried per run to keep the quota alive (raise once the limit is lifted).
+    jooble_api_key: str = ""
+    jooble_max_terms: int = 25
+    # Careerjet — global aggregator (90+ countries incl. BG), v4 API with Basic auth (free
+    # publisher key from careerjet.com/partners/api). Silent no-op until the key is set.
+    # user_ip is a required API param; default is a server-side geo placeholder, overridable.
+    careerjet_api_key: str = ""
+    careerjet_user_ip: str = ""
     # Absolute zombie cap: postings older than this retire outright (window sources where a
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).

@@ -169,4 +169,28 @@ LARGECAP_COMPANIES: list[dict] = [
     {"name": "Citadele Banka", "country": "LV", "industry": "Banking", "website": "https://www.citadele.lv"},
 ]
 
+# ---- Extended large-employer seeds (sourced 2026-07-25) ----------------------------------
+# Germany (MDAX/SDAX + large private/Mittelstand, ~500) and France (SBF120/mid-caps + the big
+# private/cooperative/state employers that dominate French employment, ~500). Kept in dedicated
+# modules for readability and appended here, deduplicated by name against the index seeds above.
+from .companies_de_large import (  # noqa: E402
+    MDAX_SDAX_COMPANIES, PRIVATE_LARGE_EMPLOYERS_DE, TOP_REVENUE_EXTRA_DE,
+    LARGE_MITTELSTAND_DE, TAIL_LARGE_DE, TAIL_SUPPLEMENT_DE)
+from .companies_fr_large import (  # noqa: E402
+    LISTED_MIDCAP_FR, PRIVATE_PUBLIC_LARGE_FR, TAIL_LARGE_FR, TAIL_SUPPLEMENT_FR,
+    TAIL_SUPPLEMENT2_FR, FINAL_TOPUP_FR)
+
+_EXTENDED_LARGECAP = (
+    MDAX_SDAX_COMPANIES + PRIVATE_LARGE_EMPLOYERS_DE + TOP_REVENUE_EXTRA_DE
+    + LARGE_MITTELSTAND_DE + TAIL_LARGE_DE + TAIL_SUPPLEMENT_DE
+    + LISTED_MIDCAP_FR + PRIVATE_PUBLIC_LARGE_FR + TAIL_LARGE_FR
+    + TAIL_SUPPLEMENT_FR + TAIL_SUPPLEMENT2_FR + FINAL_TOPUP_FR)
+
+_seen_names = {c["name"].strip().lower() for c in LARGECAP_COMPANIES}
+for _c in _EXTENDED_LARGECAP:
+    _name_key = _c["name"].strip().lower()
+    if _name_key not in _seen_names:
+        _seen_names.add(_name_key)
+        LARGECAP_COMPANIES.append(_c)
+
 LARGECAP_COUNTRY_CODES = sorted({c["country"] for c in LARGECAP_COMPANIES})

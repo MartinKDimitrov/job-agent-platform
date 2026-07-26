@@ -71,7 +71,7 @@ def run_entries(entries: list[dict], delay: float = 1.0, force: bool = False) ->
                 skipped += 1
                 continue
             try:
-                careers = find_careers_url(e.get("website", ""))
+                careers = find_careers_url(e.get("website", ""), country=e.get("country"))
                 res = detect_verified(name, careers_url=careers)
             except Exception as ex:  # noqa: BLE001 — one bad website must not abort the batch
                 print(f"  · {name}: detect error ({str(ex)[:50]})", flush=True)
