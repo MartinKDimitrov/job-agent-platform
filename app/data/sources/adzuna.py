@@ -74,11 +74,13 @@ def categories(country: str = "de") -> list[tuple[str, str]]:
 
 
 def fetch_page(country: str, page: int, *, category: str | None = None, what: str | None = None,
-               results_per_page: int = RESULTS_PER_PAGE) -> tuple[list[RawPosting] | None, int]:
+               results_per_page: int = RESULTS_PER_PAGE,
+               sort_by: str | None = None) -> tuple[list[RawPosting] | None, int]:
     """One search page -> (postings, Adzuna's total count for the query). The unit the bulk
     pull iterates; count sizes the plan/progress. Returns ``(None, 0)`` when the CALL FAILED
     (network/HTTP error, e.g. a transient 503) — distinct from ``([], total)`` for a genuinely
-    empty page — so the caller never mistakes a hiccup for a drained slice."""
+    empty page — so the caller never mistakes a hiccup for a drained slice. ``sort_by="date"``
+    returns newest-first — what the recency refresh pages until it meets already-seen jobs."""
     if not _configured():
         return [], 0
     params = {**_auth(), "results_per_page": results_per_page}
@@ -86,6 +88,8 @@ def fetch_page(country: str, page: int, *, category: str | None = None, what: st
         params["category"] = category
     if what:
         params["what"] = what
+    if sort_by:
+        params["sort_by"] = sort_by
     j = fetch_json(_BASE.format(country=country, page=page), params=params)
     if j is None:
         return None, 0                          # call failed — NOT an empty page
