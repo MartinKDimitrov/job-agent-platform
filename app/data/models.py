@@ -239,6 +239,22 @@ class AdzunaPull(Base):
     __table_args__ = (UniqueConstraint("country", "category", name="uq_adzuna_slice"),)
 
 
+class AggregatorPull(Base):
+    """Per-profession collection tally for the keyword aggregators (Jooble / Careerjet). They
+    have no catalogue cursor like Adzuna, so the fallback sweep records one row per (source,
+    term): unique postings persisted, total fetched, run count — enough to board what each
+    source has collected per profession."""
+    __tablename__ = "aggregator_pull"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(16), index=True)     # jooble | careerjet
+    term: Mapped[str] = mapped_column(String(64))
+    pulled: Mapped[int] = mapped_column(Integer, default=0)         # postings persisted (added)
+    seen: Mapped[int] = mapped_column(Integer, default=0)           # postings fetched (incl. dupes)
+    runs: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("source", "term", name="uq_agg_pull"),)
+
+
 class Application(Base):
     __tablename__ = "applications"
     id: Mapped[int] = mapped_column(primary_key=True)

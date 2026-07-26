@@ -41,6 +41,15 @@ if __name__ == "__main__":
     elif mode == "aggregator_fallback":
         # keep collecting via Careerjet + Jooble when Adzuna is rate-limited
         print(aggregator_fallback.run_aggregator_fallback(SessionLocal))
+    elif mode == "aggregator_board":
+        # render a per-profession collection board for one source: aggregator_board <source> [path]
+        src = sys.argv[2] if len(sys.argv) > 2 else "careerjet"
+        out = sys.argv[3] if len(sys.argv) > 3 else f"{src}_board.html"
+        with SessionLocal() as db:
+            html = aggregator_fallback.render_board(src, aggregator_fallback.status(db, src))
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(html)
+        print(f"wrote {out}")
     elif mode == "adzuna_status":
         import json
         with SessionLocal() as db:

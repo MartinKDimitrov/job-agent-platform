@@ -1,7 +1,7 @@
 """Aggregator fallback — Careerjet + Jooble sweep when Adzuna is rate-limited."""
 from app.application.usecases import aggregator_fallback as af
 from app.data.db import SessionLocal
-from app.data.models import Posting
+from app.data.models import Posting, AggregatorPull
 from app.domain.entities import RawPosting
 from sqlalchemy import func, select
 
@@ -29,6 +29,20 @@ def test_fallback_sweeps_both_and_caps_jooble(monkeypatch):
     assert out["total_added"] == 14
     with SessionLocal() as db:
         assert db.scalar(select(func.count(Posting.id))) == 14
+        # per-(source, term) tallies recorded for the boards
+        assert db.scalar(select(func.count(AggregatorPull.id))) == 6   # 4 careerjet + 2 jooble
+        st = af.status(db, "careerjet")
+        assert st["terms"] == 4 and st["pulled"] == 8
+        assert af.status(db, "jooble")["pulled"] == 6
+
+
+def test_render_board_reflects_status():
+    st = {"source": "careerjet", "terms": 2, "pulled": 30, "seen": 40, "last_run": None,
+          "rows": [{"term": "nurse", "pulled": 20, "seen": 25, "runs": 2, "updated_at": None},
+                   {"term": "driver", "pulled": 10, "seen": 15, "runs": 1, "updated_at": None}]}
+    html = af.render_board("careerjet", st)
+    assert "Careerjet" in html and "nurse" in html and "driver" in html
+    assert "30<small>" in html                     # unique-collected hero number
 
 
 def test_fallback_noop_when_sources_unconfigured(monkeypatch):
