@@ -1,0 +1,220 @@
+<title>Job Agent Platform — статус на събирането</title>
+<style>
+  :root{
+    --bg:#f4f7f8; --surface:#ffffff; --surface-2:#eef3f5; --border:#d9e1e5;
+    --ink:#121a1f; --ink-2:#4c5860; --ink-3:#7b878f;
+    --accent:#0c8d7e; --accent-ink:#0a6b60; --accent-soft:#dff0ed;
+    --good:#12925a; --warn:#bd7710; --pending:#78858d; --track:#e6edf0;
+    --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace; --maxw:1080px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0c1315; --surface:#121b1e; --surface-2:#18242a; --border:#243338;
+    --ink:#e9eff1; --ink-2:#a0b0b6; --ink-3:#6b7b82;
+    --accent:#2bb6a4; --accent-ink:#5fd4c4; --accent-soft:#123029;
+    --good:#33c07d; --warn:#e0a23c; --pending:#8a99a0; --track:#1e2d32;}}
+  :root[data-theme="dark"]{
+    --bg:#0c1315; --surface:#121b1e; --surface-2:#18242a; --border:#243338;
+    --ink:#e9eff1; --ink-2:#a0b0b6; --ink-3:#6b7b82;
+    --accent:#2bb6a4; --accent-ink:#5fd4c4; --accent-soft:#123029;
+    --good:#33c07d; --warn:#e0a23c; --pending:#8a99a0; --track:#1e2d32;}
+  :root[data-theme="light"]{
+    --bg:#f4f7f8; --surface:#ffffff; --surface-2:#eef3f5; --border:#d9e1e5;
+    --ink:#121a1f; --ink-2:#4c5860; --ink-3:#7b878f;
+    --accent:#0c8d7e; --accent-ink:#0a6b60; --accent-soft:#dff0ed;
+    --good:#12925a; --warn:#bd7710; --pending:#78858d; --track:#e6edf0;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:40px 22px 64px}
+  .mono{font-family:var(--font-mono)}
+  a{color:var(--accent-ink)}
+  header.top{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:30px}
+  .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 10px}
+  h1{font-size:clamp(24px,3.6vw,34px);line-height:1.12;margin:0 0 8px;font-weight:680;letter-spacing:-.015em;text-wrap:balance}
+  .sub{color:var(--ink-2);font-size:15px;margin:0;max-width:62ch}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 38px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 16px 14px}
+  .stat .v{font-size:30px;font-weight:680;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .stat .l{color:var(--ink-2);font-size:12.5px;margin-top:7px}
+  .stat .l b{color:var(--ink);font-weight:600}
+  .stat .d{font-family:var(--font-mono);font-size:11px;color:var(--good);margin-top:4px}
+  section{margin-top:40px}
+  .shead{display:flex;align-items:baseline;gap:12px;margin-bottom:18px}
+  .shead h2{font-size:19px;font-weight:660;margin:0;letter-spacing:-.01em}
+  .shead .n{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:720px){.two{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .card h3{margin:0 0 3px;font-size:14px;font-weight:640}
+  .card .cap{color:var(--ink-3);font-size:12px;margin:0 0 14px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 9px;margin:0 6px 8px 0}
+  .chip.n{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+  .chip .tag{font-size:10px;letter-spacing:.04em;color:var(--accent-ink)}
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .bar{display:grid;grid-template-columns:132px 1fr 52px;align-items:center;gap:10px}
+  .bar .k{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .track{background:var(--track);border-radius:5px;height:9px;overflow:hidden}
+  .bar .fill{height:100%;background:var(--accent);border-radius:5px}
+  .bar .n{font-family:var(--font-mono);font-size:12.5px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+  .bar.hl .fill{background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 55%,var(--warn)))}
+  .bar.hl .k{color:var(--accent-ink);font-weight:600}
+  .foot{color:var(--ink-3);font-size:12px;margin:12px 0 0}
+  .phase{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:15px 0;border-top:1px solid var(--border)}
+  .phase:first-child{border-top:0}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap}
+  .pill.done{color:var(--good);background:color-mix(in srgb,var(--good) 13%,transparent);border:1px solid color-mix(in srgb,var(--good) 32%,transparent)}
+  .pill.now{color:var(--warn);background:color-mix(in srgb,var(--warn) 13%,transparent);border:1px solid color-mix(in srgb,var(--warn) 34%,transparent)}
+  .pill.next{color:var(--pending);background:var(--surface-2);border:1px solid var(--border)}
+  .phase h4{margin:0 0 4px;font-size:14.5px;font-weight:640}
+  .phase p{margin:0;color:var(--ink-2);font-size:13px}
+  .adz{display:grid;grid-template-columns:1fr;gap:6px}
+  .adz .hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .adz .big{font-size:26px;font-weight:680;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .adz .big span{font-size:15px;color:var(--ink-3);font-weight:500}
+  .adz .track{background:var(--track);border-radius:6px;height:11px;overflow:hidden;margin-top:4px}
+  .adz .fill{height:100%;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 55%,var(--warn)));border-radius:6px}
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);color:var(--ink-3);font-size:12.5px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Job Agent Platform · обновено 26 юли 2026</p>
+    <h1>Система за събиране на обяви — жива картина</h1>
+    <p class="sub">След пивота към <b>агрегатори</b>: седем API-борси покриват цяла Европа —
+      включително <b>България и Балтика</b> — и скалират с потребителите. Ето обема, източниците
+      и накъде вървим.</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="v">25 496</div><div class="l"><b>23 541</b> live обяви в индекса</div><div class="d">▲ +17 700 от старта на пивота</div></div>
+    <div class="stat"><div class="v">11 613</div><div class="l">различни <b>работодатели</b></div></div>
+    <div class="stat"><div class="v">7</div><div class="l">живи <b>агрегатора</b></div><div class="d">+Jooble +Careerjet (BG)</div></div>
+    <div class="stat"><div class="v">26</div><div class="l">адаптера (14 ATS + 12 борси)</div></div>
+    <div class="stat"><div class="v">468</div><div class="l">теста ✓</div><div class="d">всичко зелено</div></div>
+  </div>
+
+  <!-- ADZUNA BULK PULL -->
+  <section>
+    <div class="shead"><h2>Adzuna bulk pull — всички професии</h2><span class="n">resumable · тече</span></div>
+    <div class="card">
+      <div class="adz">
+        <div class="hd">
+          <div class="big">≈17 800 <span>/ ~298 600 в каталога</span></div>
+          <span class="pill now">● тегли сега</span>
+        </div>
+        <div class="track"><span class="fill" style="width:6%"></span></div>
+      </div>
+      <p class="foot">30 категории × 7 държави = <b>210 „резена", 6 източени</b>. Курсор след всяка
+        страница (~50 обяви) — проверимо по всяко време, продължава точно откъдето е спряло.
+        Adzuna сервира пълни страници произволно надълбоко → пълното източване е нощна работа,
+        ограничена от квотата. Отделна дъска следи прогреса на резен.</p>
+    </div>
+  </section>
+
+  <!-- ПИВОТЪТ -->
+  <section>
+    <div class="shead"><h2>Пивотът към агрегатори</h2><span class="n">широчина</span></div>
+    <div class="card">
+      <p style="margin:0 0 14px;color:var(--ink-2);font-size:14px">Гоненето на бордове един по
+        един удари таван (немската опашка е JS/auth-gated). Големите борси (Indeed/StepStone/
+        LinkedIn) не се четат легитимно — но <b>агрегаторите, които теглят от тях, се четат през
+        API</b>. Един ход → цялата ни Европа, законно.</p>
+      <div>
+        <span class="chip n">Adzuna <span class="tag">DE·FR·IT·GB·ES·NL·PL</span></span>
+        <span class="chip n">Jooble <span class="tag">пан-EU · BG + Балтика</span></span>
+        <span class="chip n">Careerjet <span class="tag">90 държави · вкл. BG</span></span>
+        <span class="chip n">Arbeitnow <span class="tag">DE/EU · безплатно</span></span>
+        <span class="chip">Arbeitsagentur <span class="tag">нац. DE</span></span>
+        <span class="chip">France Travail <span class="tag">нац. FR</span></span>
+        <span class="chip n">karriere.nrw <span class="tag">публ. сектор</span></span>
+      </div>
+      <p class="foot"><b>Jooble и Careerjet покриват България нативно</b> — точно нашата дупка.
+        И двата верифицирани на живо. Adzuna скалира линейно: повече потребители (различни роли)
+        → десетки хиляди релевантни обяви, легитимно.</p>
+    </div>
+  </section>
+
+  <!-- ОБЕМ ПО ИЗТОЧНИК -->
+  <section>
+    <div class="shead"><h2>Обем по източник</h2><span class="n">обяви в индекса · по host</span></div>
+    <div class="card">
+      <div class="bars" style="margin-bottom:12px">
+        <div class="bar hl"><span class="k mono">adzuna</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="n">17 828</span></div>
+      </div>
+      <p class="foot" style="margin:0 0 14px">Adzuna доминира (bulk pull). Останалата опашка,
+        мащабирана помежду си:</p>
+      <div class="bars">
+        <div class="bar hl"><span class="k mono">karriere.nrw</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="n">916</span></div>
+        <div class="bar"><span class="k mono">greenhouse</span><span class="track"><span class="fill" style="width:99%"></span></span><span class="n">907</span></div>
+        <div class="bar"><span class="k mono">smartrecruiters</span><span class="track"><span class="fill" style="width:90%"></span></span><span class="n">828</span></div>
+        <div class="bar"><span class="k mono">workday</span><span class="track"><span class="fill" style="width:88%"></span></span><span class="n">804</span></div>
+        <div class="bar hl"><span class="k mono">arbeitnow</span><span class="track"><span class="fill" style="width:78%"></span></span><span class="n">718</span></div>
+        <div class="bar"><span class="k mono">ashby</span><span class="track"><span class="fill" style="width:35%"></span></span><span class="n">319</span></div>
+        <div class="bar"><span class="k mono">remoteok</span><span class="track"><span class="fill" style="width:32%"></span></span><span class="n">290</span></div>
+        <div class="bar"><span class="k mono">dev.bg</span><span class="track"><span class="fill" style="width:27%"></span></span><span class="n">248</span></div>
+        <div class="bar"><span class="k mono">weworkremotely</span><span class="track"><span class="fill" style="width:26%"></span></span><span class="n">234</span></div>
+        <div class="bar hl"><span class="k mono">careerjet</span><span class="track"><span class="fill" style="width:20%"></span></span><span class="n">184</span></div>
+        <div class="bar hl"><span class="k mono">jooble</span><span class="track"><span class="fill" style="width:4%"></span></span><span class="n">36</span></div>
+      </div>
+      <p class="foot">Осветените са агрегатори. Careerjet/Jooble са малки още — теглят се
+        таргетирано по роли (2 активни профила сега), скалират с потребителите.</p>
+    </div>
+  </section>
+
+  <!-- ПОКРИТИЕ -->
+  <section>
+    <div class="shead"><h2>Двата слоя на покритието</h2><span class="n">широчина + каноничен apply</span></div>
+    <div class="two">
+      <div class="card">
+        <h3>Агрегатори — широчината</h3>
+        <p class="cap">Един API → хиляди работодатели, цяла Европа</p>
+        <div class="bars">
+          <div class="bar hl"><span class="k">Adzuna</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="n">7 дър.</span></div>
+          <div class="bar hl"><span class="k">Careerjet</span><span class="track"><span class="fill" style="width:95%"></span></span><span class="n">90 дър.</span></div>
+          <div class="bar hl"><span class="k">Jooble</span><span class="track"><span class="fill" style="width:90%"></span></span><span class="n">пан-EU</span></div>
+        </div>
+        <p class="foot">Jooble + Careerjet нативно покриват BG + Балтика — нашата най-голяма дупка, вече запълнена.</p>
+      </div>
+      <div class="card">
+        <h3>ATS адаптери (14) — каноничният apply-URL</h3>
+        <div style="margin-top:2px">
+          <span class="chip">workday</span><span class="chip">successfactors</span><span class="chip">greenhouse</span>
+          <span class="chip">smartrecruiters</span><span class="chip">teamtailor</span><span class="chip">personio</span>
+          <span class="chip">recruitee</span><span class="chip">ashby</span><span class="chip">lever</span>
+          <span class="chip">workable</span><span class="chip">jsonld</span>
+          <span class="chip">rexx</span><span class="chip">softgarden</span><span class="chip">d.vinci</span>
+        </div>
+        <p class="foot">Немската JS/auth-gated опашка (b-ite, Haufe-Umantis, Cornerstone, Taleo, Concludis, SF-RMK) — отложена за headless фаза.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- НАКЪДЕ -->
+  <section>
+    <div class="shead"><h2>Накъде оттук</h2><span class="n">roadmap</span></div>
+    <div class="card">
+      <div class="phase">
+        <div><span class="pill done">✓ готово</span></div>
+        <div><h4>ATS адаптери + инфраструктура</h4><p>Enterprise (Workday/SF) + mid-market (rexx/softgarden/d.vinci) + публичен сектор (karriere.nrw); многоезично откриване; шардиран нощен конвейер с guard.</p></div>
+      </div>
+      <div class="phase">
+        <div><span class="pill done">✓ готово</span></div>
+        <div><h4>Агрегаторска широчина + BG покритие</h4><p>Adzuna (7 държави, bulk pull за всички професии) + Jooble + Careerjet (нативно BG/Балтика) + Arbeitnow + France Travail. Индексът +17 700 обяви; трите големи EU агрегатора се четат легитимно.</p></div>
+      </div>
+      <div class="phase">
+        <div><span class="pill now">● тук сме</span></div>
+        <div><h4>Източване на Adzuna + анотация</h4><p>Drain-ът тегли каталога на порции (≈17 800 / ~298 600, resumable, quota-aware). Анотацията наваксва backlog-а (Groq rate-limit — lazy retry всяка нощ).</p></div>
+      </div>
+      <div class="phase">
+        <div><span class="pill next">⏳ следва</span></div>
+        <div><h4>EURES + headless</h4><p>EURES (официален ЕС портал, 3–4M обяви от националните бюра) за още покритие; headless фаза за JS-gated ATS опашката, ако потрябва.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Числа: staging към 26 юли 2026 (Adzuna drain тече — числата растат). Само реални данни.
+    Големите борси (Indeed/StepStone/LinkedIn) не се четат (anti-bot/ToS) — агрегаторите ни дават
+    същите обяви легитимно през API.
+  </footer>
+</div>
