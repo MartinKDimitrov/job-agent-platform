@@ -124,6 +124,38 @@ def test_run_bulk_resumes_from_cursor_and_respects_budget(monkeypatch):
         assert row.next_page == 5 and row.pulled == 20
 
 
+def test_run_bulk_backs_off_exponentially_on_failures(monkeypatch):
+    """503-aware pacing: consecutive failed calls back off exponentially, capped — so we stop
+    hammering a rate-limiting API instead of burning through slices at full speed."""
+    _keys(monkeypatch)
+    monkeypatch.setattr(ab.adzuna, "categories",
+                        lambda c: [(f"cat{i}", f"C{i}") for i in range(6)])
+    monkeypatch.setattr(ab.adzuna, "fetch_page", lambda *a, **k: (None, 0))  # every call 503s
+    slept = []
+    ab.run_bulk(SessionLocal, call_budget=10, countries=("de",),
+                fail_backoff_base=5.0, fail_backoff_max=120.0, sleep=lambda s: slept.append(s))
+    assert slept == [5.0, 10.0, 20.0, 40.0, 80.0, 120.0]   # exponential, capped at 120
+
+
+def test_run_bulk_backoff_resets_after_success(monkeypatch):
+    """A good page clears the backoff — a later failure starts again at base, not escalated."""
+    _keys(monkeypatch)
+    monkeypatch.setattr(ab.adzuna, "categories", lambda c: [("it-jobs", "IT")])
+    seq = iter([1, 1, 0])   # page1 ok, page2 ok, page3 fails (0)
+
+    def fake(country, page, *, category=None, what=None, results_per_page=5):
+        if next(seq):
+            j = _page(country, page, 5, 999)
+            return [p for p in (az._to_posting(country, it) for it in j["results"]) if p], 999
+        return None, 0
+    monkeypatch.setattr(ab.adzuna, "fetch_page", fake)
+    slept = []
+    ab.run_bulk(SessionLocal, call_budget=5, pages_per_slice=5, results_per_page=5,
+                countries=("de",), fail_backoff_base=5.0, sleep=lambda s: slept.append(s))
+    # two CALL_DELAY paces (0.3) for the good pages, then a single base backoff (5.0) — not escalated
+    assert 5.0 in slept and slept.count(5.0) == 1
+
+
 def test_run_bulk_does_not_mark_done_on_failed_call(monkeypatch):
     """A transient 503 mid-slice must NOT retire the slice or advance the cursor."""
     _keys(monkeypatch)

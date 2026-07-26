@@ -58,12 +58,17 @@ def ensure_slices(session_factory, countries=COUNTRIES) -> int:
 def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
              pages_per_slice: int = DEFAULT_PAGES_PER_SLICE,
              results_per_page: int = RESULTS_PER_PAGE, countries=COUNTRIES,
+             fail_backoff_base: float = 5.0, fail_backoff_max: float = 120.0,
              sleep=time.sleep) -> dict:
     """Drain up to ``call_budget`` pages across not-yet-done slices, least-pulled-first, at most
     ``pages_per_slice`` per slice this run. Commits after every page (durable cursor). Returns a
-    run summary; progress persists in AdzunaPull for the board/status."""
+    run summary; progress persists in AdzunaPull for the board/status.
+
+    503-aware pacing: a failed call (503 / read timeout = Adzuna rate-limiting us) triggers an
+    exponential backoff — ``base * 2**(consecutive_failures-1)`` capped at ``fail_backoff_max``
+    — so a struggling API gets breathing room instead of being hammered; a success resets it."""
     if not adzuna._configured():
-        return {"configured": False, "calls": 0, "added": 0, "slices_touched": 0}
+        return {"configured": False, "calls": 0, "added": 0, "slices_touched": 0, "failed": 0}
 
     ensure_slices(session_factory, countries)
 
@@ -78,6 +83,7 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
                       AdzunaPull.country.asc())).scalars().all()
 
     calls = added = touched = failed = 0
+    consec_fail = 0
     for slice_id in pending:
         if calls >= call_budget:
             break
@@ -94,10 +100,14 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
             calls += 1
             pages_this_slice += 1
             if posts is None:
-                # the call failed (e.g. transient 503) — leave the cursor exactly where it is
-                # (retry this same page next run) and move on; NEVER mark the slice done here.
+                # the call failed (e.g. transient 503 / read timeout = we're being rate-limited)
+                # — leave the cursor exactly where it is (retry this same page next run) and NEVER
+                # mark the slice done. Back off exponentially so we stop hammering the API.
                 failed += 1
+                consec_fail += 1
+                sleep(min(fail_backoff_base * 2 ** (consec_fail - 1), fail_backoff_max))
                 break
+            consec_fail = 0                       # a good page — clear the backoff
             with session_factory() as db:
                 row = db.get(AdzunaPull, slice_id)
                 res = persist_postings(db, posts)
