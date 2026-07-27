@@ -45,6 +45,7 @@ def posting_freshness(post, now=None) -> float:
                             settings.freshness_fresh_days,
                             settings.freshness_at_30d, settings.freshness_at_60d)
 from ...domain.filters import passes_hard_filters
+from ...domain.language import language_factor
 
 log = logging.getLogger(__name__)
 
@@ -595,11 +596,13 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             if stale is not None:
                 db.delete(stale)
             continue
-        # freshness and the salary signal are both soft multipliers on the base score —
-        # passed as one product (score() applies it after the blend, inside the gate cap)
+        # freshness, salary, and the language signal are all soft multipliers on the base score
+        # — passed as one product (score() applies it after the blend, inside the gate cap)
         soft = posting_freshness(post) * salary_factor(
             posting_salary(post), expectation,
-            low=settings.salary_low_factor, fit=settings.salary_fit_boost)
+            low=settings.salary_low_factor, fit=settings.salary_fit_boost) * language_factor(
+            profile.languages, post.description or post.title,
+            unreadable=settings.language_unreadable_factor)
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,

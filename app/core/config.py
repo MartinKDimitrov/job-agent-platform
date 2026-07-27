@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     # currencies: multiplier when the posting pays clearly below the expectation / meets it.
     salary_low_factor: float = 0.85
     salary_fit_boost: float = 1.05
+    # Language soft signal: a posting written in a non-English language the user doesn't read is
+    # a real barrier (can't parse the requirements) -> down-weight. Soft multiplier, never a hard
+    # filter; only fires when Profile.languages is set. English is treated as broadly readable.
+    language_unreadable_factor: float = 0.5
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with
