@@ -45,6 +45,25 @@ def test_render_board_reflects_status():
     assert "30<small>" in html                     # unique-collected hero number
 
 
+def test_fallback_passes_pagination_depth(monkeypatch):
+    """Deeper pages surface many more of the same profession — the fallback must forward the
+    page count to each adapter (Jooble kept shallower to protect its 500-request cap)."""
+    seen = {}
+
+    def cjfetch(search_terms=None, pages=1, **k):
+        seen["cj"] = pages
+        return _posts("cj", search_terms[0], 2)
+
+    def jbfetch(search_terms=None, pages=1, **k):
+        seen["jb"] = pages
+        return _posts("jb", search_terms[0], 2)
+    monkeypatch.setattr(af.careerjet, "fetch", cjfetch)
+    monkeypatch.setattr(af.jooble, "fetch", jbfetch)
+    af.run_aggregator_fallback(SessionLocal, terms=["nurse"], careerjet_terms=1, jooble_terms=1,
+                               careerjet_pages=4, jooble_pages=2, sleep=lambda *_: None)
+    assert seen["cj"] == 4 and seen["jb"] == 2
+
+
 def test_fallback_noop_when_sources_unconfigured(monkeypatch):
     # both adapters silently return [] without keys -> nothing added, no crash
     monkeypatch.setattr(af.careerjet, "fetch", lambda search_terms=None, **k: [])
