@@ -542,6 +542,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     whole index measured ~2.5s over the staging tunnel vs ~0.2s this way."""
     keywords = _profile_keywords(profile)
     ptext = profile.as_text()
+    from ...domain.skills import parse_skill_years
+    skill_years = parse_skill_years(profile.skills) or None   # {skill: years}; once per search
     from ...domain.salary import parse_salary, posting_salary, salary_factor
     expectation = parse_salary(profile.salary_expectation or "")   # once per search
     if profile.embedding is None:            # cached on the row; cleared on profile edit
@@ -610,7 +612,7 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
-                                     freshness=soft,
+                                     freshness=soft, skill_years=skill_years,
                                      gate_cap=settings.must_gate_cap or None)
         existing = existing_by_post.get(post.id)
         if existing:

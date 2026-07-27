@@ -7,7 +7,7 @@ import re
 from functools import lru_cache
 
 from ..core.config import settings
-from .skills import canon_skill, extract_skills
+from .skills import canon_skill, extract_skills, experience_multiplier
 
 _model = None
 
@@ -160,6 +160,15 @@ def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None 
     return bool(rtok and rtok & (toks - _GENERIC_REQ_TOKENS))
 
 
+def _covering_skills(r: dict, p_skills: set[str]) -> set[str]:
+    """Which of the profile's canonical skills cover this requirement (empty when it's covered
+    only by raw tokens, not a nameable skill) — used to weight coverage by that skill's years."""
+    skills = r.get("skills")
+    if skills:
+        return {cs for s in skills if (cs := canon_skill(s)) in p_skills}
+    return p_skills & extract_skills(r.get("text", ""))
+
+
 def _norm_reqs(requirements) -> list[dict]:
     """Accept either the new [{'text','kind'}] shape or the old [str] one (older rows / callers)
     so scoring never breaks on legacy data."""
@@ -175,7 +184,8 @@ def _norm_reqs(requirements) -> list[dict]:
 
 def score(profile_text: str, posting_text: str, requirements=None,
           profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT,
-          freshness: float = 1.0, gate_cap: float | None = None):
+          freshness: float = 1.0, gate_cap: float | None = None,
+          skill_years: dict | None = None):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -196,7 +206,14 @@ def score(profile_text: str, posting_text: str, requirements=None,
         if w > 0:                       # responsibilities/soft (w=0) are not scored as gaps
             w_tot += w
             if hit:
-                w_cov += w
+                # experience weighting: a requirement met by a deeply-held skill counts fully;
+                # by a barely-held one, partially. No years data anywhere -> exp=1.0 (unchanged).
+                exp = 1.0
+                if skill_years:
+                    cov = _covering_skills(r, p_skills)
+                    if cov:
+                        exp = max(experience_multiplier(skill_years.get(s)) for s in cov)
+                w_cov += w * exp
         (covered if hit else missing).append(r)
 
     # weighted keyword ratio (fallback / blend)
