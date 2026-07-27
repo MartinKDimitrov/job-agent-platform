@@ -195,6 +195,40 @@ def test_run_drain_stops_when_all_slices_done(monkeypatch):
         assert db.query(AdzunaPull).filter_by(done=True).count() == 1
 
 
+def test_run_drain_retries_on_db_connection_blip(monkeypatch):
+    """A dropped tunnel (OperationalError) mid-run must NOT crash the drain — it waits and
+    resumes from the durable cursor once the connection is back."""
+    from sqlalchemy.exc import OperationalError
+    calls = {"n": 0}
+
+    def flaky_bulk(session_factory, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:                              # first batch: tunnel blip
+            raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+        return {"configured": True, "calls": 0, "added": 0, "slices_touched": 0, "failed": 0}
+    monkeypatch.setattr(ab, "run_bulk", flaky_bulk)
+    monkeypatch.setattr(ab, "status", lambda db: {"slices_done": 0, "slices": 1, "pulled": 5,
+                                                  "est_total": 10})
+    waits = []
+    out = ab.run_drain(SessionLocal, db_retry_wait=30, db_max_retries=5,
+                       log=lambda *_: None, sleep=lambda s: waits.append(s))
+    assert out["configured"] and calls["n"] == 2         # retried after the blip, then succeeded
+    assert 30 in waits                                   # waited the retry interval
+
+
+def test_run_drain_gives_up_after_max_db_retries(monkeypatch):
+    """If the tunnel never comes back, bail after db_max_retries instead of looping forever."""
+    from sqlalchemy.exc import OperationalError
+
+    def always_down(session_factory, **k):
+        raise OperationalError("SELECT 1", {}, Exception("refused"))
+    monkeypatch.setattr(ab, "run_bulk", always_down)
+    monkeypatch.setattr(ab, "status", lambda db: {"slices_done": 0, "slices": 0, "pulled": 0})
+    out = ab.run_drain(SessionLocal, db_retry_wait=1, db_max_retries=3,
+                       log=lambda *_: None, sleep=lambda *_: None)
+    assert out["configured"] and out["batches"] == 0     # never completed a batch, gave up cleanly
+
+
 def test_run_drain_backs_off_on_stall(monkeypatch):
     """A 503 storm (every call fails -> adds nothing) must stop the loop, not hammer forever."""
     _keys(monkeypatch)
