@@ -401,6 +401,35 @@ def _source_host(post: Posting) -> str:
     return host.removeprefix("www.").removeprefix("boards.").removeprefix("jobs.")
 
 
+def _score_breakdown(p: Profile, post: Posting, lang: str = "en") -> str:
+    """The 'why this score' line — the soft multipliers that actually moved the score (≠ 1.0),
+    read from the same soft_factors() the scorer uses, so the explanation can't drift. Shown only
+    when something moved it; a clean match shows nothing."""
+    from ...application.usecases.search import soft_factors
+    f = soft_factors(p, post)
+    chips = []
+
+    def _chip(ic: str, key: str, v: float, up: bool = False) -> None:
+        chips.append(f"<span class='factor {'up' if up else 'down'}'>{ic} "
+                     f"{escape(t(key, lang))} ×{v:.2f}</span>")
+
+    if f["language"] < 1.0:
+        _chip("🌐", "breakdown.language" if f["language"] <= 0.7 else "breakdown.foreign_country",
+              f["language"])
+    if f["seniority"] < 1.0:
+        _chip("📊", "breakdown.under" if f["seniority"] <= 0.7 else "breakdown.over", f["seniority"])
+    if f["salary"] < 1.0:
+        _chip("💰", "breakdown.salary_low", f["salary"])
+    elif f["salary"] > 1.0:
+        _chip("💰", "breakdown.salary_fit", f["salary"], up=True)
+    if f["freshness"] < 1.0:
+        _chip("🕐", "breakdown.stale", f["freshness"])
+    if not chips:
+        return ""
+    return (f"<div class='breakdown'><span class='bd-label'>{escape(t('breakdown.title', lang))}"
+            f"</span>{''.join(chips)}</div>")
+
+
 def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
                 lang: str = "en") -> str:
     meta = []
@@ -459,6 +488,7 @@ def _match_card(p: Profile, m: Match, post: Posting, docs: list[Document],
             f"<div class='title'>{escape(post.title)}</div>{meta_html}"
             f"{_score_parts(p, m, post, lang)}"
             f"{_gaps_block(m.covered, m.missing, lang, verified=bool(m.llm_verified), unused=_unused_skills(p, post))}"
+            f"{_score_breakdown(p, post, lang)}"
             f"{docs_html}"
             f"<div class='actions'>{apply_btn}{gen}{hide_btn}</div></div></div>")
 

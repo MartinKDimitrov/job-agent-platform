@@ -46,6 +46,11 @@ CATALOG: dict[str, str] = {
     "err.remote": "Remote preference must be remote, hybrid, onsite or any.",
     "err.salary_long": "Salary expectation is too long (max 64 characters).",
     # ---- logged-in app (feed / gaps / control strip) ----
+    "breakdown.title": "Why this score:",
+    "breakdown.language": "language you can't read", "breakdown.foreign_country": "local language",
+    "breakdown.under": "above your level", "breakdown.over": "below your level",
+    "breakdown.salary_low": "pay below expectation", "breakdown.salary_fit": "pay meets expectation",
+    "breakdown.stale": "older posting",
     "gaps.covered": "covered", "gaps.to_check": "to check",
     "gaps.tap": "tap for details", "gaps.you_cover": "You cover",
     "gaps.not_in_profile": "Not in your profile",
