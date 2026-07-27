@@ -8,6 +8,7 @@
     python -m app.jobs adzuna_bulk [call_budget]  # drain ALL Adzuna professions, resumable
     python -m app.jobs adzuna_recent [call_budget]  # nightly: catch only NEW postings (date-sort)
     python -m app.jobs aggregator_fallback  # collect via Careerjet+Jooble when Adzuna is limited
+    python -m app.jobs eures [pages]    # blanket-pull EURES (EU countries others miss, incl. BG)
     python -m app.jobs adzuna_status    # print bulk-pull progress (per country / slice)
 """
 import sys
@@ -43,6 +44,15 @@ if __name__ == "__main__":
         src = sys.argv[2] if len(sys.argv) > 2 else None
         sources = (src,) if src else ("careerjet", "jooble")
         print(aggregator_fallback.run_aggregator_fallback(SessionLocal, sources=sources))
+    elif mode == "eures":
+        # blanket-pull EURES (the EU countries other sources miss) + persist. pages default 2.
+        from .data.sources import eures
+        from .application.usecases.search import persist_postings
+        pages = int(sys.argv[2]) if len(sys.argv) > 2 else eures.DEFAULT_PAGES
+        with SessionLocal() as db:
+            res = persist_postings(db, eures.fetch(pages=pages))
+            db.commit()
+        print(res)
     elif mode == "aggregator_board":
         # render a per-profession collection board for one source: aggregator_board <source> [path]
         src = sys.argv[2] if len(sys.argv) > 2 else "careerjet"
