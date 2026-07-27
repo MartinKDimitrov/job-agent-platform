@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     # senior role for a junior candidate; over-qualified = a junior role for a senior candidate.
     seniority_underqualified_factor: float = 0.6
     seniority_overqualified_factor: float = 0.75
+    # Role-family soft signal (adjacent-but-different discipline the hard filter lets through):
+    # Data Scientist vs Data Engineer, Backend vs DevOps — related enough to show, different
+    # enough to rank below a same-family match. Non-adjacent mismatches (QA↔Backend) are dropped.
+    role_family_adjacent_factor: float = 0.8
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with

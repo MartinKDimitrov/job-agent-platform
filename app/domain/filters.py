@@ -9,6 +9,8 @@ filters implicitly by how they describe what they want.
 import re
 from functools import lru_cache
 
+from .role_family import role_family_ok
+
 _TOKEN_RE = re.compile(r"[a-zA-Zа-яА-Я0-9\+\#\.]+")
 
 # Title cues. "lead"/"principal"/"staff" read as senior IC, not management — only real people-
@@ -225,7 +227,7 @@ def seniority_factor(profile, title: str, *, underqualified: float = 0.6,
 
 
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:
-    """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority'."""
+    """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority' / 'role'."""
     if not location_ok(profile, location):
         return False, "location"
     # a "remote"-labeled posting whose text says otherwise is an onsite/hybrid posting. The
@@ -238,4 +240,9 @@ def passes_hard_filters(profile, title: str, location: str, description: str = "
         return False, "location"
     if not seniority_ok(profile, title):
         return False, "seniority"
+    # role-family: a QA posting for a Backend candidate (or PM for a Data Scientist) is a
+    # different discipline no semantic overlap should surface. Only the clearest, non-adjacent
+    # mismatch drops here; adjacent families (Data Scientist↔Data Engineer) are soft-weighted.
+    if not role_family_ok(profile, title):
+        return False, "role"
     return True, ""
