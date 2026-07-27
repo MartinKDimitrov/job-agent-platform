@@ -13,8 +13,14 @@ _TOKEN_RE = re.compile(r"[a-zA-Zа-яА-Я0-9\+\#\.]+")
 
 # Title cues. "lead"/"principal"/"staff" read as senior IC, not management — only real people-
 # management titles go here, so e.g. "Tech Lead" is not treated as a manager role.
-_MGMT = ("manager", "head of", "director", "vice president", " vp", "vp ", "chief",
-         "team lead", "people lead", "engineering lead")
+_MGMT = ("manager", "head of", "head, ", "director", "vice president", " vp", "vp ", "svp",
+         "evp", "chief", "cto", "ceo", "cfo", "coo", "team lead", "people lead",
+         "engineering lead", "supervisor", "leadership")
+# Titles that contain "manager" but are individual-contributor / functional roles — NOT
+# people-management. A Product/Account/Project Manager is not a mismatch for an IC candidate.
+_IC_MANAGER = ("product manager", "account manager", "project manager", "program manager",
+               "community manager", "product marketing manager", "customer success manager",
+               "engagement manager", "social media manager", "content manager")
 _JUNIOR = ("junior", "jr.", "jr ", "intern", "graduate", "entry level", "entry-level",
            "apprentice", "trainee", "working student", "стажант")
 _SENIOR = ("senior", "sr.", "sr ", "staff", "principal", "lead", "expert")
@@ -32,6 +38,8 @@ def _tokens(s: str) -> set[str]:
 
 
 def _posting_is_mgmt(title: str) -> bool:
+    if _has(title, _IC_MANAGER):          # Product/Account/Project Manager etc. = IC, not people-mgmt
+        return False
     return _has(title, _MGMT)
 
 
@@ -196,11 +204,24 @@ def location_ok(profile, location: str) -> bool:
 
 
 def seniority_ok(profile, title: str) -> bool:
-    if _posting_is_mgmt(title) and not _profile_wants_mgmt(profile):
-        return False                      # management role, candidate is an IC
-    if _posting_level(title) == 0 and _profile_level(profile) == 2:
-        return False                      # junior/intern role, candidate is senior
-    return True
+    """Hard filter — only the clearest category mismatch: a people-management role for an IC
+    candidate. Level mismatches (junior↔senior) are handled softly by seniority_factor, so a
+    slightly-off level is down-weighted, not hidden."""
+    return not (_posting_is_mgmt(title) and not _profile_wants_mgmt(profile))
+
+
+def seniority_factor(profile, title: str, *, underqualified: float = 0.6,
+                     overqualified: float = 0.75) -> float:
+    """Soft multiplier for a level mismatch the hard filter lets through:
+    - a senior/lead/principal role for a junior candidate -> under-qualified (they won't get it);
+    - a junior/intern role for a senior candidate -> over-qualified (they likely don't want it).
+    Mid-level or matching -> 1.0."""
+    pl, ql = _posting_level(title), _profile_level(profile)
+    if pl == 2 and ql == 0:
+        return underqualified
+    if pl == 0 and ql == 2:
+        return overqualified
+    return 1.0
 
 
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:

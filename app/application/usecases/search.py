@@ -44,7 +44,7 @@ def posting_freshness(post, now=None) -> float:
     return freshness_factor(posting_age_days(post, now),
                             settings.freshness_fresh_days,
                             settings.freshness_at_30d, settings.freshness_at_60d)
-from ...domain.filters import passes_hard_filters
+from ...domain.filters import passes_hard_filters, seniority_factor
 from ...domain.language import language_factor
 
 log = logging.getLogger(__name__)
@@ -603,7 +603,10 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             low=settings.salary_low_factor, fit=settings.salary_fit_boost) * language_factor(
             profile.languages, post.description or post.title, post.location or "",
             unreadable=settings.language_unreadable_factor,
-            foreign_country=settings.language_foreign_country_factor)
+            foreign_country=settings.language_foreign_country_factor) * seniority_factor(
+            profile, post.title,
+            underqualified=settings.seniority_underqualified_factor,
+            overqualified=settings.seniority_overqualified_factor)
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
