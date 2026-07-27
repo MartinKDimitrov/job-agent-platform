@@ -163,6 +163,47 @@ def extract_skills(text: str) -> set[str]:
     return {_CANON[m.group(1).lower()] for m in _ALIAS_RE.finditer(text or "")}
 
 
+# "skill:5", "Java 3y", "Kotlin (5 years)", "Python:2г" — a trailing years count on a skill.
+# Requires a real separator so trailing digits in a name ("Web3") aren't read as years.
+_SKILL_YEARS_RE = re.compile(
+    r"^(?P<skill>.+?)[\s:\-(]+\(?\s*(?P<yrs>\d{1,2})\s*\+?\s*"
+    r"(?:years?|yrs?|y|г\.?|години)?\s*\)?$", re.I)
+
+
+def parse_skill_years(skills: str) -> dict[str, int | None]:
+    """Parse the comma-separated skills field into {canonical_skill: years}. A skill with no
+    stated years maps to None (no experience signal). Repeated skills keep the max years."""
+    out: dict[str, int | None] = {}
+    for part in (skills or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        m = _SKILL_YEARS_RE.match(part)
+        name, yrs = (m.group("skill"), int(m.group("yrs"))) if m else (part, None)
+        cs = canon_skill(name.strip())
+        if not cs:
+            continue
+        if cs in out and yrs is not None:
+            out[cs] = yrs if out[cs] is None else max(out[cs], yrs)
+        elif cs not in out:
+            out[cs] = yrs
+    return out
+
+
+def experience_multiplier(years: int | None) -> float:
+    """How fully a skill's coverage counts, by stated years. Unspecified -> 1.0 (no signal, so
+    users who don't annotate aren't penalised); low years discount; 3+ years counts fully."""
+    if years is None:
+        return 1.0
+    if years <= 0:
+        return 0.7
+    if years == 1:
+        return 0.8
+    if years == 2:
+        return 0.9
+    return 1.0
+
+
 # Skills too common to signal RELEVANCE on their own — the recall stop-list (a 'git' or
 # 'sql' overlap must not flood the candidate set; they still count for COVERAGE).
 RECALL_GENERIC_SKILLS = frozenset({

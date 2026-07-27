@@ -1,5 +1,6 @@
 """Canonical skills dictionary (Phase 3): bilateral normalization, synonym fallback."""
-from app.domain.skills import canon_skill, extract_skills, is_known
+from app.domain.skills import (canon_skill, extract_skills, is_known, parse_skill_years,
+                               experience_multiplier)
 from app.domain.scoring import requirement_hit, score
 
 
@@ -67,3 +68,31 @@ def test_score_end_to_end_with_aliases():
     sc, cov, mis = score("Frontend · React.js, Node", "role", reqs)
     assert len(cov) == 2 and not mis
     assert sc == 100
+
+
+# ---- years of experience per skill ----
+def test_parse_skill_years_formats():
+    got = parse_skill_years("Kotlin:5, Java 3y, Python (2 years), Android")
+    assert got == {"kotlin": 5, "java": 3, "python": 2, "android": None}
+    # a trailing digit that's PART of the name (Web3) is not read as years
+    assert parse_skill_years("Web3")["web3"] is None
+    assert parse_skill_years("") == {}
+    # repeated skill keeps the max stated years
+    assert parse_skill_years("react:2, React 5")["react"] == 5
+
+
+def test_experience_multiplier_curve():
+    assert experience_multiplier(None) == 1.0        # unspecified -> no penalty
+    assert experience_multiplier(0) == 0.7
+    assert experience_multiplier(1) == 0.8
+    assert experience_multiplier(2) == 0.9
+    assert experience_multiplier(5) == 1.0
+
+
+def test_score_weights_coverage_by_experience():
+    reqs = [{"text": "React experience", "kind": "must", "skills": ["react"], "weight": 4}]
+    base = score("Frontend · React", "role", reqs)[0]                       # no years signal
+    low = score("Frontend · React", "role", reqs, skill_years={"react": 1})[0]    # 1yr -> 0.8
+    high = score("Frontend · React", "role", reqs, skill_years={"react": 5})[0]   # 5yr -> full
+    assert low < base                                # barely-held skill scores lower
+    assert high == base                              # deep skill == full coverage, no penalty
