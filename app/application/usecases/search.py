@@ -601,8 +601,9 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         soft = posting_freshness(post) * salary_factor(
             posting_salary(post), expectation,
             low=settings.salary_low_factor, fit=settings.salary_fit_boost) * language_factor(
-            profile.languages, post.description or post.title,
-            unreadable=settings.language_unreadable_factor)
+            profile.languages, post.description or post.title, post.location or "",
+            unreadable=settings.language_unreadable_factor,
+            foreign_country=settings.language_foreign_country_factor)
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,

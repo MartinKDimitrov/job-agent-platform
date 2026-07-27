@@ -4,11 +4,15 @@ A posting written in a language the candidate can't read is a real barrier — t
 parse the requirements — so it should be down-weighted. This is a **soft multiplier** (like
 freshness/salary), never a hard filter, and only fires when we have data on the user's languages.
 
-First cut = signal (1) from the roadmap: the posting's OWN language vs the user's spoken
-languages. English is treated as broadly readable (EU job-market lingua franca), so English
-postings are never penalized. Detection is a cheap stopword heuristic — langdetect isn't a
-dependency here — good enough for a soft signal. (Signals (2) country-language and (3) explicit
-"fließende Deutschkenntnisse"-style requirements are follow-ups.)
+Three roadmap signals, strongest first:
+  (3) EXPLICIT requirement — the posting demands a language ("fließende Deutschkenntnisse",
+      "italiano fluente", "C1 German") the user doesn't have -> strong down-weight.
+  (1) POSTING language — written in a non-English language the user can't read -> strong.
+  (2) COUNTRY language — posting readable (English), but the country's everyday language is one
+      the user doesn't speak -> mild (many international firms work in English).
+Soft multiplier, never a hard filter; only fires when Profile.languages is set. English is
+treated as broadly readable. Detection is a cheap stopword/keyword heuristic — langdetect isn't
+a dependency here — good enough for a soft signal.
 """
 from __future__ import annotations
 
@@ -75,13 +79,79 @@ def user_language_codes(languages: str) -> set[str]:
     return {code for name, code in _LANG_NAMES.items() if name in s}
 
 
-def language_factor(user_languages: str, posting_text: str, *, unreadable: float = 0.5) -> float:
-    """Soft multiplier: 1.0 normally, `unreadable` when the posting is in a non-English language
-    the user doesn't read. No user-language data -> no signal (1.0). English -> always 1.0."""
+# --- signal (2): the country's everyday language, from the location string --------------------
+# Country / major-city keywords -> local language code. English-speaking places map to "en"
+# (no penalty). Heuristic — the location field is free text (e.g. "Berlin, Germany", "София").
+_COUNTRY_LANG = {
+    "de": ("germany", "deutschland", "berlin", "münchen", "munich", "hamburg", "frankfurt",
+           "köln", "cologne", "stuttgart", "düsseldorf", "austria", "österreich", "wien",
+           "vienna", "switzerland", "zürich", "zurich"),
+    "fr": ("france", "paris", "lyon", "marseille", "toulouse", "bordeaux", "nantes", "lille"),
+    "it": ("italy", "italia", "rome", "roma", "milan", "milano", "turin", "torino", "naples"),
+    "es": ("spain", "españa", "espana", "madrid", "barcelona", "valencia", "sevilla", "málaga"),
+    "nl": ("netherlands", "nederland", "amsterdam", "rotterdam", "utrecht", "eindhoven", "hague"),
+    "pl": ("poland", "polska", "warsaw", "warszawa", "kraków", "krakow", "wrocław", "wroclaw"),
+    "bg": ("bulgaria", "българия", "sofia", "софия", "plovdiv", "пловдив", "varna", "варна"),
+    "en": ("united kingdom", "england", "london", "manchester", "ireland", "dublin", "scotland",
+           "remote", "anywhere", "worldwide"),
+}
+
+
+def country_language(location: str) -> str | None:
+    """Local everyday language for a posting's location string, or None if unrecognized."""
+    t = (location or "").lower()
+    if not t.strip():
+        return None
+    for code, keys in _COUNTRY_LANG.items():
+        if any(k in t for k in keys):
+            return code
+    return None
+
+
+# --- signal (3): an explicit language requirement in the posting -------------------------------
+_LANG_TOKEN = {
+    "de": r"deutsch\w*|german|немски",
+    "fr": r"fran[cç]ais|french|френски",
+    "it": r"italian[oa]?|italiano|италиански",
+    "es": r"espa[nñ]ol\w*|spanish|испански",
+    "nl": r"nederlands|dutch|нидерландски|холандски",
+    "pl": r"pol(?:ski|ish)|полски",
+    "bg": r"b[aъ]lgar\w*|bulgarian|български",
+}
+_FLUENCY = (r"fluent|fluency|native|proficien\w+|mother\s*tongue|muttersprache|flie[sß]end\w*|"
+            r"courant|corrente|kenntnisse|sprachkenntnisse|\bc1\b|\bc2\b|\bb2\b|required|"
+            r"mandatory|essential|владеене|свободно|отличен")
+
+
+def required_languages(text: str) -> set[str]:
+    """Languages the posting EXPLICITLY requires (a language name within ~50 chars of a fluency/
+    requirement indicator, either order). Heuristic — some noise is fine for a soft signal."""
+    t = (text or "").lower()
+    out = set()
+    for code, names in _LANG_TOKEN.items():
+        pat = rf"(?:{names}).{{0,50}}?(?:{_FLUENCY})|(?:{_FLUENCY}).{{0,50}}?(?:{names})"
+        if re.search(pat, t):
+            out.add(code)
+    return out
+
+
+def language_factor(user_languages: str, posting_text: str, location: str = "", *,
+                    unreadable: float = 0.5, foreign_country: float = 0.9) -> float:
+    """Soft multiplier combining the three signals (strongest wins). 1.0 = no barrier. No
+    user-language data -> 1.0. English postings are never penalized on readability."""
     langs = user_language_codes(user_languages)
     if not langs:
         return 1.0
+    # (3) explicit requirement the user meets none of -> strong barrier
+    req = required_languages(posting_text)
+    if req and not (req & langs):
+        return unreadable
+    # (1) can they even read the posting text?
     plang = detect_language(posting_text)
-    if plang is None or plang == "en" or plang in langs:
-        return 1.0
-    return unreadable
+    if plang and plang != "en" and plang not in langs:
+        return unreadable
+    # (2) posting readable, but the country's everyday language is foreign -> mild
+    clang = country_language(location)
+    if clang and clang != "en" and clang not in langs:
+        return foreign_country
+    return 1.0
