@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # the user doesn't speak (mild — many international firms work in English).
     language_unreadable_factor: float = 0.5
     language_foreign_country_factor: float = 0.9
+    # Seniority soft signal (level mismatch the hard filter lets through): under-qualified = a
+    # senior role for a junior candidate; over-qualified = a junior role for a senior candidate.
+    seniority_underqualified_factor: float = 0.6
+    seniority_overqualified_factor: float = 0.75
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with

@@ -1,5 +1,6 @@
 """Hard filters: seniority (management/IC, junior/senior), location and geo compatibility."""
-from app.domain.filters import geo_ok, location_ok, seniority_ok, passes_hard_filters, is_hybrid
+from app.domain.filters import (geo_ok, location_ok, seniority_ok, passes_hard_filters, is_hybrid,
+                                 seniority_factor)
 
 
 class P:
@@ -33,10 +34,33 @@ def test_ic_roles_pass():
     assert seniority_ok(ic, "Tech Lead, Android") is True         # tech lead = IC, not mgmt
 
 
-def test_junior_role_filtered_for_senior_profile():
-    assert seniority_ok(P(target_roles="Senior Android"), "Junior Android Engineer") is False
-    # but fine for a non-senior profile
-    assert seniority_ok(P(target_roles="Android"), "Junior Android Engineer") is True
+def test_level_mismatch_is_now_soft_not_a_hard_filter():
+    # junior role for a senior profile no longer HIDDEN — it's surfaced but down-weighted
+    assert seniority_ok(P(target_roles="Senior Android"), "Junior Android Engineer") is True
+
+
+def test_ic_manager_titles_not_treated_as_management():
+    ic = P(target_roles="Android")
+    assert seniority_ok(ic, "Product Manager") is True        # PM = IC/functional, not people-mgmt
+    assert seniority_ok(ic, "Account Manager") is True
+    assert seniority_ok(ic, "Senior Project Manager") is True
+    # a real people-management title still filtered for an IC
+    assert seniority_ok(ic, "Engineering Manager") is False
+    assert seniority_ok(ic, "Head of Engineering") is False
+
+
+def test_seniority_factor_under_and_over_qualified():
+    junior = P(target_roles="Junior Android")
+    senior = P(target_roles="Senior Android")
+    mid = P(target_roles="Android Developer")
+    # senior/lead role for a junior candidate -> under-qualified (strong down-weight)
+    assert seniority_factor(junior, "Staff Android Engineer", underqualified=0.6) == 0.6
+    assert seniority_factor(junior, "Principal Engineer", underqualified=0.6) == 0.6
+    # junior role for a senior candidate -> over-qualified (mild)
+    assert seniority_factor(senior, "Junior Android Engineer", overqualified=0.75) == 0.75
+    # matching / mid -> no penalty
+    assert seniority_factor(senior, "Senior Android Engineer") == 1.0
+    assert seniority_factor(mid, "Android Developer") == 1.0
 
 
 # ---- location ----
