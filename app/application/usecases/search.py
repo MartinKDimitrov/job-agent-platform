@@ -67,8 +67,10 @@ def soft_factors(profile, post, expectation=None) -> dict:
                                       overqualified=settings.seniority_overqualified_factor),
         "role_family": role_family_factor(profile, post.title,
                                           adjacent=settings.role_family_adjacent_factor),
+        "commute": commute_factor(profile, post.location or "", post.description or "",
+                                  onsite=settings.onsite_commute_factor),
     }
-from ...domain.filters import passes_hard_filters, seniority_factor
+from ...domain.filters import passes_hard_filters, seniority_factor, commute_factor
 from ...domain.role_family import role_family_factor
 from ...domain.language import language_factor
 
@@ -595,9 +597,11 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     existing_by_post = {m.posting_id: m for m in db.execute(
         select(Match).where(Match.profile_id == profile.id)).scalars()}
     scored = filtered = matched = 0
+    seen: set = set()
     posts = db.execute(select(Posting).where(Posting.id.in_(relevant_ids))
                        .order_by(Posting.first_seen.desc())).scalars() if relevant_ids else []
     for post in posts:
+        seen.add(post.id)
         # A match the user can't act on is noise: postings without ANY link never create NEW
         # matches (junk/manually-scaffolded rows). Existing matches (the owner pasted the JD
         # via the manual form) still refresh their score.
@@ -623,11 +627,11 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             if stale is not None:
                 db.delete(stale)
             continue
-        # freshness, salary, language and seniority are soft multipliers on the base score —
-        # passed as one product (score() applies it after the blend, inside the gate cap)
+        # freshness, salary, language, seniority, role-family and commute are soft multipliers on
+        # the base score — passed as one product (score() applies it after the blend, inside the cap)
         _f = soft_factors(profile, post, expectation)
         soft = (_f["freshness"] * _f["salary"] * _f["language"]
-                * _f["seniority"] * _f["role_family"])
+                * _f["seniority"] * _f["role_family"] * _f["commute"])
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
@@ -644,6 +648,17 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             matched += 1
         if limit is not None and scored >= limit:
             break
+    # Zombie sweep: matches whose posting fell out of the recall set are never re-scored above, so
+    # one created under an older, laxer filter (e.g. a hybrid role before relocate/commute handling)
+    # could outlive it. Re-check each such leftover against the CURRENT hard filters and drop the
+    # ones that no longer qualify (or whose posting was retired).
+    for post_id, stale in existing_by_post.items():
+        if post_id in seen:
+            continue
+        zp = db.get(Posting, post_id)
+        if zp is None or not getattr(zp, "is_live", True) or not passes_hard_filters(
+                profile, zp.title, zp.location, zp.description)[0]:
+            db.delete(stale)
     try:
         db.commit()
     except IntegrityError:

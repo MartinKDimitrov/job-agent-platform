@@ -57,6 +57,7 @@ CATALOG: dict[str, str] = {
     "breakdown.salary_fit": "μισθός σύμφωνος",
     "breakdown.stale": "παλαιότερη αγγελία",
     "breakdown.role_family": "διαφορετικός τύπος ρόλου",
+    "breakdown.onsite": "με φυσική παρουσία",
     "gaps.covered": "καλύπτονται", "gaps.to_check": "προς έλεγχο",
     "gaps.tap": "δες λεπτομέρειες", "gaps.you_cover": "Καλύπτεις",
     "gaps.not_in_profile": "Δεν υπάρχει στο προφίλ σου",

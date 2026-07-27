@@ -57,6 +57,7 @@ CATALOG: dict[str, str] = {
     "breakdown.salary_fit": "plaća odgovara",
     "breakdown.stale": "stariji oglas",
     "breakdown.role_family": "drugačija vrsta uloge",
+    "breakdown.onsite": "rad u uredu",
     "gaps.covered": "pokriveno", "gaps.to_check": "za provjeru",
     "gaps.tap": "pogledaj detalje", "gaps.you_cover": "Pokrivaš",
     "gaps.not_in_profile": "Nije u tvom profilu",

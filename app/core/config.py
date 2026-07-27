@@ -96,6 +96,10 @@ class Settings(BaseSettings):
     # Data Scientist vs Data Engineer, Backend vs DevOps — related enough to show, different
     # enough to rank below a same-family match. Non-adjacent mismatches (QA↔Backend) are dropped.
     role_family_adjacent_factor: float = 0.8
+    # Commute soft signal: a candidate who prefers remote but is willing to relocate now SEES
+    # on-site / hybrid roles (the hard location filter no longer hides them) — this keeps genuine
+    # remote roles ranked above the ones that would require a move.
+    onsite_commute_factor: float = 0.92
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with

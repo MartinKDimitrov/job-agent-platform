@@ -20,6 +20,7 @@ class _Prof:
     def __init__(self, languages="", target_roles="", salary_expectation=""):
         self.languages, self.target_roles = languages, target_roles
         self.salary_expectation = salary_expectation
+        self.remote_pref, self.relocate = "any", False    # neutral: no commute penalty
 
 
 def test_soft_factors_named_values():
