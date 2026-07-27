@@ -19,6 +19,7 @@ import time
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError, OperationalError
 
 from ...data.models import AdzunaPull
 from ...data.sources import adzuna
@@ -163,43 +164,69 @@ def status(db) -> dict:
 
 def run_drain(session_factory, *, batch_budget: int = DEFAULT_CALL_BUDGET, max_calls: int = 5000,
               stall_runs: int = 3, batch_pause: float = 2.0, board_path: str | None = None,
-              countries=COUNTRIES, log=print, sleep=time.sleep) -> dict:
+              countries=COUNTRIES, db_retry_wait: float = 30.0, db_max_retries: int = 30,
+              log=print, sleep=time.sleep) -> dict:
     """Run batches back-to-back until every slice is drained OR the trial quota throttles us.
 
     Adzuna serves full pages arbitrarily deep, so a slice only drains after its whole count is
     paged — full drain is thousands of calls, quota-bounded. This loops run_bulk, stopping on:
     all slices done; ``max_calls`` safety cap; or ``stall_runs`` consecutive batches that add
     nothing (a 503/quota storm — back off rather than hammer the key). Rewrites the board file
-    after each batch when ``board_path`` is set (publishing stays a manual step)."""
+    after each batch when ``board_path`` is set (publishing stays a manual step).
+
+    Tunnel-resilient: the staging DB is behind a flaky SSH tunnel that can blip mid-query. A
+    dropped connection (OperationalError/DBAPIError) is NOT fatal — the drain waits
+    ``db_retry_wait`` s (up to ``db_max_retries`` times, ~15 min) for it to recover (the monitor
+    loop restarts the tunnel; pool_pre_ping reconnects) and retries. Cursors are durable, so the
+    work resumes exactly where it stopped — no data loss, no double-count."""
     total_calls = total_added = batches = 0
-    stalled = 0
+    stalled = db_errors = 0
     while total_calls < max_calls:
-        res = run_bulk(session_factory, call_budget=batch_budget, countries=countries, sleep=sleep)
+        try:
+            res = run_bulk(session_factory, call_budget=batch_budget, countries=countries,
+                           sleep=sleep)
+        except (OperationalError, DBAPIError) as e:
+            db_errors += 1
+            if db_errors > db_max_retries:
+                log(f"DB unreachable after {db_max_retries} retries — ending this run")
+                break
+            log(f"DB connection lost ({type(e).__name__}) — retry {db_errors}/{db_max_retries} "
+                f"in {db_retry_wait:.0f}s")
+            sleep(db_retry_wait)
+            continue                                  # tunnel healed -> resume from durable cursor
+        db_errors = 0                                 # a good batch clears the streak
         if not res.get("configured"):
             return {"configured": False, "batches": batches, "calls": 0, "added": 0}
         batches += 1
         total_calls += res["calls"]
         total_added += res["added"]
-        with session_factory() as db:
-            st = status(db)
-            if board_path:
-                try:
-                    with open(board_path, "w", encoding="utf-8") as fh:
-                        fh.write(render_board(st))
-                except OSError:
-                    pass
+        st = None
+        try:                                          # status/board are best-effort — a blip here
+            with session_factory() as db:             # must not crash a run that already committed
+                st = status(db)
+                if board_path:
+                    try:
+                        with open(board_path, "w", encoding="utf-8") as fh:
+                            fh.write(render_board(st))
+                    except OSError:
+                        pass
+        except (OperationalError, DBAPIError):
+            pass
+        progress = f"pulled={st['pulled']} done={st['slices_done']}/{st['slices']}" if st else "(status unavailable)"
         log(f"batch {batches}: +{res['added']} postings, {res['calls']} calls "
-            f"({res.get('failed', 0)} failed) | pulled={st['pulled']} "
-            f"done={st['slices_done']}/{st['slices']}")
-        if res["calls"] == 0 or st["slices_done"] >= st["slices"]:
+            f"({res.get('failed', 0)} failed) | {progress}")
+        if res["calls"] == 0 or (st and st["slices_done"] >= st["slices"]):
             break                                     # nothing pending / everything drained
         stalled = stalled + 1 if res["added"] == 0 else 0
         if stalled >= stall_runs:
             log(f"stalled {stalled} batches (quota/503) — backing off")
             break
         sleep(batch_pause)
-    with session_factory() as db:
-        st = status(db)
+    try:
+        with session_factory() as db:
+            st = status(db)
+    except (OperationalError, DBAPIError):
+        st = {"slices_done": 0, "slices": 0, "pulled": 0}
     return {"configured": True, "batches": batches, "calls": total_calls, "added": total_added,
             "stalled": stalled >= stall_runs, "slices_done": st["slices_done"],
             "slices": st["slices"], "pulled": st["pulled"]}
