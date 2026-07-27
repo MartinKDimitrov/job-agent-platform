@@ -25,7 +25,7 @@ from ...data.models import AdzunaPull
 from ...data.sources import adzuna
 from .search import persist_postings
 
-COUNTRIES = adzuna.COUNTRIES                 # de/fr/it/gb/es/nl/pl
+COUNTRIES = adzuna.COUNTRIES                 # de/fr/it/gb/es/nl/pl/at/be/ch
 RESULTS_PER_PAGE = adzuna.RESULTS_PER_PAGE   # 50
 DEFAULT_CALL_BUDGET = 200                    # Adzuna calls per run — spread across slices
 DEFAULT_PAGES_PER_SLICE = 20                 # cap per slice per run -> budget fans out
@@ -282,7 +282,8 @@ def run_recency_refresh(session_factory, *, call_budget: int = 300, max_pages_pe
             "slices": len(slices), "slices_with_new": touched}
 
 
-_FLAG = {"DE": "🇩🇪", "FR": "🇫🇷", "IT": "🇮🇹", "GB": "🇬🇧", "ES": "🇪🇸", "NL": "🇳🇱", "PL": "🇵🇱"}
+_FLAG = {"DE": "🇩🇪", "FR": "🇫🇷", "IT": "🇮🇹", "GB": "🇬🇧", "ES": "🇪🇸", "NL": "🇳🇱", "PL": "🇵🇱",
+         "AT": "🇦🇹", "BE": "🇧🇪", "CH": "🇨🇭"}
 
 
 def _bar(pct: float, tone: str = "accent") -> str:

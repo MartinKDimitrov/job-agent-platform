@@ -24,9 +24,11 @@ from .base import register
 from .http import fetch_json
 
 _BASE = "https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
-COUNTRIES = ("de", "fr", "it", "gb", "es", "nl", "pl")   # our target markets
+# Adzuna's supported markets we pull. Beyond these it 404s — the rest of the EU (BG/RO/SE/
+# Baltics/...) comes from Jooble/Careerjet/EURES instead. (at/be/ch verified live 2026-07.)
+COUNTRIES = ("de", "fr", "it", "gb", "es", "nl", "pl", "at", "be", "ch")
 _ISO2_COUNTRY = {"de": "DE", "fr": "FR", "it": "IT", "gb": "GB", "es": "ES", "nl": "NL",
-                 "pl": "PL"}
+                 "pl": "PL", "at": "AT", "be": "BE", "ch": "CH"}
 RESULTS_PER_PAGE = 50
 CALL_DELAY = 0.3
 
