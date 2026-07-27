@@ -40,8 +40,8 @@ EMBED_VERSION = "e5-asym-clean-v2"
 DEFAULT_SEM_WEIGHT = 0.5
 
 
-def freshness_factor(age_days: float | None, fresh_days: float = 7.0,
-                     f30: float = 0.85, f60: float = 0.70) -> float:
+def freshness_factor(age_days: float | None, fresh_days: float = 14.0,
+                     f30: float = 0.90, f60: float = 0.80) -> float:
     """Age decay multiplier on the final score (owner decision: age IN the score instead of
     hard deletion at 30 days). Piecewise linear: 1.0 through `fresh_days`, then down to
     `f30` at day 30 and `f60` at day 60, flat after (the 90-day zombie cap retires the

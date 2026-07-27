@@ -202,10 +202,11 @@ def test_freshness_factor_curve():
     from app.domain.scoring import freshness_factor
     assert freshness_factor(None) == 1.0
     assert freshness_factor(3) == 1.0                       # fresh window
-    assert freshness_factor(30) == 0.85
-    assert abs(freshness_factor(45) - 0.775) < 0.001        # midway 30->60
-    assert freshness_factor(60) == 0.70
-    assert freshness_factor(80) == 0.70                     # flat until the 90d cap
+    assert freshness_factor(14) == 1.0                      # 2-week grace, full score
+    assert freshness_factor(30) == 0.90
+    assert abs(freshness_factor(45) - 0.85) < 0.001         # midway 30->60
+    assert freshness_factor(60) == 0.80
+    assert freshness_factor(80) == 0.80                     # flat until the 90d cap
 
 
 def test_score_applies_freshness_and_must_gate():

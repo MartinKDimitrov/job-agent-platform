@@ -53,9 +53,11 @@ class Settings(BaseSettings):
     # (owner decision: no more blanket deletion at 30 days).
     posting_max_age_days: int = 90
     # Freshness decay knees: full score through fresh_days, then linear to f30@30d, f60@60d.
-    freshness_fresh_days: float = 7.0
-    freshness_at_30d: float = 0.85
-    freshness_at_60d: float = 0.70
+    # Softened (owner) so a still-relevant older posting isn't buried: a 2-week grace window and
+    # gentler knees, since job ads commonly stay open well past a month.
+    freshness_fresh_days: float = 14.0
+    freshness_at_30d: float = 0.90
+    freshness_at_60d: float = 0.80
     # Must-gate: a ★5 must with zero coverage across its annotated alternatives caps the
     # score here (0 disables the gate).
     must_gate_cap: float = 0.40
