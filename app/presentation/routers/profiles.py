@@ -633,7 +633,9 @@ def add_posting(pid: int, request: Request, url: str = Form(""), apply_url: str 
     post = db.execute(select(Posting).where(Posting.content_hash == chash)).scalar_one_or_none()
     if not post:
         reqs = extract_requirements(description)  # rules-based: must/nice/resp, no LLM cost
+        from ...domain.dedup import normalize_company
         post = Posting(title=title, company=company, url=url, apply_url=apply_url,
+                       norm_company=normalize_company(company),
                        location=location, description=description, requirements=reqs,
                        content_hash=chash)
         db.add(post); db.commit(); db.refresh(post)

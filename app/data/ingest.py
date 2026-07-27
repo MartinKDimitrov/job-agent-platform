@@ -45,10 +45,16 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
     """Upsert RawPostings into the Posting table. Returns {added, skipped, deduped}."""
     added = skipped = deduped = 0
     now = datetime.utcnow()
-    # index of existing postings by normalized company, for the cross-source check
+    # Cross-source check index — but only load the CANDIDATE rows: postings whose normalized
+    # company matches one in THIS batch. The old code scanned the whole table on every call
+    # (O(n) per ~50-posting page — crippling at 100k+ rows and under parallel writers). With
+    # norm_company indexed, this is a small, bounded lookup.
+    batch_norms = {n for n in (normalize_company(rp.company) for rp in postings) if n}
     by_company: dict[str, list[Posting]] = {}
-    for post in db.execute(select(Posting)).scalars().all():
-        by_company.setdefault(normalize_company(post.company), []).append(post)
+    if batch_norms:
+        for post in db.execute(
+                select(Posting).where(Posting.norm_company.in_(batch_norms))).scalars().all():
+            by_company.setdefault(post.norm_company, []).append(post)
 
     for rp in postings:
         chash = rp.content_hash()
@@ -81,6 +87,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
         sal = parse_salary(f"{rp.title or ''}\n{rp.description or ''}")
         post = Posting(
             title=(rp.title or "")[:512], company=(rp.company or "")[:255],
+            norm_company=norm_co,
             url=rp.url, apply_url=rp.apply_url,
             location=(rp.location or "")[:255], description=rp.description, requirements=None,
             posted_at=(rp.posted_at.replace(tzinfo=None) if rp.posted_at else None),

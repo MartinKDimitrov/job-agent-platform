@@ -81,6 +81,9 @@ class Posting(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(512), default="")
     company: Mapped[str] = mapped_column(String(255), default="")
+    # normalize_company(company), stored + indexed so cross-source dedup queries only the
+    # candidate companies in a batch instead of scanning the whole table (see ingest()).
+    norm_company: Mapped[str] = mapped_column(String(255), default="", index=True)
     url: Mapped[str] = mapped_column(Text, default="")
     apply_url: Mapped[str] = mapped_column(Text, default="")
     location: Mapped[str] = mapped_column(String(255), default="")
