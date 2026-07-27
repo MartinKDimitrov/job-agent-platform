@@ -53,6 +53,15 @@ if __name__ == "__main__":
             res = persist_postings(db, eures.fetch(pages=pages))
             db.commit()
         print(res)
+    elif mode == "eures_board":
+        # render the per-country EURES collection board: eures_board [path]
+        from .application.usecases import eures_board
+        out = sys.argv[2] if len(sys.argv) > 2 else "eures_board.html"
+        with SessionLocal() as db:
+            html = eures_board.render_board(eures_board.status(db))
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(html)
+        print(f"wrote {out}")
     elif mode == "aggregator_board":
         # render a per-profession collection board for one source: aggregator_board <source> [path]
         src = sys.argv[2] if len(sys.argv) > 2 else "careerjet"
