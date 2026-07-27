@@ -100,7 +100,9 @@ class Posting(Base):
     salary_period: Mapped[str | None] = mapped_column(String(8), nullable=True)  # month/year
     salary_raw: Mapped[str | None] = mapped_column(String(64), nullable=True)    # as written
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
-    content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    # UNIQUE so concurrent writers (parallel Adzuna/Careerjet/Jooble) can't both insert the same
+    # posting — the DB rejects the racing INSERT and ingest() catches it and touches instead.
+    content_hash: Mapped[str] = mapped_column(String(64), default="", unique=True, index=True)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # source date
     first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   # by a fetch
@@ -237,6 +239,22 @@ class AdzunaPull(Base):
     done: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     __table_args__ = (UniqueConstraint("country", "category", name="uq_adzuna_slice"),)
+
+
+class AggregatorPull(Base):
+    """Per-profession collection tally for the keyword aggregators (Jooble / Careerjet). They
+    have no catalogue cursor like Adzuna, so the fallback sweep records one row per (source,
+    term): unique postings persisted, total fetched, run count — enough to board what each
+    source has collected per profession."""
+    __tablename__ = "aggregator_pull"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(16), index=True)     # jooble | careerjet
+    term: Mapped[str] = mapped_column(String(64))
+    pulled: Mapped[int] = mapped_column(Integer, default=0)         # postings persisted (added)
+    seen: Mapped[int] = mapped_column(Integer, default=0)           # postings fetched (incl. dupes)
+    runs: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("source", "term", name="uq_agg_pull"),)
 
 
 class Application(Base):

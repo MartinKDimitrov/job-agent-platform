@@ -15,6 +15,7 @@ arrives with Alembic — ROADMAP step 35).
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..core.config import settings
@@ -35,6 +36,11 @@ def _touch(post: Posting, now: datetime) -> None:
             post.is_live = True
 
 
+def _existing_by_hash(db: Session, chash: str) -> Posting | None:
+    return db.execute(
+        select(Posting).where(Posting.content_hash == chash).limit(1)).scalars().first()
+
+
 def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None) -> dict:
     """Upsert RawPostings into the Posting table. Returns {added, skipped, deduped}."""
     added = skipped = deduped = 0
@@ -46,12 +52,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
 
     for rp in postings:
         chash = rp.content_hash()
-        # .first(), not scalar_one_or_none(): there's no DB-level unique constraint on
-        # content_hash, so concurrent writers (bulk pulls + a manual ingest) can race the
-        # SELECT-then-INSERT and leave two rows with the same hash. A duplicate must NOT crash
-        # the whole ingest (MultipleResultsFound) — touch the first match and move on.
-        existing = db.execute(
-            select(Posting).where(Posting.content_hash == chash).limit(1)).scalars().first()
+        existing = _existing_by_hash(db, chash)
         if existing is not None:
             # cheap backfill: rows ingested before posted_at existed learn their source date
             # the next time the source shows them (age filter needs it)
@@ -90,7 +91,20 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             salary_period=sal["period"] if sal else None,
             salary_raw=sal["raw"][:64] if sal else None,
         )
-        db.add(post)
+        # Insert inside a SAVEPOINT: with content_hash UNIQUE, a concurrent writer (parallel
+        # aggregators) may have inserted this same posting between our SELECT above and now.
+        # The savepoint lets that one racing row roll back without losing the rest of the batch;
+        # we then fetch the winner and touch it, so nothing is dropped or double-counted.
+        try:
+            with db.begin_nested():
+                db.add(post)
+                db.flush()
+        except IntegrityError:
+            existing = _existing_by_hash(db, chash)          # the concurrent winner
+            if existing is not None:
+                _touch(existing, now)
+            skipped += 1
+            continue
         by_company.setdefault(norm_co, []).append(post)   # catch dups within the same batch too
         added += 1
     db.commit()

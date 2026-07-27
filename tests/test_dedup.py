@@ -1,5 +1,5 @@
 """Cross-source dedup: company normalization (incl. Cyrillic), title similarity, ingest merge."""
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.domain.dedup import normalize_company, normalize_title, similar_titles, is_duplicate
 from app.domain.entities import RawPosting
@@ -63,22 +63,44 @@ def test_within_batch_duplicate_collapses():
         assert res["added"] == 1 and res["deduped"] == 1
 
 
-def test_duplicate_content_hash_does_not_crash_ingest():
-    """No DB-level unique constraint on content_hash, so a concurrent-writer race can leave two
-    rows with the same hash. ingest() must tolerate that (touch the first) — not raise
-    MultipleResultsFound and abort the whole run."""
+def test_content_hash_is_unique():
+    """The UNIQUE constraint makes duplicate content_hash rows impossible at the DB level."""
+    from sqlalchemy.exc import IntegrityError
     with SessionLocal() as db:
-        rp = _rp("rss", "https://race/1")
-        chash = rp.content_hash()
-        # simulate the race outcome directly: two persisted rows sharing a content_hash
         db.add_all([
-            Posting(title="A", company="Acme", url="https://race/1", apply_url="https://race/1",
-                    description="d", content_hash=chash),
-            Posting(title="A", company="Acme", url="https://race/1b", apply_url="https://race/1b",
-                    description="d", content_hash=chash)])
+            Posting(title="A", company="Acme", url="https://u/1", apply_url="https://u/1",
+                    description="d", content_hash="same"),
+            Posting(title="B", company="Beta", url="https://u/2", apply_url="https://u/2",
+                    description="d", content_hash="same")])
+        try:
+            db.commit()
+            assert False, "expected a unique-violation on content_hash"
+        except IntegrityError:
+            db.rollback()
+
+
+def test_ingest_race_touches_instead_of_duplicating(monkeypatch):
+    """Concurrent-writer race: another worker inserts the same content_hash between our SELECT
+    and INSERT. The unique constraint rejects our INSERT; ingest catches it, touches the winner,
+    and never duplicates or crashes."""
+    import app.data.ingest as ing
+    rp = _rp("rss", "https://race/1")
+    chash = rp.content_hash()
+    with SessionLocal() as db:                  # the concurrent winner already committed it
+        db.add(Posting(title="A", company="Zeta", url="https://race/1", apply_url="https://race/1",
+                       description="d", content_hash=chash))
         db.commit()
-        res = ingest(db, [rp])                  # would raise MultipleResultsFound before the fix
-        assert res["skipped"] == 1 and res["added"] == 0
+    real, calls = ing._existing_by_hash, {"n": 0}
+
+    def flaky(db, ch):                          # miss on the first look (race), real thereafter
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real(db, ch)
+    monkeypatch.setattr(ing, "_existing_by_hash", flaky)
+    with SessionLocal() as db:
+        res = ing.ingest(db, [rp])              # SELECT misses -> INSERT -> IntegrityError -> touch
+    assert res["added"] == 0 and res["skipped"] == 1
+    with SessionLocal() as db:
+        assert db.scalar(select(func.count(Posting.id)).where(Posting.content_hash == chash)) == 1
 
 
 def test_ats_duplicate_upgrades_apply_url():

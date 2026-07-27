@@ -7,6 +7,7 @@
     python -m app.jobs detect_window    # sharded, paced ATS detection over pending companies
     python -m app.jobs adzuna_bulk [call_budget]  # drain ALL Adzuna professions, resumable
     python -m app.jobs adzuna_recent [call_budget]  # nightly: catch only NEW postings (date-sort)
+    python -m app.jobs aggregator_fallback  # collect via Careerjet+Jooble when Adzuna is limited
     python -m app.jobs adzuna_status    # print bulk-pull progress (per country / slice)
 """
 import sys
@@ -16,6 +17,7 @@ from .application.usecases.ingest_job import run_ingest        # noqa: F401  (re
 from .application.usecases.ingest_window import run_ingest_window  # noqa: F401  (re-export)
 from .application.usecases.detect_window import run_detect_window  # noqa: F401  (re-export)
 from .application.usecases import adzuna_bulk                  # noqa: F401  (re-export)
+from .application.usecases import aggregator_fallback          # noqa: F401  (re-export)
 
 if __name__ == "__main__":
     from .data.db import SessionLocal
@@ -36,6 +38,20 @@ if __name__ == "__main__":
         # cheap nightly maintenance: catch only NEW postings (date-sorted, stop at first-seen)
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else 300
         print(adzuna_bulk.run_recency_refresh(SessionLocal, call_budget=budget))
+    elif mode == "aggregator_fallback":
+        # collect via Careerjet + Jooble; optional single source: aggregator_fallback [careerjet|jooble]
+        src = sys.argv[2] if len(sys.argv) > 2 else None
+        sources = (src,) if src else ("careerjet", "jooble")
+        print(aggregator_fallback.run_aggregator_fallback(SessionLocal, sources=sources))
+    elif mode == "aggregator_board":
+        # render a per-profession collection board for one source: aggregator_board <source> [path]
+        src = sys.argv[2] if len(sys.argv) > 2 else "careerjet"
+        out = sys.argv[3] if len(sys.argv) > 3 else f"{src}_board.html"
+        with SessionLocal() as db:
+            html = aggregator_fallback.render_board(src, aggregator_fallback.status(db, src))
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(html)
+        print(f"wrote {out}")
     elif mode == "adzuna_status":
         import json
         with SessionLocal() as db:
