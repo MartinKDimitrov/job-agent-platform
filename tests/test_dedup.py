@@ -63,6 +63,20 @@ def test_within_batch_duplicate_collapses():
         assert res["added"] == 1 and res["deduped"] == 1
 
 
+def test_norm_company_stored_and_candidate_dedup_survives_noise():
+    """The O(n) fix: cross-source dedup now queries only candidate companies (norm_company
+    indexed), not the whole table. Correctness must hold even with lots of unrelated rows."""
+    with SessionLocal() as db:
+        ingest(db, [_rp("rss", f"https://n/{i}", company=f"Company {i}", title=f"Role {i}")
+                    for i in range(25)])                      # noise: unrelated employers
+        ingest(db, [_rp("rss", "https://a/x", company="Acme Ltd", title="QA Engineer")])
+        res = ingest(db, [_rp("html", "https://b/y", company="ACME EOOD", title="QA Engineer")])
+        assert res == {"added": 0, "skipped": 0, "deduped": 1}   # caught despite the noise
+    with SessionLocal() as db:
+        row = db.execute(select(Posting).where(Posting.company == "Acme Ltd")).scalars().first()
+        assert row.norm_company == normalize_company("Acme Ltd") != ""   # stored for querying
+
+
 def test_content_hash_is_unique():
     """The UNIQUE constraint makes duplicate content_hash rows impossible at the DB level."""
     from sqlalchemy.exc import IntegrityError

@@ -8,6 +8,7 @@ from app.application.usecases.search import retire_stale_postings, search_db
 from app.data.db import SessionLocal
 from app.data.ingest import ingest
 from app.data.models import Posting, Match
+from app.domain.dedup import normalize_company
 from app.domain.entities import RawPosting
 from tests.conftest import make_profile
 from tests.test_crawl import _make_profile_row, _mock
@@ -17,7 +18,8 @@ FRESH = datetime.utcnow() - timedelta(days=5)
 
 
 def _posting(db, title, posted_at=None, first_seen=None, chash=None):
-    p = Posting(title=title, company="Acme", url=f"https://x/{chash or title}",
+    p = Posting(title=title, company="Acme", norm_company=normalize_company("Acme"),
+                url=f"https://x/{chash or title}",
                 apply_url=f"https://x/{chash or title}",
                 description="Requirements:\n- Kotlin experience",
                 posted_at=posted_at, content_hash=chash or title)
