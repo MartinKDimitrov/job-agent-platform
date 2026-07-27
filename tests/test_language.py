@@ -1,5 +1,6 @@
 """Language signal: detect a posting's language and down-weight ones the user can't read."""
-from app.domain.language import detect_language, user_language_codes, language_factor
+from app.domain.language import (detect_language, user_language_codes, language_factor,
+                                 country_language, required_languages)
 
 _EN = ("We are looking for a backend engineer to join our team. You will work with our "
        "platform and build reliable services for the company and its customers every day.")
@@ -44,3 +45,41 @@ def test_bulgarian_speaker_reads_bulgarian_and_english():
     assert language_factor(langs, _BG) == 1.0
     assert language_factor(langs, _EN) == 1.0
     assert language_factor(langs, _DE, unreadable=0.4) == 0.4   # no German
+
+
+# ---- signal (2): country language ----
+def test_country_language():
+    assert country_language("Berlin, Germany") == "de"
+    assert country_language("Milano, Italia") == "it"
+    assert country_language("Sofia, България") == "bg"
+    assert country_language("London, UK") == "en"
+    assert country_language("Remote") == "en"
+    assert country_language("Atlantis") is None
+
+
+def test_signal2_mild_penalty_for_english_posting_in_foreign_country():
+    langs = "English C1"                                  # speaks only English
+    # English posting located in Germany -> readable, but everyday language is German -> mild
+    assert language_factor(langs, _EN, "Berlin, Germany", foreign_country=0.9) == 0.9
+    # same posting in London -> English country -> no penalty
+    assert language_factor(langs, _EN, "London, UK") == 1.0
+    # a German speaker is fine in Germany
+    assert language_factor("English, German", _EN, "Berlin, Germany") == 1.0
+
+
+# ---- signal (3): explicit language requirement ----
+def test_required_languages():
+    assert required_languages("Fließende Deutschkenntnisse erforderlich") == {"de"}
+    assert required_languages("Fluent German (C1) is required") == {"de"}
+    assert required_languages("italiano fluente richiesto") == {"it"}
+    assert required_languages("Native French speaker") == {"fr"}
+    assert required_languages("We build great software with modern tools") == set()
+
+
+def test_signal3_explicit_requirement_dominates():
+    langs = "English C1"                                  # no German
+    # posting is in English (readable) but explicitly requires fluent German -> strong penalty
+    text = _EN + " Fluent German (C1) is required for this role."
+    assert language_factor(langs, text, "Berlin, Germany", unreadable=0.5) == 0.5
+    # a German speaker meets the requirement -> no penalty
+    assert language_factor("English, German", text, "Berlin, Germany") == 1.0
