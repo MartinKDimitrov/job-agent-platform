@@ -48,6 +48,11 @@ CATALOG: dict[str, str] = {
     "err.remote": "Начинът на работа трябва да е дистанционно, хибридно, на място или без значение.",
     "err.salary_long": "Очакваното възнаграждение е твърде дълго (макс. 64 знака).",
     # ---- logged-in app (feed / gaps / control strip) ----
+    "breakdown.title": "Защо този скор:",
+    "breakdown.language": "език, който не владееш", "breakdown.foreign_country": "местен език",
+    "breakdown.under": "над твоето ниво", "breakdown.over": "под твоето ниво",
+    "breakdown.salary_low": "заплата под очакването", "breakdown.salary_fit": "заплата над очакването",
+    "breakdown.stale": "по-стара обява",
     "gaps.covered": "покрити", "gaps.to_check": "за проверка",
     "gaps.tap": "виж детайли", "gaps.you_cover": "Покриваш",
     "gaps.not_in_profile": "Не е в профила ти",

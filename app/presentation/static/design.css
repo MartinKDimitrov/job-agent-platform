@@ -267,6 +267,16 @@ input::placeholder, textarea::placeholder { color: #97a0af; }
 .chip.ai      { background: var(--navy-soft); color: var(--navy); font-weight: 600; }
 .chip.toggle  { cursor: pointer; border-color: var(--line-strong); background: var(--card); user-select: none; }
 .chip.toggle:hover { background: var(--gray-soft); border-color: var(--navy-soft); }
+
+/* "Why this score" breakdown — the soft multipliers that moved the score */
+.breakdown { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.breakdown .bd-label { font-size: 12px; color: var(--muted); }
+.breakdown .factor {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px 12px 999px 12px;
+  font-size: 12px; font-variant-numeric: tabular-nums; border: 1px solid transparent;
+}
+.breakdown .factor.down { background: var(--amber-soft); color: var(--amber-ink); }
+.breakdown .factor.up   { background: var(--teal-soft); color: var(--teal-ink); }
 .chip.toggle.on { background: var(--navy); color: #fff; border-color: var(--navy); }
 .chip.more { background: transparent; color: var(--muted); }
 

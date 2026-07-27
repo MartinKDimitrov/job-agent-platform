@@ -44,6 +44,28 @@ def posting_freshness(post, now=None) -> float:
     return freshness_factor(posting_age_days(post, now),
                             settings.freshness_fresh_days,
                             settings.freshness_at_30d, settings.freshness_at_60d)
+
+
+def soft_factors(profile, post, expectation=None) -> dict:
+    """The soft score multipliers, by name — the SINGLE source both scoring and the 'why this
+    score' breakdown read, so the explanation can never drift from the number. Each is a cheap
+    pure function of profile+posting (no embeddings), so the breakdown is computable at display
+    time without a stored column."""
+    from ...domain.salary import parse_salary, posting_salary, salary_factor
+    if expectation is None:
+        expectation = parse_salary(profile.salary_expectation or "")
+    return {
+        "freshness": posting_freshness(post),
+        "salary": salary_factor(posting_salary(post), expectation,
+                                low=settings.salary_low_factor, fit=settings.salary_fit_boost),
+        "language": language_factor(profile.languages, post.description or post.title,
+                                    post.location or "",
+                                    unreadable=settings.language_unreadable_factor,
+                                    foreign_country=settings.language_foreign_country_factor),
+        "seniority": seniority_factor(profile, post.title,
+                                      underqualified=settings.seniority_underqualified_factor,
+                                      overqualified=settings.seniority_overqualified_factor),
+    }
 from ...domain.filters import passes_hard_filters, seniority_factor
 from ...domain.language import language_factor
 
@@ -598,17 +620,10 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             if stale is not None:
                 db.delete(stale)
             continue
-        # freshness, salary, and the language signal are all soft multipliers on the base score
-        # — passed as one product (score() applies it after the blend, inside the gate cap)
-        soft = posting_freshness(post) * salary_factor(
-            posting_salary(post), expectation,
-            low=settings.salary_low_factor, fit=settings.salary_fit_boost) * language_factor(
-            profile.languages, post.description or post.title, post.location or "",
-            unreadable=settings.language_unreadable_factor,
-            foreign_country=settings.language_foreign_country_factor) * seniority_factor(
-            profile, post.title,
-            underqualified=settings.seniority_underqualified_factor,
-            overqualified=settings.seniority_overqualified_factor)
+        # freshness, salary, language and seniority are soft multipliers on the base score —
+        # passed as one product (score() applies it after the blend, inside the gate cap)
+        _f = soft_factors(profile, post, expectation)
+        soft = _f["freshness"] * _f["salary"] * _f["language"] * _f["seniority"]
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
