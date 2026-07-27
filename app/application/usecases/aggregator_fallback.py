@@ -51,20 +51,22 @@ def _record(db, source: str, term: str, fetched: int, added: int) -> None:
 
 def run_aggregator_fallback(session_factory, *, terms: list[str] | None = None,
                             careerjet_terms: int = 20, jooble_terms: int = 6,
+                            careerjet_pages: int = 3, jooble_pages: int = 2,
                             sources=("careerjet", "jooble"), sleep=time.sleep) -> dict:
     """Sweep Careerjet (primary) + Jooble (capped) over profession keywords and persist.
 
-    ``careerjet_terms`` / ``jooble_terms`` bound how many keywords each source queries this run —
-    Jooble stays small to protect its 500-request lifetime cap. ``sources`` selects which to run,
-    so each can be launched as its own parallel process (safe now that content_hash is UNIQUE).
-    Records per-term tallies for the boards. Returns per-source added counts.
+    ``careerjet_terms`` / ``jooble_terms`` bound how many keywords each source queries this run;
+    ``careerjet_pages`` / ``jooble_pages`` how DEEP each keyword goes (page 1 alone is broad but
+    shallow — deeper pages surface many more of the same profession). Jooble stays small (terms
+    AND pages) to protect its 500-request lifetime cap. ``sources`` selects which to run. Records
+    per-term tallies for the boards. Returns per-source added counts.
     """
     terms = terms or PROFESSION_TERMS
     cj_added = jb_added = cj_terms = jb_terms = 0
 
     if "careerjet" in sources:
         for term in terms[:max(0, careerjet_terms)]:             # Careerjet — term × all locales
-            posts = careerjet.fetch(search_terms=[term], sleep=sleep)
+            posts = careerjet.fetch(search_terms=[term], pages=careerjet_pages, sleep=sleep)
             cj_terms += 1
             with session_factory() as db:
                 res = persist_postings(db, posts)
@@ -74,7 +76,7 @@ def run_aggregator_fallback(session_factory, *, terms: list[str] | None = None,
 
     if "jooble" in sources:
         for term in terms[:max(0, jooble_terms)]:                # Jooble — sparing (500 cap)
-            posts = jooble.fetch(search_terms=[term], sleep=sleep)
+            posts = jooble.fetch(search_terms=[term], pages=jooble_pages, sleep=sleep)
             jb_terms += 1
             with session_factory() as db:
                 res = persist_postings(db, posts)
