@@ -56,6 +56,7 @@ CATALOG: dict[str, str] = {
     "breakdown.salary_low": "wynagrodzenie poniżej oczekiwań",
     "breakdown.salary_fit": "wynagrodzenie zgodne",
     "breakdown.stale": "starsze ogłoszenie",
+    "breakdown.location_other": "inna lokalizacja",
     "breakdown.role_family": "inny rodzaj roli",
     "gaps.covered": "spełnione", "gaps.to_check": "do sprawdzenia",
     "gaps.tap": "zobacz szczegóły", "gaps.you_cover": "Spełniasz",

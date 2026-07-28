@@ -67,8 +67,10 @@ def soft_factors(profile, post, expectation=None) -> dict:
                                       overqualified=settings.seniority_overqualified_factor),
         "role_family": role_family_factor(profile, post.title,
                                           adjacent=settings.role_family_adjacent_factor),
+        "location": location_factor(profile, post.title, post.location or "", post.description or "",
+                                    elsewhere=settings.location_elsewhere_factor),
     }
-from ...domain.filters import passes_hard_filters, seniority_factor
+from ...domain.filters import passes_hard_filters, seniority_factor, location_factor
 from ...domain.role_family import role_family_factor
 from ...domain.language import language_factor
 
@@ -629,7 +631,7 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         # score — passed as one product (score() applies it after the blend, inside the gate cap)
         _f = soft_factors(profile, post, expectation)
         soft = (_f["freshness"] * _f["salary"] * _f["language"]
-                * _f["seniority"] * _f["role_family"])
+                * _f["seniority"] * _f["role_family"] * _f["location"])
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,

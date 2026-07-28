@@ -200,10 +200,10 @@ def is_remote(title: str, location: str = "", description: str = "") -> bool:
     return bool(_REMOTE_ROLE_RE.search(f"{title or ''} {description or ''}"))
 
 
-# Major Bulgarian cities (Latin + Cyrillic) — used to place an on-site posting whose location
-# field is empty (dev.bg carries none) from cues in its text, so an on-site candidate who named a
-# city isn't shown a job that's clearly in a different one.
-_BG_CITY_ALIASES = {
+# Major Bulgarian + European cities (Latin/local) — used to PLACE a posting whose location field
+# is empty (dev.bg carries none) from cues in its text, so the geography model can tell whether a
+# job sits in the candidate's preferred city or a different one.
+_CITY_ALIASES = {
     "sofia": ("sofia", "софия"), "plovdiv": ("plovdiv", "пловдив"),
     "varna": ("varna", "варна"), "burgas": ("burgas", "бургас"),
     "ruse": ("ruse", "русе"), "stara zagora": ("stara zagora", "стара загора"),
@@ -215,17 +215,33 @@ _BG_CITY_ALIASES = {
     "gabrovo": ("gabrovo", "габрово"), "vratsa": ("vratsa", "враца"),
     "kazanlak": ("kazanlak", "казанлък"), "vidin": ("vidin", "видин"),
     "kardzhali": ("kardzhali", "кърджали"), "montana": ("montana", "монтана"),
+    # major EU tech hubs (so a preferred city like Berlin/Amsterdam works, not just BG)
+    "berlin": ("berlin",), "munich": ("munich", "münchen", "muenchen"),
+    "hamburg": ("hamburg",), "frankfurt": ("frankfurt",), "cologne": ("cologne", "köln"),
+    "stuttgart": ("stuttgart",), "duesseldorf": ("düsseldorf", "duesseldorf", "dusseldorf"),
+    "paris": ("paris",), "lyon": ("lyon",), "amsterdam": ("amsterdam",),
+    "rotterdam": ("rotterdam",), "london": ("london",), "manchester": ("manchester",),
+    "madrid": ("madrid",), "barcelona": ("barcelona",), "valencia": ("valencia",),
+    "warsaw": ("warsaw", "warszawa"), "krakow": ("krakow", "kraków", "cracow"),
+    "wroclaw": ("wroclaw", "wrocław"), "gdansk": ("gdansk", "gdańsk"),
+    "vienna": ("vienna", "wien"), "zurich": ("zurich", "zürich"), "geneva": ("geneva", "genève"),
+    "milan": ("milan", "milano"), "rome": ("rome", "roma"), "dublin": ("dublin",),
+    "lisbon": ("lisbon", "lisboa"), "porto": ("porto",), "prague": ("prague", "praha"),
+    "budapest": ("budapest",), "bucharest": ("bucharest", "bucurești", "bucuresti"),
+    "athens": ("athens", "αθήνα"), "thessaloniki": ("thessaloniki",),
+    "stockholm": ("stockholm",), "copenhagen": ("copenhagen", "københavn"),
+    "oslo": ("oslo",), "helsinki": ("helsinki",), "brussels": ("brussels", "bruxelles"),
 }
-_BG_CITY_RES = {
+_CITY_RES = {
     c: re.compile(r"(?<![a-zа-я])(?:" + "|".join(re.escape(a) for a in al) + r")(?![a-zа-я])", re.I)
-    for c, al in _BG_CITY_ALIASES.items()
+    for c, al in _CITY_ALIASES.items()
 }
 
 
-def bg_cities_in(text: str) -> set[str]:
-    """Canonical BG-city keys named anywhere in the text."""
+def cities_in(text: str) -> set[str]:
+    """Canonical city keys (BG + major EU) named anywhere in the text."""
     t = text or ""
-    return {c for c, rx in _BG_CITY_RES.items() if rx.search(t)}
+    return {c for c, rx in _CITY_RES.items() if rx.search(t)}
 
 
 def is_hybrid(text: str) -> bool:
@@ -237,29 +253,87 @@ def is_hybrid(text: str) -> bool:
     return bool(_HYBRID_RE.search(text))
 
 
-def location_ok(profile, location: str) -> bool:
-    """Work-TYPE is the hard filter; `relocate` only frees up the GEOGRAPHY. A remote seeker wants
-    remote wherever it lives (relocate lets a 'remote, must reside in Germany' role through via
-    geo_ok) — but a purely on-site role never fits them, relocate or not. An on-site seeker who is
-    willing to relocate takes an office role in any city."""
-    remote_pref = (profile.remote_pref or "any").lower()
-    loc = (location or "").strip()
-    if remote_pref == "any" or not loc:
-        return True                       # no constraint, or unknown location -> don't hide
-    if _has(loc, _REMOTE):
-        return True                       # a remote posting suits remote/hybrid/onsite alike
-    # a located (on-site) posting from here on.
-    # an on-site seeker willing to relocate takes an office role in any city:
-    if remote_pref not in ("remote", "hybrid") and getattr(profile, "relocate", False):
+# ---- the unified geography model -------------------------------------------------------------
+# Two independent axes: WORK-TYPE (remote/hybrid/on-site) is a hard filter; GEOGRAPHY (which
+# city/country) is a PRIMARY preference — the preferred place ranks first, a different place is
+# secondary (shown only when the candidate will relocate, and then soft-down-weighted).
+
+def _preferred_place_tokens(profile) -> set[str]:
+    """The candidate's preferred place as tokens, from their explicit location preference (a city
+    like 'Berlin' or a country like 'Germany'). Empty when they named none — then geography places
+    no constraint (country ELIGIBILITY, e.g. visa, is handled separately by geo_ok)."""
+    return _tokens(profile.location_pref or "") - {"remote", "hybrid", "onsite", "any"}
+
+
+def geo_relation(profile, title: str, location: str, description: str = "") -> str:
+    """Where the posting sits vs the candidate's target: 'preferred' | 'elsewhere' | 'unknown'.
+    A remote role is location-agnostic -> 'preferred'. Otherwise the place comes from the location
+    field (authoritative) or, when empty (dev.bg), from city cues in the text."""
+    if _has(location or "", _REMOTE) or (is_remote(title, location, description)
+                                         and not onsite_only(description)):
+        return "preferred"
+    pref = _preferred_place_tokens(profile)
+    if not pref:
+        return "preferred"                        # candidate named no place -> nothing to miss
+    ltoks = _tokens(location or "")
+    if ltoks:
+        return "preferred" if (pref & ltoks) else "elsewhere"
+    # empty location field -> read the city from the text
+    pref_cities = cities_in(profile.location_pref or "")
+    found = cities_in(f"{title} {description}")
+    if (pref_cities and (pref_cities & found)) or (pref & _tokens(description or "")):
+        return "preferred"
+    if found and pref_cities and not (found & pref_cities):
+        return "elsewhere"
+    return "unknown"
+
+
+def work_type_ok(profile, title: str, location: str, description: str = "") -> bool:
+    """Work-TYPE compatibility (remote / hybrid / on-site), independent of WHERE."""
+    pref = (profile.remote_pref or "any").lower()
+    if pref == "any":
         return True
-    # otherwise accept it only if it's in one of the candidate's preferred cities. This is the one
-    # way a remote/hybrid seeker takes an on-site role — they explicitly named that city.
-    pref = _tokens(profile.location_pref) - {"remote", "hybrid", "onsite", "any"}
-    if pref:
-        return bool(_tokens(loc) & pref)
-    # no preferred cities: a remote/hybrid seeker can't take a random on-site role (relocate frees
-    # geography, not the work type); an on-site seeker with no city given, we can't judge -> keep.
-    return remote_pref not in ("remote", "hybrid")
+    loc = location or ""
+    text = f"{loc} {description}"
+    # a "no remote / not a remote position" note overrides a 'Remote' location label
+    remote = not onsite_only(description) and (_has(loc, _REMOTE) or is_remote(title, loc, description))
+    hybrid = is_hybrid(text)
+    located_onsite = bool(_tokens(loc)) and not _has(loc, _REMOTE)
+    if pref == "remote":
+        if remote:
+            return True
+        # they may still accept an on-site role in a city they explicitly named
+        city = _tokens(profile.location_pref or "") - {"remote", "hybrid", "onsite", "any"}
+        if located_onsite and city and (city & _tokens(loc)):
+            return True
+        if onsite_only(description) or hybrid or located_onsite:
+            return False
+        return True                               # unknown (empty loc, no on-site cue) -> keep
+    if pref == "hybrid":
+        if hybrid or remote:
+            return True
+        return not onsite_only(description)
+    if pref == "onsite":
+        if remote and not hybrid:                 # a purely remote role gives no office
+            return False
+        return True
+    return True
+
+
+def location_ok(profile, location: str, description: str = "") -> bool:
+    """GEOGRAPHY gate only (work-TYPE handled by work_type_ok): the place must match the preferred
+    city/country, unless the candidate will relocate. Remote / unknown always pass."""
+    if geo_relation(profile, "", location, description) == "elsewhere":
+        return bool(getattr(profile, "relocate", False))
+    return True
+
+
+def location_factor(profile, title: str, location: str, description: str = "",
+                    *, elsewhere: float = 0.8) -> float:
+    """Soft multiplier: a role in a DIFFERENT place than the candidate prefers (surfaced only
+    because they'll relocate) ranks BELOW their preferred-location roles — relocation is a
+    secondary option, not an equal one. 1.0 for preferred / remote / unknown."""
+    return elsewhere if geo_relation(profile, title, location, description) == "elsewhere" else 1.0
 
 
 def seniority_ok(profile, title: str) -> bool:
@@ -285,35 +359,16 @@ def seniority_factor(profile, title: str, *, underqualified: float = 0.6,
 
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:
     """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority' / 'role'."""
-    remote_pref = (profile.remote_pref or "").lower()
-    # A genuinely remote role suits a remote/hybrid seeker no matter where the employer sits, so it
-    # clears the location gate even when the location field names the company's city (a Berlin firm
-    # advertising an EU-remote position). onsite_only rules out "no remote" phrasing first.
-    remote_role = (remote_pref in ("remote", "hybrid") and not onsite_only(description)
-                   and is_remote(title, location, description))
-    if not remote_role and not location_ok(profile, location):
+    # 1. WORK-TYPE (hard): remote / hybrid / on-site compatibility, independent of where.
+    if not work_type_ok(profile, title, location, description):
         return False, "location"
-    # a "remote"-labeled posting whose text says otherwise is an onsite/hybrid posting. The
-    # hybrid signal often lives ONLY in the description (dev.bg has no location field), so
-    # location_ok can't see it — catch it here for a remote-only seeker. relocate doesn't exempt
-    # it: work-TYPE is the hard filter, relocate only frees up geography.
-    if remote_pref == "remote" and not remote_role and (
-            onsite_only(description) or is_hybrid(f"{location} {description}")):
+    # 2. GEOGRAPHY (hard): a role in a DIFFERENT place than the candidate's preferred city/country
+    #    is dropped — unless they'll relocate, in which case it's kept and soft-down-weighted by
+    #    location_factor (relocation is a SECONDARY option, ranked below the preferred location).
+    if geo_relation(profile, title, location, description) == "elsewhere" \
+            and not getattr(profile, "relocate", False):
         return False, "location"
-    # symmetric guard for an ON-SITE seeker: they want an office. A purely remote role (remote
-    # location or fully-remote text, and not hybrid) gives them none -> drop it. And if they named
-    # a city, a posting whose text places it in a DIFFERENT BG city (its own field being empty, as
-    # on dev.bg) is the wrong location.
-    if remote_pref == "onsite":
-        _txt = f"{location} {description}"
-        if not is_hybrid(_txt) and (_has(location, _REMOTE)
-                                    or is_remote(title, location, description)):
-            return False, "location"
-        pref_cities = bg_cities_in(profile.location_pref or "")
-        if pref_cities and not getattr(profile, "relocate", False):   # relocate frees the city
-            found = bg_cities_in(f"{title} {location} {description}")
-            if found and not (found & pref_cities):
-                return False, "location"
+    # 3. country eligibility (visa / must-reside restrictions — orthogonal to the city preference).
     if not geo_ok(profile, location, description):
         return False, "location"
     if not seniority_ok(profile, title):

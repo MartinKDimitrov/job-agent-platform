@@ -420,6 +420,8 @@ def _score_breakdown(p: Profile, post: Posting, lang: str = "en") -> str:
         _chip("📊", "breakdown.under" if f["seniority"] <= 0.7 else "breakdown.over", f["seniority"])
     if f["role_family"] < 1.0:
         _chip("🧭", "breakdown.role_family", f["role_family"])
+    if f["location"] < 1.0:
+        _chip("📍", "breakdown.location_other", f["location"])
     if f["salary"] < 1.0:
         _chip("💰", "breakdown.salary_low", f["salary"])
     elif f["salary"] > 1.0:

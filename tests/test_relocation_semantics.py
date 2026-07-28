@@ -9,7 +9,7 @@ from sqlalchemy import select
 import app.application.usecases.search as crawl
 from app.data.db import SessionLocal
 from app.data.models import Match
-from app.domain.filters import location_ok, passes_hard_filters, is_remote
+from app.domain.filters import location_ok, work_type_ok, passes_hard_filters, is_remote
 from tests.test_crawl import _make_profile_row
 from tests.test_recall import _post
 
@@ -27,8 +27,9 @@ _ONSITE_DE = "Berlin, Germany"
 
 # ---- work-type is the hard filter; relocate does NOT unlock on-site for a remote seeker ----
 def test_remote_seeker_never_takes_onsite_even_with_relocate():
-    assert location_ok(_Prof(relocate=False), _ONSITE_DE) is False
-    assert location_ok(_Prof(relocate=True), _ONSITE_DE) is False   # relocate frees geo, not type
+    # work-TYPE is independent of relocate: a remote seeker never takes a purely on-site role
+    assert work_type_ok(_Prof(relocate=False), "t", _ONSITE_DE, "") is False
+    assert work_type_ok(_Prof(relocate=True), "t", _ONSITE_DE, "") is False
 
 
 def test_remote_seeker_keeps_remote_roles():

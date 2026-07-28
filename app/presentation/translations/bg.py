@@ -53,6 +53,7 @@ CATALOG: dict[str, str] = {
     "breakdown.under": "над твоето ниво", "breakdown.over": "под твоето ниво",
     "breakdown.salary_low": "заплата под очакването", "breakdown.salary_fit": "заплата над очакването",
     "breakdown.stale": "по-стара обява",
+    "breakdown.location_other": "друга локация",
     "breakdown.role_family": "различен тип роля",
     "gaps.covered": "покрити", "gaps.to_check": "за проверка",
     "gaps.tap": "виж детайли", "gaps.you_cover": "Покриваш",
