@@ -11,6 +11,26 @@ class _Prof:
         self.experience = ""
 
 
+# ---- android vs ios ----
+def test_ios_is_a_hard_mismatch_for_android():
+    assert families("iOS Developer") == {"ios"}
+    assert families("Android Developer") == {"android"}
+    assert conflict(families("Android Developer"), families("iOS Developer")) == "hard"
+    assert role_family_ok(_Prof(target_roles="Android Developer"), "iOS Developer - София") is False
+    ok, reason = passes_hard_filters(_Prof(target_roles="Android Developer"),
+                                     "iOS Developer - София", "София", "")
+    assert ok is False and reason == "role"
+
+
+def test_cross_platform_matches_both_specialists():
+    # React Native / Flutter / KMP / generic "Mobile Developer" carry BOTH families
+    for title in ("React Native Developer", "Flutter Developer", "Kotlin Multiplatform Developer",
+                  "Mobile Developer"):
+        assert {"android", "ios"} <= families(title)
+        assert role_family_ok(_Prof(target_roles="Android Developer"), title) is True
+        assert role_family_ok(_Prof(target_roles="iOS Engineer"), title) is True
+
+
 # ---- family detection ----
 def test_families_from_specific_cues():
     assert families("Backend Developer") == {"backend"}

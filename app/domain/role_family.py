@@ -22,8 +22,11 @@ FAMILIES: dict[str, tuple[str, ...]] = {
                      "api engineer", "api developer"),
     "frontend":     ("frontend", "front-end", "front end", "ui engineer", "ui developer"),
     "fullstack":    ("fullstack", "full-stack", "full stack"),
-    "mobile":       ("mobile developer", "mobile engineer", "android", "ios developer",
-                     "ios engineer", "react native", "flutter"),
+    "android":      ("android", "mobile developer", "mobile engineer", "react native", "flutter",
+                     "kotlin multiplatform", "kmp"),
+    "ios":          ("ios developer", "ios engineer", "swift developer", "objective-c", "swiftui",
+                     "mobile developer", "mobile engineer", "react native", "flutter",
+                     "kotlin multiplatform", "kmp"),
     "data_eng":     ("data engineer", "data engineering", "etl", "analytics engineer", "big data"),
     "data_science": ("data scientist", "data science"),
     "ml":           ("machine learning", "ml engineer", "deep learning", "nlp", "ai engineer",
@@ -54,12 +57,15 @@ _FAMILY_RES: dict[str, re.Pattern] = {
 _ADJACENT: set[frozenset] = {frozenset(p) for p in (
     ("backend", "frontend"), ("backend", "fullstack"), ("frontend", "fullstack"),
     ("backend", "devops"), ("backend", "data_eng"), ("backend", "security"),
-    ("backend", "ml"), ("backend", "embedded"), ("backend", "mobile"),
-    ("frontend", "mobile"), ("frontend", "design"),
+    ("backend", "ml"), ("backend", "embedded"), ("backend", "android"),
+    ("frontend", "android"), ("frontend", "ios"), ("frontend", "design"),
     ("devops", "security"), ("devops", "data_eng"),
     ("data_eng", "data_science"), ("data_eng", "data_analyst"), ("data_eng", "ml"),
     ("data_science", "ml"), ("data_science", "data_analyst"),
-    ("mobile", "gamedev"), ("mobile", "embedded"), ("embedded", "gamedev"),
+    ("android", "gamedev"), ("android", "embedded"), ("ios", "gamedev"), ("embedded", "gamedev"),
+    # note: android and ios are deliberately NOT adjacent — a pure iOS role is a hard mismatch for
+    # an Android profile (different language/SDK); cross-platform titles (React Native, Flutter,
+    # KMP, "Mobile Developer") carry BOTH families, so those still match either specialist.
 )}
 
 
