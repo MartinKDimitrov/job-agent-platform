@@ -182,6 +182,12 @@ _REMOTE_ROLE_RE = re.compile(
     r"\bremote\s*(?:position|role|job|opportunity|work|working)\b|\bwork(?:ing)?\s+from\s+anywhere\b|"
     r"\banywhere\s+in\s+(?:the\s+)?(?:eu|europe)\b|\b(?:eu|europe|european)[-\s]remote\b|"
     r"\bremote\s*\((?:eu|europe|emea)\)|изцяло\s*дистанционно|напълно\s*дистанционно", re.I)
+# A limited 'remote for N days/weeks per year' WORKATION perk — an on-site role with a bit of
+# remote, NOT a remote work mode ("Remote work from any location worldwide for two weeks annually").
+_REMOTE_PERK_RE = re.compile(
+    r"\bremote\b[^.]{0,60}?\b(?:one|two|three|four|five|six|\d+)\s*(?:days?|weeks?|months?)\b"
+    r"[^.]{0,30}?\b(?:per\s+(?:year|month|quarter)|annually|a\s+year|yearly|each\s+year|/\s*year)\b",
+    re.I)
 
 
 def onsite_only(description: str) -> bool:
@@ -197,7 +203,12 @@ def is_remote(title: str, location: str = "", description: str = "") -> bool:
         return True
     if "remote" in (title or "").lower():
         return True
-    return bool(_REMOTE_ROLE_RE.search(f"{title or ''} {description or ''}"))
+    text = f"{title or ''} {description or ''}"
+    # a limited 'N weeks remote per year' workation perk is not the work mode (unless the text also
+    # states a genuine full/EU-remote arrangement elsewhere)
+    if _REMOTE_PERK_RE.search(text) and not _FULLY_REMOTE_RE.search(text):
+        return False
+    return bool(_REMOTE_ROLE_RE.search(text))
 
 
 # Major Bulgarian + European cities (Latin/local) — used to PLACE a posting whose location field

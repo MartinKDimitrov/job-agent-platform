@@ -53,7 +53,11 @@ _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits",
 # marketing stats, EEO statements).
 _NOISE = ("equal opportunity", "eeo", "we are an equal", "apply now", "how to apply",
           "registered trademark", "under license", "claim based on", "registered users",
-          "fortune 100", "fortune 500", "кандидатствай")
+          "fortune 100", "fortune 500", "кандидатствай",
+          # closing / culture / employment-detail lines that are not skill requirements
+          "if this feels like", "love to connect", "we'd love to hear", "we would love to hear",
+          "full-time role", "full time role", "flexible hours", "no engagement tests",
+          "time tracking", "official employment", "startup vibe", "no time tracking")
 
 _BULLET = re.compile(r"^\s*(?:[-*•·▪●○◦→–—]|\d+[.)])\s+")
 # A header line is short-ish and label-like: no sentence punctuation, optional trailing colon
@@ -125,6 +129,9 @@ _SOFT_RE = re.compile(
     r"\b(team player|communication skills|interpersonal|mindset|attention to detail|"
     r"self-motivat\w*|proactive|positive attitude|can-do|work ethic|fast learner|"
     r"eager to learn|passion\w*|curiosity|curious|adaptab\w*|problem[- ]solv\w*|"
+    r"ability to (?:independently\s+)?(?:learn|integrate|adapt|collaborate|work|write clean)|"
+    r"focus on results|clean code|build(?:ing)? a team|emotionally balanced|"
+    r"supportive(?:,| team)|strong analytical thinking|"
     r"комуникативн\w*|екипен играч|работа в екип|лична мотивация|адаптивн\w*)\b", re.I)
 
 # Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
