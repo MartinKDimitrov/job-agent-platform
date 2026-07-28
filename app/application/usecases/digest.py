@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...data.models import User, Profile, Match, Posting, DigestEntry
-from ...data.sources import jobtiger, zaplata
+from ...data.sources import jobtiger, zaplata, rabota
 from ...data.sources.seed_boards import GREENHOUSE_BOARDS
 from .search import fetch_all, fetch_extra, ingest_from_sources, search_db
 from ...data.activity_repo import get_activity
@@ -63,7 +63,8 @@ def _compose(user: User, items, lang: str = "en") -> tuple[str, str]:
 
 def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
                      jobtiger_limit: int = 0, jobtiger_delay: float = jobtiger.CRAWL_DELAY,
-                     zaplata_limit: int = 0, zaplata_delay: float = zaplata.CRAWL_DELAY) -> dict:
+                     zaplata_limit: int = 0, zaplata_delay: float = zaplata.CRAWL_DELAY,
+                     rabota_limit: int = 0, rabota_delay: float = rabota.CRAWL_DELAY) -> dict:
     """`jobtiger_limit` > 0 additionally crawls up to that many NEW JobTiger pages (30s apart,
     per their robots crawl-delay) — background/cron only; 0 keeps runs fast and network-free
     beyond the fast sources. `zaplata_limit` does the same for Zaplata.bg, which has no crawl-delay
@@ -84,6 +85,11 @@ def run_daily_digest(db: Session, boards=None, send=send_email, now=None,
             zp = zaplata.fetch(limit=zaplata_limit, delay=zaplata_delay, skip_urls=known)
             raw += zp
             stats.source("zaplata", fetched=len(zp))
+        if rabota_limit > 0:
+            known = {u for (u,) in db.execute(select(Posting.url)).all() if u}
+            rb = rabota.fetch(limit=rabota_limit, delay=rabota_delay, skip_urls=known)
+            raw += rb
+            stats.source("rabota", fetched=len(rb))
         users = db.execute(select(User)).scalars().all()
 
         # gate users first, so the single ingest below runs targeted queries only for them

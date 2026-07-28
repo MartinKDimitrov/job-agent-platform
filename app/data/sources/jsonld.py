@@ -15,7 +15,9 @@ def jobpostings_ld(html: str) -> list[dict]:
     out: list[dict] = []
     for m in _LDJSON_RE.finditer(html or ""):
         try:
-            data = json.loads(m.group(1))
+            # strict=False tolerates literal newlines/tabs inside string values — some boards
+            # (rabota.bg) embed raw control chars in the description, which strict JSON rejects.
+            data = json.loads(m.group(1), strict=False)
         except ValueError:
             continue
         items = data.get("@graph", [data]) if isinstance(data, dict) else data
