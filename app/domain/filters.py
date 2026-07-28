@@ -190,40 +190,28 @@ def is_hybrid(text: str) -> bool:
 
 
 def location_ok(profile, location: str) -> bool:
-    if getattr(profile, "relocate", False):
-        return True                       # willing to move -> location never hides a role (an
-                                          # on-site role elsewhere is down-weighted by commute_factor)
+    """Work-TYPE is the hard filter; `relocate` only frees up the GEOGRAPHY. A remote seeker wants
+    remote wherever it lives (relocate lets a 'remote, must reside in Germany' role through via
+    geo_ok) — but a purely on-site role never fits them, relocate or not. An on-site seeker who is
+    willing to relocate takes an office role in any city."""
     remote_pref = (profile.remote_pref or "any").lower()
     loc = (location or "").strip()
     if remote_pref == "any" or not loc:
         return True                       # no constraint, or unknown location -> don't hide
     if _has(loc, _REMOTE):
         return True                       # a remote posting suits remote/hybrid/onsite alike
-    # onsite posting: keep it only if it's in one of the candidate's preferred locations
+    # a located (on-site) posting from here on.
+    # an on-site seeker willing to relocate takes an office role in any city:
+    if remote_pref not in ("remote", "hybrid") and getattr(profile, "relocate", False):
+        return True
+    # otherwise accept it only if it's in one of the candidate's preferred cities. This is the one
+    # way a remote/hybrid seeker takes an on-site role — they explicitly named that city.
     pref = _tokens(profile.location_pref) - {"remote", "hybrid", "onsite", "any"}
     if pref:
         return bool(_tokens(loc) & pref)
-    # no preferred cities given: a remote/hybrid candidate can't take an onsite role -> drop it;
-    # an onsite-seeking candidate with no city given, we can't judge -> keep.
+    # no preferred cities: a remote/hybrid seeker can't take a random on-site role (relocate frees
+    # geography, not the work type); an on-site seeker with no city given, we can't judge -> keep.
     return remote_pref not in ("remote", "hybrid")
-
-
-def commute_factor(profile, location: str, description: str = "", *, onsite: float = 0.85) -> float:
-    """Soft down-weight for a role that needs on-site presence when the candidate prefers to work
-    remotely — surfaced only because they're willing to relocate. Keeps genuine remote roles ranked
-    above the ones that require a move. 1.0 when the candidate doesn't prefer remote/hybrid, or the
-    posting is remote-compatible (a 'remote' location or fully-remote phrasing). An empty location
-    with no on-site cue is left neutral — we can't tell, so we don't penalise."""
-    pref = (profile.remote_pref or "any").lower()
-    if pref not in ("remote", "hybrid"):
-        return 1.0
-    loc = location or ""
-    text = f"{loc} {description or ''}"
-    if _has(loc, _REMOTE) or _FULLY_REMOTE_RE.search(text):
-        return 1.0
-    if onsite_only(description) or is_hybrid(text) or _tokens(loc):
-        return onsite                     # explicit on-site/hybrid, or a concrete (non-remote) place
-    return 1.0
 
 
 def seniority_ok(profile, title: str) -> bool:
@@ -253,10 +241,10 @@ def passes_hard_filters(profile, title: str, location: str, description: str = "
         return False, "location"
     # a "remote"-labeled posting whose text says otherwise is an onsite/hybrid posting. The
     # hybrid signal often lives ONLY in the description (dev.bg has no location field), so
-    # location_ok can't see it — catch it here for a remote-only seeker. A candidate willing to
-    # relocate is exempt: they'd take an on-site role, so it's shown (down-weighted by commute).
-    if (profile.remote_pref or "").lower() == "remote" and not getattr(profile, "relocate", False) \
-            and (onsite_only(description) or is_hybrid(f"{location} {description}")):
+    # location_ok can't see it — catch it here for a remote-only seeker. relocate doesn't exempt
+    # it: work-TYPE is the hard filter, relocate only frees up geography.
+    if (profile.remote_pref or "").lower() == "remote" and (
+            onsite_only(description) or is_hybrid(f"{location} {description}")):
         return False, "location"
     if not geo_ok(profile, location, description):
         return False, "location"

@@ -57,7 +57,6 @@ CATALOG: dict[str, str] = {
     "breakdown.salary_fit": "stipendio in linea",
     "breakdown.stale": "annuncio meno recente",
     "breakdown.role_family": "tipo di ruolo diverso",
-    "breakdown.onsite": "ruolo in sede",
     "gaps.covered": "coperti", "gaps.to_check": "da verificare",
     "gaps.tap": "vedi dettagli", "gaps.you_cover": "Copri",
     "gaps.not_in_profile": "Non nel tuo profilo",

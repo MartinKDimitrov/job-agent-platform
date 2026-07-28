@@ -57,7 +57,6 @@ CATALOG: dict[str, str] = {
     "breakdown.salary_fit": "salaris voldoet",
     "breakdown.stale": "oudere vacature",
     "breakdown.role_family": "ander soort functie",
-    "breakdown.onsite": "functie op locatie",
     "gaps.covered": "gedekt", "gaps.to_check": "te controleren",
     "gaps.tap": "bekijk details", "gaps.you_cover": "Jij dekt",
     "gaps.not_in_profile": "Niet in je profiel",
