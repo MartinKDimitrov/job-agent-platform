@@ -149,9 +149,16 @@ _ALIAS_RE = re.compile(
 
 
 def canon_skill(s: str) -> str:
-    """Canonical form of one skill string ('React.js' -> 'react'); unknowns lowercase as-is."""
+    """Canonical form of one skill string ('React.js' -> 'react'); unknowns lowercase as-is.
+    The LLM annotator emits hyphen-joined tags ('jetpack-compose'); if the raw form isn't in the
+    dictionary, retry with hyphens/underscores as spaces so they meet the space-separated entries
+    ('jetpack compose'). This is what let a profile's 'Jetpack Compose' cover a 'jetpack-compose'
+    requirement instead of showing as a false gap."""
     low = (s or "").strip().lower()
-    return _CANON.get(low, low)
+    if low in _CANON:
+        return _CANON[low]
+    spaced = low.replace("-", " ").replace("_", " ")
+    return _CANON.get(spaced, low)
 
 
 def is_known(s: str) -> bool:

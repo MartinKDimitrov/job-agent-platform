@@ -99,6 +99,15 @@ _STRONG_SIGNAL_RE = re.compile(
     r"\b(experience|proficien\w*|knowledge|degree|fluen\w*|expertise|track record|"
     r"опит|познания|владеене|образование)\b"
     r"|\d+\s*\+?\s*(?:years?|години)\s+(?:of|опит|в)\b", re.I)
+# Company self-praise that a strong-signal word ('25 years of experience' — of the COMPANY, not
+# the candidate) would otherwise sneak past the marketing filter. These describe the employer's
+# scale/history, never a requirement, so they're dropped outright ("2,700+ professional experts,
+# half a billion people worldwide impacted by our work, we believe we've got the numbers…").
+_COMPANY_BOAST_RE = re.compile(
+    r"professional experts|people worldwide|worldwide impacted|impacted by our|"
+    r"we believe we|we['’]?ve got the numbers|billion (?:people|users|customers)|"
+    r"millions? of (?:people|users|customers)|trusted by|founded in \d{4}|our mission is|"
+    r"years? in business|we serve|we['’]?ve grown|our clients|proud to", re.I)
 
 # Personality / soft-skill lines ("Team player with strong communication skills...",
 # "Performance-oriented mindset—you care about..."). Nobody lists these in a skills profile,
@@ -159,6 +168,8 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
     if _MONEY_RE.search(cleaned):
         return False
     if _BENEFIT_RE.search(cleaned):
+        return False
+    if _COMPANY_BOAST_RE.search(cleaned):   # employer self-praise, even if it says "N years…"
         return False
     if _MARKETING_RE.match(cleaned) and not _STRONG_SIGNAL_RE.search(cleaned):
         return False
