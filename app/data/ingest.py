@@ -41,6 +41,16 @@ def _existing_by_hash(db: Session, chash: str) -> Posting | None:
         select(Posting).where(Posting.content_hash == chash).limit(1)).scalars().first()
 
 
+# Aggregator links that bounce through the aggregator's own site instead of the employer's page.
+# Jooble's free API only ever returns a jooble.org/away|desc link (the real apply URL is not in the
+# response) — so when the SAME job also arrives from a direct source, we prefer that direct link.
+_INDIRECT_HOSTS = ("jooble.org",)
+
+
+def _is_indirect(url: str | None) -> bool:
+    return bool(url) and any(h in url for h in _INDIRECT_HOSTS)
+
+
 def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None) -> dict:
     """Upsert RawPostings into the Posting table. Returns {added, skipped, deduped}."""
     added = skipped = deduped = 0
@@ -77,8 +87,12 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
                     break
         if dup is not None:
             deduped += 1
-            # an ATS listing carries the canonical apply URL — upgrade the stored posting
-            if rp.source_kind == "ats_api" and rp.apply_url and rp.apply_url != dup.apply_url:
+            # keep the most direct apply URL for the stored posting: an ATS canonical link, or any
+            # employer link in place of an aggregator redirect (jooble.org points at its own page,
+            # not the employer's). Order-independent — the direct link wins whichever arrives first.
+            if rp.apply_url and rp.apply_url != dup.apply_url and (
+                    rp.source_kind == "ats_api"
+                    or (_is_indirect(dup.apply_url) and not _is_indirect(rp.apply_url))):
                 dup.apply_url = rp.apply_url
             _touch(dup, now)
             continue

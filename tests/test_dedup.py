@@ -134,6 +134,28 @@ def test_non_ats_duplicate_does_not_downgrade():
         assert post.apply_url == "https://boards.greenhouse.io/acme/jobs/9"   # kept
 
 
+def test_jooble_redirect_yields_to_direct_url():
+    # a direct employer link replaces a stored jooble.org redirect (Jooble's link isn't the
+    # employer's page) — regardless of which source arrived first
+    with SessionLocal() as db:
+        ingest(db, [_rp("api", "https://jooble.org/away/123",
+                        apply_url="https://jooble.org/away/123")])
+        ingest(db, [_rp("html", "https://adzuna.co.uk/details/9",
+                        apply_url="https://www.adzuna.co.uk/details/9")])
+        post = db.execute(select(Posting)).scalars().one()
+        assert post.apply_url == "https://www.adzuna.co.uk/details/9"     # direct link won
+
+
+def test_direct_url_not_downgraded_to_jooble():
+    with SessionLocal() as db:
+        ingest(db, [_rp("html", "https://adzuna.co.uk/details/9",
+                        apply_url="https://www.adzuna.co.uk/details/9")])
+        ingest(db, [_rp("api", "https://jooble.org/away/123",
+                        apply_url="https://jooble.org/away/123")])
+        post = db.execute(select(Posting)).scalars().one()
+        assert post.apply_url == "https://www.adzuna.co.uk/details/9"     # jooble did not overwrite
+
+
 def test_different_companies_same_title_not_deduped():
     with SessionLocal() as db:
         res = ingest(db, [_rp("rss", "https://a/1", company="Acme"),
