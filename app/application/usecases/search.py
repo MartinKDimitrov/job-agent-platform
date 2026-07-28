@@ -571,6 +571,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     ptext = profile.as_text()
     from ...domain.skills import parse_skill_years
     skill_years = parse_skill_years(profile.skills) or None   # {skill: years}; once per search
+    from ...domain.role_family import families as _role_families
+    profile_families = _role_families(profile.target_roles or "")   # once per search
     from ...domain.salary import parse_salary, posting_salary, salary_factor
     expectation = parse_salary(profile.salary_expectation or "")   # once per search
     if profile.embedding is None:            # cached on the row; cleared on profile edit
@@ -632,10 +634,14 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         _f = soft_factors(profile, post, expectation)
         soft = (_f["freshness"] * _f["salary"] * _f["language"]
                 * _f["seniority"] * _f["role_family"] * _f["location"])
+        # the posting IS the candidate's kind of role when their target family overlaps the title's
+        role_match = bool(profile_families & _role_families(post.title))
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
                                      freshness=soft, skill_years=skill_years,
+                                     role_match=role_match,
+                                     role_match_floor=settings.role_match_sem_floor,
                                      gate_cap=settings.must_gate_cap or None)
         existing = existing_by_post.get(post.id)
         if existing:

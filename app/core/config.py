@@ -102,6 +102,10 @@ class Settings(BaseSettings):
     # (shown only because they'll relocate) ranks BELOW their preferred-location roles — relocation
     # is a secondary option, not an equal one.
     location_elsewhere_factor: float = 0.8
+    # Role-match floor: when the posting is the candidate's kind of role (target role-family in the
+    # title), its score is at least this fraction of the semantic similarity — a thorough JD or a
+    # truncated aggregator snippet can't sink an on-target role below what E5 sees.
+    role_match_sem_floor: float = 0.9
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with
