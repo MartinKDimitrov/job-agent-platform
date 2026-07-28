@@ -77,6 +77,13 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             _touch(existing, now)
             skipped += 1
             continue
+        # age gate: never bring in a brand-new posting the source dates older than the cutoff
+        # (owner rule: no ads over ~2 months). Unknown-age postings (no posted_at) still enter.
+        if rp.posted_at is not None and settings.posting_max_ingest_age_days:
+            cutoff = now - timedelta(days=settings.posting_max_ingest_age_days)
+            if rp.posted_at.replace(tzinfo=None) < cutoff:
+                skipped += 1
+                continue
         # cross-source duplicate? (same employer, same/near title, different URL)
         dup = None
         norm_co = normalize_company(rp.company)

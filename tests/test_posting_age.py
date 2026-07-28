@@ -30,6 +30,24 @@ def _posting(db, title, posted_at=None, first_seen=None, chash=None):
     return p
 
 
+def test_ingest_skips_postings_over_two_months_old():
+    # owner rule: an ad the source dates older than the ingest cutoff is never brought in;
+    # a fresh one and an unknown-age one (no posted_at) still come in.
+    old = datetime.utcnow() - timedelta(days=75)
+    with SessionLocal() as db:
+        res = ingest(db, [
+            RawPosting("rss", "1", "Too Old", "Acme", url="https://x/old",
+                       apply_url="https://x/old", description="d", posted_at=old),
+            RawPosting("rss", "2", "Fresh", "Acme", url="https://x/fresh",
+                       apply_url="https://x/fresh", description="d", posted_at=FRESH),
+            RawPosting("rss", "3", "No Date", "Acme", url="https://x/nd",
+                       apply_url="https://x/nd", description="d"),
+        ])
+        titles = {p.title for p in db.execute(select(Posting)).scalars()}
+        assert titles == {"Fresh", "No Date"}    # the 75-day-old ad was skipped
+        assert res["added"] == 2
+
+
 def test_ingest_stores_posted_at_and_backfills_on_reseen():
     rp = RawPosting("rss", "1", "Dev", "Acme", url="https://x/1", apply_url="https://x/1",
                     description="d", posted_at=FRESH)

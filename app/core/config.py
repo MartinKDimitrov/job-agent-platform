@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
     posting_max_age_days: int = 90
+    # Never INGEST an ad the source dates older than this — a >2-month posting is not worth
+    # tracking (owner rule). Only applies when the source gives a posted_at; unknown-age ads
+    # still come in and age out via posting_max_age_days / freshness decay.
+    posting_max_ingest_age_days: int = 60
     # Freshness decay knees: full score through fresh_days, then linear to f30@30d, f60@60d.
     # Softened (owner) so a still-relevant older posting isn't buried: a 2-week grace window and
     # gentler knees, since job ads commonly stay open well past a month.
