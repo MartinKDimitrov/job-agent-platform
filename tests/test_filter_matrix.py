@@ -65,8 +65,8 @@ CASES = [
     ("on_city_pref",    "onsite", False, _CITY, "pref_city",     True,  "",         1.0),
     ("on_city_other_F", "onsite", False, _CITY, "other_city",    False, "location", None), # no relocate -> drop
     ("on_city_other_T", "onsite", True,  _CITY, "other_city",    True,  "",         0.8),  # relocate -> secondary
-    ("on_city_hybrid",  "onsite", False, _CITY, "hybrid",        True,  "",         1.0),  # office days -> ok
-    ("on_city_unknown", "onsite", False, _CITY, "unknown",       True,  "",         1.0),
+    ("on_city_hybrid",  "onsite", False, _CITY, "hybrid",        False, "location", None),  # office days but city unconfirmed
+    ("on_city_unknown", "onsite", False, _CITY, "unknown",       False, "location", None),  # can't confirm the city
     ("on_city_eurem",   "onsite", False, _CITY, "eu_remote_city", False, "location", None), # fully-remote -> no office
 
     # ---------- on-site seeker, no city ----------

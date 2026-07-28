@@ -367,8 +367,15 @@ def passes_hard_filters(profile, title: str, location: str, description: str = "
     # 2. GEOGRAPHY (hard): a role in a DIFFERENT place than the candidate's preferred city/country
     #    is dropped — unless they'll relocate, in which case it's kept and soft-down-weighted by
     #    location_factor (relocation is a SECONDARY option, ranked below the preferred location).
-    if geo_relation(profile, title, location, description) == "elsewhere" \
-            and not getattr(profile, "relocate", False):
+    rel = geo_relation(profile, title, location, description)
+    relocate = getattr(profile, "relocate", False)
+    if rel == "elsewhere" and not relocate:
+        return False, "location"
+    # An on-site / hybrid seeker who NAMED a city and won't relocate needs that city CONFIRMED: a
+    # role whose place can't be determined (empty location, no city cue — an unlabelled dev.bg ad)
+    # is not a confirmed office in their city, so it's dropped rather than shown on spec.
+    if rel == "unknown" and not relocate and (profile.remote_pref or "").lower() == "onsite" \
+            and (_preferred_place_tokens(profile) or cities_in(profile.location_pref or "")):
         return False, "location"
     # 3. country eligibility (visa / must-reside restrictions — orthogonal to the city preference).
     if not geo_ok(profile, location, description):

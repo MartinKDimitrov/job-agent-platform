@@ -101,8 +101,10 @@ def test_onsite_seeker_with_city_drops_other_city_named_in_text():
                                "Flexible hybrid work in Plovdiv, Bulgaria.")[:2] == (False, "location")
     # the preferred city named -> kept
     assert passes_hard_filters(p, "Android Developer", "", "On-site in our Sofia office.")[0] is True
-    # no city named at all -> can't tell, kept
-    assert passes_hard_filters(p, "Android Developer", "", "Great team, home office option.")[0] is True
+    # no city anywhere -> an on-site seeker who named a city can't confirm this is it, so it's
+    # dropped (strict: only confirmed-city on-site roles when not relocating)
+    assert passes_hard_filters(p, "Android Developer", "", "Great team, home office option.")[:2] \
+        == (False, "location")
 
 
 # ---- on-site seeker: relocate frees the city ----
