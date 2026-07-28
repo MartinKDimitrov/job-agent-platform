@@ -272,14 +272,16 @@ def geo_relation(profile, title: str, location: str, description: str = "") -> s
     if _has(location or "", _REMOTE) or (is_remote(title, location, description)
                                          and not onsite_only(description)):
         return "preferred"
-    pref = _preferred_place_tokens(profile)
-    if not pref:
+    pref = _preferred_place_tokens(profile)                 # ascii tokens (varna, germany…)
+    pref_cities = cities_in(profile.location_pref or "")    # canonical city keys — Cyrillic-safe
+    if not pref and not pref_cities:
         return "preferred"                        # candidate named no place -> nothing to miss
-    ltoks = _tokens(location or "")
-    if ltoks:
-        return "preferred" if (pref & ltoks) else "elsewhere"
+    loc = location or ""
+    ltoks = _tokens(loc)                          # ascii tokens ('Berlin, Germany')
+    loc_cities = cities_in(loc)                   # Cyrillic-safe city read ('София' from dev.bg)
+    if ltoks or loc_cities:                       # the location field names a place
+        return "preferred" if ((pref & ltoks) or (pref_cities & loc_cities)) else "elsewhere"
     # empty location field -> read the city from the text
-    pref_cities = cities_in(profile.location_pref or "")
     found = cities_in(f"{title} {description}")
     if (pref_cities and (pref_cities & found)) or (pref & _tokens(description or "")):
         return "preferred"
