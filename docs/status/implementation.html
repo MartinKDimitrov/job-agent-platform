@@ -97,18 +97,18 @@
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">Job Agent Platform · карта на изграждането · 26 юли 2026</p>
+    <p class="eyebrow">Job Agent Platform · карта на изграждането · 28 юли 2026</p>
     <h1>От идея до продукт — цялата имплементация</h1>
     <p class="sub">Потребителят описва уменията си → платформата <b>сама</b> намира отворени
       позиции в цяла Европа и дава директен apply-линк. Ето целия път: какво е построено, къде
       сме сега и какво предстои.</p>
 
     <div class="stats">
-      <div class="stat"><div class="v">47 166</div><div class="l">обяви (41 295 live)</div></div>
-      <div class="stat"><div class="v">18 724</div><div class="l">работодатели</div></div>
-      <div class="stat"><div class="v">26</div><div class="l">адаптера (14 ATS + 12 борси)</div></div>
-      <div class="stat"><div class="v">7</div><div class="l">агрегатора · 13 UI езика</div></div>
-      <div class="stat"><div class="v">477</div><div class="l">теста ✓</div></div>
+      <div class="stat"><div class="v">223 503</div><div class="l">обяви (190 238 live)</div></div>
+      <div class="stat"><div class="v">67 168</div><div class="l">работодатели</div></div>
+      <div class="stat"><div class="v">27</div><div class="l">адаптера (14 ATS + 13 борси)</div></div>
+      <div class="stat"><div class="v">8</div><div class="l">агрегатора · 13 UI езика</div></div>
+      <div class="stat"><div class="v">584</div><div class="l">теста ✓</div></div>
     </div>
 
     <div class="meter">
@@ -159,7 +159,7 @@
         <div class="items">
           <span class="it ok"><span class="m">✓</span> Adapter framework + норм. схема</span>
           <span class="it ok"><span class="m">✓</span> 14 ATS адаптера (Workday…d.vinci)</span>
-          <span class="it ok"><span class="m">✓</span> 12 борси/агрегатора</span>
+          <span class="it ok"><span class="m">✓</span> 13 борси/агрегатора</span>
           <span class="it ok"><span class="m">✓</span> Cross-source dedup (кирилица↔латиница)</span>
           <span class="it ok"><span class="m">✓</span> Company registry + ATS автодетекция</span>
           <span class="it ok"><span class="m">✓</span> Многоезично careers-откриване + TLD-gating</span>
@@ -187,6 +187,7 @@
           <span class="it ok"><span class="m">✓</span> Каноничен речник на умения</span>
           <span class="it ok"><span class="m">✓</span> Must-gate · ★5 таван · freshness decay</span>
           <span class="it ok"><span class="m">✓</span> Near-dup merge · заплата (меко)</span>
+          <span class="it ok"><span class="m">✓</span> Seniority · role-family · разбит скор</span>
           <span class="it ok"><span class="m">✓</span> Feedback събития (applied/hidden)</span>
         </div>
       </div>
@@ -221,12 +222,14 @@
           официални API — същите обяви като Indeed/StepStone, но легитимно. Adzuna се източва на
           порции за <b>всички професии</b>.</p>
         <div class="items">
-          <span class="it go"><span class="m">▸</span> Adzuna bulk pull ≈39.5k / ~804k (тече, 503-aware)</span>
+          <span class="it go"><span class="m">▸</span> Adzuna bulk pull ≈203k / ~4.68M · 179/300 резена · 10 държави (503+blip-устойчив)</span>
           <span class="it ok"><span class="m">✓</span> Jooble — жив (пан-EU · BG+Балтика)</span>
           <span class="it ok"><span class="m">✓</span> Careerjet — жив (90 държави · BG)</span>
+          <span class="it ok"><span class="m">✓</span> EURES — жив (офиц. ЕС портал · 25 държави, вкл. BG)</span>
           <span class="it ok"><span class="m">✓</span> Arbeitnow · Arbeitsagentur · France Travail</span>
           <span class="it ok"><span class="m">✓</span> karriere.nrw (публичен сектор)</span>
           <span class="it ok"><span class="m">✓</span> Recency-refresh (евтина нощна поддръжка)</span>
+          <span class="it ok"><span class="m">✓</span> Careerjet+Jooble fallback (при лимит на Adzuna)</span>
           <span class="it go"><span class="m">▸</span> Bulk discovery (директории тип karriere.at)</span>
         </div>
       </div>
@@ -242,11 +245,12 @@
         <div class="items">
           <span class="it ok"><span class="m">✓</span> Дневен digest имейл (+ found_job / inactivity гейтове)</span>
           <span class="it ok"><span class="m">✓</span> Onboarding таксономия (Етап 1)</span>
+          <span class="it ok"><span class="m">✓</span> Езиков сигнал в скора (3 нива)</span>
+          <span class="it ok"><span class="m">✓</span> Години опит per умение (skill:years)</span>
+          <span class="it ok"><span class="m">✓</span> GEO/relocation слой · on-site down-weight</span>
           <span class="it wait"><span class="m">○</span> Auth hardening (reset/verify)</span>
           <span class="it wait"><span class="m">○</span> Пълна ESCO таксономия (не-IT)</span>
           <span class="it wait"><span class="m">○</span> Профил-темплейти · публични landing</span>
-          <span class="it wait"><span class="m">○</span> Години опит per умение · learning-time</span>
-          <span class="it wait"><span class="m">○</span> Езиков сигнал в скора · GEO слой</span>
         </div>
       </div>
     </div>
@@ -293,7 +297,7 @@
         <p class="desc">Работи паралелно с всичко останало.</p>
         <div class="items">
           <span class="it ok"><span class="m">✓</span> Clean Architecture (core/domain/data/app)</span>
-          <span class="it ok"><span class="m">✓</span> 477 теста (hermetic SQLite)</span>
+          <span class="it ok"><span class="m">✓</span> 584 теста (hermetic SQLite)</span>
           <span class="it ok"><span class="m">✓</span> pgvector HNSW на staging</span>
           <span class="it wait"><span class="m">○</span> Deployment (VPS) · Alembic миграции</span>
           <span class="it wait"><span class="m">○</span> Sentry + PostHog · CI (Pipelines)</span>
@@ -316,7 +320,7 @@
   </div>
 
   <footer>
-    Статус към 26 юли 2026 (staging, само реални данни). Числата за обяви растат — Adzuna drain
+    Статус към 28 юли 2026 (staging, само реални данни). Числата за обяви растат — Adzuna drain
     тече. Източник на етапите: <span class="mono">ROADMAP.md</span> · референции
     <span class="mono">ARCHITECTURE.md</span>, <span class="mono">DECISIONS.md</span>,
     <span class="mono">docs/features/</span>.

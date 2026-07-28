@@ -39,9 +39,12 @@ EMBED_VERSION = "e5-asym-clean-v2"
 # SEMANTIC_WEIGHT) pending more labeled data.
 DEFAULT_SEM_WEIGHT = 0.5
 
+# Covered nice-to-haves add at most this to the must-driven coverage; missing ones never subtract.
+_NICE_BONUS = 0.20
 
-def freshness_factor(age_days: float | None, fresh_days: float = 7.0,
-                     f30: float = 0.85, f60: float = 0.70) -> float:
+
+def freshness_factor(age_days: float | None, fresh_days: float = 14.0,
+                     f30: float = 0.90, f60: float = 0.80) -> float:
     """Age decay multiplier on the final score (owner decision: age IN the score instead of
     hard deletion at 30 days). Piecewise linear: 1.0 through `fresh_days`, then down to
     `f30` at day 30 and `f60` at day 60, flat after (the 90-day zombie cap retires the
@@ -185,7 +188,8 @@ def _norm_reqs(requirements) -> list[dict]:
 def score(profile_text: str, posting_text: str, requirements=None,
           profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT,
           freshness: float = 1.0, gate_cap: float | None = None,
-          skill_years: dict | None = None):
+          skill_years: dict | None = None, role_match: bool = False,
+          role_match_floor: float = 0.9):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -199,30 +203,50 @@ def score(profile_text: str, posting_text: str, requirements=None,
     p_tok = _tokens(profile_text)
     p_skills = extract_skills(profile_text)     # canonical, computed once per call
     covered, missing = [], []
-    w_cov = w_tot = 0.0
+    must_cov = must_tot = nice_cov = nice_tot = 0.0
     for r in reqs:
         hit = requirement_hit(r, profile_text, p_tok, p_skills)
         w = req_weight(r)
         if w > 0:                       # responsibilities/soft (w=0) are not scored as gaps
-            w_tot += w
-            if hit:
+            exp = 1.0
+            if hit and skill_years:
                 # experience weighting: a requirement met by a deeply-held skill counts fully;
                 # by a barely-held one, partially. No years data anywhere -> exp=1.0 (unchanged).
-                exp = 1.0
-                if skill_years:
-                    cov = _covering_skills(r, p_skills)
-                    if cov:
-                        exp = max(experience_multiplier(skill_years.get(s)) for s in cov)
-                w_cov += w * exp
+                cov = _covering_skills(r, p_skills)
+                if cov:
+                    exp = max(experience_multiplier(skill_years.get(s)) for s in cov)
+            if r.get("kind") == "nice":
+                nice_tot += w
+                if hit:
+                    nice_cov += w * exp
+            else:
+                must_tot += w
+                if hit:
+                    must_cov += w * exp
         (covered if hit else missing).append(r)
 
-    # weighted keyword ratio (fallback / blend)
-    kw_ratio = (w_cov / w_tot) if w_tot else None
+    # Coverage is driven by the MUST-haves; covered nice-to-haves add a small bounded bonus and
+    # MISSING ones never subtract — so a thorough job ad that lists many extras (a detailed German
+    # JD) isn't punished for its breadth against a sparse one that happens to list only what fits.
+    if must_tot:
+        kw_ratio = must_cov / must_tot
+        if nice_tot:
+            kw_ratio = min(1.0, kw_ratio + _NICE_BONUS * (nice_cov / nice_tot))
+    elif nice_tot:
+        kw_ratio = nice_cov / nice_tot
+    else:
+        kw_ratio = None
 
     pe = profile_vec if profile_vec is not None else embed_query(profile_text)
     se = posting_vec if posting_vec is not None else embed_passage(posting_text)
     sem_pct = semantic_pct(pe, se)
     base = blend(sem_pct, kw_ratio, sem_weight)
+    # Role-match floor: when the posting IS the candidate's kind of role (e.g. a Senior Android
+    # Engineer for an Android profile), that title is strong evidence on its own. A thorough JD
+    # listing 25 requirements a 9-skill profile can't all name — or a truncated aggregator snippet
+    # with no requirements at all — must not sink such a role below its semantic similarity.
+    if role_match and sem_pct is not None:
+        base = max(base, role_match_floor * sem_pct)
     if gate_cap is not None:
         gate = must_gate_cap(((r, r in covered) for r in reqs), gate_cap)
         if gate is not None:
@@ -254,13 +278,25 @@ def blend(sem_pct: float | None, kw_ratio: float | None,
 
 
 def coverage_ratio(requirements_with_hits) -> float | None:
-    """Weighted coverage from [({'text','kind',...}, hit: bool)] pairs — the verifier's way
-    to recompute the ratio after the LLM corrects individual hits."""
-    w_cov = w_tot = 0.0
+    """Weighted coverage from [({'text','kind',...}, hit: bool)] pairs — the verifier's way to
+    recompute the ratio after the LLM corrects individual hits. Must-driven, with a bounded bonus
+    from covered nice-to-haves (mirrors score(), so the two never drift)."""
+    must_cov = must_tot = nice_cov = nice_tot = 0.0
     for r, hit in requirements_with_hits:
         w = req_weight(r)
-        if w > 0:
-            w_tot += w
+        if w <= 0:
+            continue
+        if r.get("kind") == "nice":
+            nice_tot += w
             if hit:
-                w_cov += w
-    return (w_cov / w_tot) if w_tot else None
+                nice_cov += w
+        else:
+            must_tot += w
+            if hit:
+                must_cov += w
+    if must_tot:
+        ratio = must_cov / must_tot
+        return min(1.0, ratio + _NICE_BONUS * (nice_cov / nice_tot)) if nice_tot else ratio
+    if nice_tot:
+        return nice_cov / nice_tot
+    return None

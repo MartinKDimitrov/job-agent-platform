@@ -116,3 +116,12 @@ def test_network_error_and_bad_xml(monkeypatch):
     assert dv.fetch(pages=2) == []
     monkeypatch.setattr(dv, "fetch_text", lambda url, params=None, timeout=15.0: "not xml <<<")
     assert dv.fetch(pages=2) == []
+
+def test_location_from_job_page():
+    # dev.bg's RSS carries no location; the job page shows a city badge (JSON-LD address is empty)
+    badge = ('<div class="job-card-badge location"> '
+             '<img src="/pin.png" class="location-icon" alt="A pin icon" />София</div>')
+    assert dv.location_from_page(badge) == "София"
+    alt = '<img src="https://dev.bg/pin.png" width="12" alt="Пловдив - Android Developer" />'
+    assert dv.location_from_page(alt) == "Пловдив"
+    assert dv.location_from_page("<html>no location here</html>") == ""

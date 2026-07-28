@@ -30,6 +30,24 @@ def _posting(db, title, posted_at=None, first_seen=None, chash=None):
     return p
 
 
+def test_ingest_skips_postings_over_two_months_old():
+    # owner rule: an ad the source dates older than the ingest cutoff is never brought in;
+    # a fresh one and an unknown-age one (no posted_at) still come in.
+    old = datetime.utcnow() - timedelta(days=75)
+    with SessionLocal() as db:
+        res = ingest(db, [
+            RawPosting("rss", "1", "Too Old", "Acme", url="https://x/old",
+                       apply_url="https://x/old", description="d", posted_at=old),
+            RawPosting("rss", "2", "Fresh", "Acme", url="https://x/fresh",
+                       apply_url="https://x/fresh", description="d", posted_at=FRESH),
+            RawPosting("rss", "3", "No Date", "Acme", url="https://x/nd",
+                       apply_url="https://x/nd", description="d"),
+        ])
+        titles = {p.title for p in db.execute(select(Posting)).scalars()}
+        assert titles == {"Fresh", "No Date"}    # the 75-day-old ad was skipped
+        assert res["added"] == 2
+
+
 def test_ingest_stores_posted_at_and_backfills_on_reseen():
     rp = RawPosting("rss", "1", "Dev", "Acme", url="https://x/1", apply_url="https://x/1",
                     description="d", posted_at=FRESH)
@@ -144,6 +162,8 @@ def test_url_probe_retires_on_404_only(monkeypatch):
                 "https://dev.bg/company/jobads/flaky/": None}
     import app.data.sources.http as http_mod
     monkeypatch.setattr(http_mod, "url_status", lambda url, timeout=15.0: statuses[url])
+    # content probe reads the page first; return no HTML so this test exercises the 404-only path
+    monkeypatch.setattr(http_mod, "fetch_text", lambda url, **kw: None)
     with SessionLocal() as db:
         for slug in ("dead", "alive", "flaky"):
             p = _posting(db, f"{slug} role", chash=slug)
@@ -160,10 +180,34 @@ def test_url_probe_retires_on_404_only(monkeypatch):
         assert rows["jobtiger role"].last_checked_at is None  # excluded (crawl delay)
 
 
+def test_url_probe_retires_on_expiry_content_at_200(monkeypatch):
+    # aggregators sign a dead ad with a 200 "no longer available" page, not a 404
+    import app.application.usecases.search as crawl
+    import app.data.sources.http as http_mod
+    pages = {"https://boards.greenhouse.io/acme/jobs/gone":
+             "<html><body>This position is no longer available.</body></html>",
+             "https://boards.greenhouse.io/acme/jobs/open":
+             "<html><body>Senior Kotlin Engineer — apply now</body></html>"}
+    monkeypatch.setattr(http_mod, "fetch_text", lambda url, **kw: pages.get(url))
+    monkeypatch.setattr(http_mod, "url_status", lambda url, timeout=15.0: 200)
+    with SessionLocal() as db:
+        gone = _posting(db, "gone role", chash="g1")
+        gone.url = "https://boards.greenhouse.io/acme/jobs/gone"
+        openr = _posting(db, "open role", chash="o1")
+        openr.url = "https://boards.greenhouse.io/acme/jobs/open"
+        db.commit()
+        retired = crawl.probe_taken_down_urls(db, budget=10, delay=0, sleep=lambda s: None)
+        assert retired == 1
+        rows = {p.title: p for p in db.execute(select(Posting)).scalars()}
+        assert rows["gone role"].is_live is False            # 200 but page says it's gone
+        assert rows["open role"].is_live is True             # 200 and still a live ad
+
+
 def test_url_probe_budget_and_off_switch(monkeypatch):
     import app.application.usecases.search as crawl
     calls = []
     import app.data.sources.http as http_mod
+    monkeypatch.setattr(http_mod, "fetch_text", lambda url, **kw: None)
     monkeypatch.setattr(http_mod, "url_status",
                         lambda url, timeout=15.0: calls.append(url) or 200)
     with SessionLocal() as db:
@@ -202,10 +246,11 @@ def test_freshness_factor_curve():
     from app.domain.scoring import freshness_factor
     assert freshness_factor(None) == 1.0
     assert freshness_factor(3) == 1.0                       # fresh window
-    assert freshness_factor(30) == 0.85
-    assert abs(freshness_factor(45) - 0.775) < 0.001        # midway 30->60
-    assert freshness_factor(60) == 0.70
-    assert freshness_factor(80) == 0.70                     # flat until the 90d cap
+    assert freshness_factor(14) == 1.0                      # 2-week grace, full score
+    assert freshness_factor(30) == 0.90
+    assert abs(freshness_factor(45) - 0.85) < 0.001         # midway 30->60
+    assert freshness_factor(60) == 0.80
+    assert freshness_factor(80) == 0.80                     # flat until the 90d cap
 
 
 def test_score_applies_freshness_and_must_gate():

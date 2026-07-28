@@ -53,7 +53,11 @@ _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits",
 # marketing stats, EEO statements).
 _NOISE = ("equal opportunity", "eeo", "we are an equal", "apply now", "how to apply",
           "registered trademark", "under license", "claim based on", "registered users",
-          "fortune 100", "fortune 500", "кандидатствай")
+          "fortune 100", "fortune 500", "кандидатствай",
+          # closing / culture / employment-detail lines that are not skill requirements
+          "if this feels like", "love to connect", "we'd love to hear", "we would love to hear",
+          "full-time role", "full time role", "flexible hours", "no engagement tests",
+          "time tracking", "official employment", "startup vibe", "no time tracking")
 
 _BULLET = re.compile(r"^\s*(?:[-*•·▪●○◦→–—]|\d+[.)])\s+")
 # A header line is short-ish and label-like: no sentence punctuation, optional trailing colon
@@ -76,8 +80,16 @@ _BENEFIT_RE = re.compile(
     r"tick every box|sending us your|up-to-date cv|annual bonus|"
     r"only shortlisted|approved candidates|treated (?:strictly |with strict )?confidential|"
     r"data protection legislation|"
+    # perks that routinely slip a section header (a SumUp 'What we offer' block):
+    r"pension (?:scheme|plan|contribution)|stock options|share options|equity|vsop|esop|"
+    r"own a stake|referral bonus|sign-?on bonus|relocation (?:assistance|package|support)|"
+    r"sports club|gym membership|fitness|wellbeing|hack days?|hack week|kita|childcare|"
+    r"office lunch|free lunch|subsidi[sz]ed|meal (?:allowance|voucher)|flexible working hours|"
+    r"remote (?:work )?budget|home[- ]office (?:budget|setup)|equipment budget|"
+    r"opportunity to work (?:with|at|on)|healthy and safe workplace|prohibits harassment|"
+    r"work[- ]life balance|paid (?:sick|parental|maternity|paternity)|"
     r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
-    r"карта за транспорт|бонус за)\b", re.I)
+    r"карта за транспорт|бонус за|пенси\w*|релокац\w*|обяд\w*)\b", re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...")
 # plus what-the-company-gives-you sentences ("You will have the opportunity for fully remote...").
 _MARKETING_RE = re.compile(
@@ -99,6 +111,15 @@ _STRONG_SIGNAL_RE = re.compile(
     r"\b(experience|proficien\w*|knowledge|degree|fluen\w*|expertise|track record|"
     r"опит|познания|владеене|образование)\b"
     r"|\d+\s*\+?\s*(?:years?|години)\s+(?:of|опит|в)\b", re.I)
+# Company self-praise that a strong-signal word ('25 years of experience' — of the COMPANY, not
+# the candidate) would otherwise sneak past the marketing filter. These describe the employer's
+# scale/history, never a requirement, so they're dropped outright ("2,700+ professional experts,
+# half a billion people worldwide impacted by our work, we believe we've got the numbers…").
+_COMPANY_BOAST_RE = re.compile(
+    r"professional experts|people worldwide|worldwide impacted|impacted by our|"
+    r"we believe we|we['’]?ve got the numbers|billion (?:people|users|customers)|"
+    r"millions? of (?:people|users|customers)|trusted by|founded in \d{4}|our mission is|"
+    r"years? in business|we serve|we['’]?ve grown|our clients|proud to", re.I)
 
 # Personality / soft-skill lines ("Team player with strong communication skills...",
 # "Performance-oriented mindset—you care about..."). Nobody lists these in a skills profile,
@@ -108,6 +129,9 @@ _SOFT_RE = re.compile(
     r"\b(team player|communication skills|interpersonal|mindset|attention to detail|"
     r"self-motivat\w*|proactive|positive attitude|can-do|work ethic|fast learner|"
     r"eager to learn|passion\w*|curiosity|curious|adaptab\w*|problem[- ]solv\w*|"
+    r"ability to (?:independently\s+)?(?:learn|integrate|adapt|collaborate|work|write clean)|"
+    r"focus on results|clean code|build(?:ing)? a team|emotionally balanced|"
+    r"supportive(?:,| team)|strong analytical thinking|"
     r"комуникативн\w*|екипен играч|работа в екип|лична мотивация|адаптивн\w*)\b", re.I)
 
 # Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
@@ -159,6 +183,8 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
     if _MONEY_RE.search(cleaned):
         return False
     if _BENEFIT_RE.search(cleaned):
+        return False
+    if _COMPANY_BOAST_RE.search(cleaned):   # employer self-praise, even if it says "N years…"
         return False
     if _MARKETING_RE.match(cleaned) and not _STRONG_SIGNAL_RE.search(cleaned):
         return False

@@ -1,6 +1,6 @@
 """Hard filters: seniority (management/IC, junior/senior), location and geo compatibility."""
-from app.domain.filters import (geo_ok, location_ok, seniority_ok, passes_hard_filters, is_hybrid,
-                                 seniority_factor)
+from app.domain.filters import (geo_ok, location_ok, work_type_ok, seniority_ok,
+                                 passes_hard_filters, is_hybrid, seniority_factor)
 
 
 class P:
@@ -82,16 +82,17 @@ def test_remote_profile_accepts_preferred_onsite_city():
 
 
 def test_any_pref_and_unknown_location_pass():
-    assert location_ok(P(remote_pref="any"), "San Francisco") is True
+    # geography places no constraint when the candidate named no preferred place
+    assert location_ok(P(remote_pref="any", location_pref=""), "San Francisco") is True
     assert location_ok(P(remote_pref="remote"), "") is True       # unknown -> don't hide
 
 
-def test_remote_with_no_preferred_cities_drops_onsite():
-    # remote candidate who gave no cities can't take an onsite role
-    assert location_ok(P(remote_pref="remote", location_pref=""), "Bangalore, India") is False
-    assert location_ok(P(remote_pref="remote", location_pref=""), "Remote, India") is True
-    # an onsite-seeking candidate with no city given: we can't judge, keep it
-    assert location_ok(P(remote_pref="onsite", location_pref=""), "Bangalore, India") is True
+def test_work_type_drops_onsite_for_remote_seeker():
+    # work-TYPE (not geography): a remote candidate who gave no cities can't take an on-site role
+    assert work_type_ok(P(remote_pref="remote", location_pref=""), "t", "Bangalore, India", "") is False
+    assert work_type_ok(P(remote_pref="remote", location_pref=""), "t", "Remote, India", "") is True
+    # an on-site seeker takes a located role (geography aside)
+    assert work_type_ok(P(remote_pref="onsite", location_pref=""), "t", "Bangalore, India", "") is True
 
 
 # ---- combined ----

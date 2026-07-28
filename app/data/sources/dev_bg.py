@@ -30,6 +30,28 @@ DEFAULT_PAGES = 3          # global feed: 3 pages ≈ the ~30 newest postings
 DEFAULT_SEARCH_PAGES = 5   # per search term: up to ~50 matching postings
 
 
+# dev.bg's RSS carries no location, but the job PAGE shows a city badge (the JSON-LD address is
+# left empty). Read it from the badge div, or the map-pin image's alt text as a fallback.
+_LOC_BADGE = re.compile(r'job-card-badge location"[^>]*>\s*<img[^>]*>\s*([^<]+?)\s*</div>', re.I | re.S)
+_PIN_ALT = re.compile(r'pin\.png"[^>]*alt="([^"-]+?)\s*-', re.I)
+
+
+def location_from_page(html: str) -> str:
+    """The city shown on a dev.bg job page ('София', 'Пловдив', 'Remote'…), '' if none found."""
+    for rx in (_LOC_BADGE, _PIN_ALT):
+        m = rx.search(html or "")
+        if m:
+            loc = re.sub(r"\s+", " ", m.group(1)).strip()
+            if loc and loc.lower() != "a pin icon":
+                return loc
+    return ""
+
+
+def fetch_location(url: str) -> str:
+    """Fetch a dev.bg job page and return its city badge (used to backfill the empty RSS location)."""
+    return location_from_page(fetch_text(url) or "")
+
+
 def _slug(url: str) -> str:
     return url.rstrip("/").rsplit("/", 1)[-1]
 

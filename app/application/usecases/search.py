@@ -65,8 +65,13 @@ def soft_factors(profile, post, expectation=None) -> dict:
         "seniority": seniority_factor(profile, post.title,
                                       underqualified=settings.seniority_underqualified_factor,
                                       overqualified=settings.seniority_overqualified_factor),
+        "role_family": role_family_factor(profile, post.title,
+                                          adjacent=settings.role_family_adjacent_factor),
+        "location": location_factor(profile, post.title, post.location or "", post.description or "",
+                                    elsewhere=settings.location_elsewhere_factor),
     }
-from ...domain.filters import passes_hard_filters, seniority_factor
+from ...domain.filters import passes_hard_filters, seniority_factor, location_factor
+from ...domain.role_family import role_family_factor
 from ...domain.language import language_factor
 
 log = logging.getLogger(__name__)
@@ -457,12 +462,23 @@ def retire_unseen_board_postings(db: Session, hours: int = _UNSEEN_RETIRE_HOURS)
     return retired
 
 
+# Aggregators (Adzuna/Jooble/Careerjet) return the expired ad as a 200 page ("This listing went
+# offline", "The job position is no longer available") instead of a 404 — so a status check misses
+# them. Detect the expiry from the page content too.
+_EXPIRED_RE = re.compile(
+    r"no longer available|listing went offline|this (?:job|position|vacancy|listing) (?:has )?"
+    r"(?:expired|is expired|is closed|has closed|has been filled|is no longer)|"
+    r"job (?:position|posting|advert) is no longer|position has been filled|vacancy is closed|"
+    r"offer (?:has )?expired|обявата (?:е )?(?:изтекла|неактивна|затворена)|позицията е заета", re.I)
+
+
 def probe_taken_down_urls(db: Session, budget: int | None = None,
                           delay: float = 0.5, sleep=time.sleep) -> int:
-    """Takedown detection for WINDOW sources: politely GET the least-recently-checked live
-    postings' URLs; an explicit 404/410 retires the posting. Network errors / backoff leave
-    it untouched (only proof retires). JobTiger is excluded (its 30s crawl delay)."""
-    from ...data.sources.http import url_status
+    """Takedown detection: politely fetch the least-recently-checked live postings' pages. Retire
+    on an explicit 404/410 OR an 'expired / no longer available' page — the latter is how the
+    aggregators (Adzuna/Jooble/Careerjet) sign a dead ad while still returning HTTP 200. Network
+    errors / backoff leave it untouched (only proof retires). JobTiger is excluded (30s crawl delay)."""
+    from ...data.sources.http import url_status, fetch_text
     budget = settings.takedown_probe_budget if budget is None else budget
     if not budget:
         return 0
@@ -474,14 +490,19 @@ def probe_taken_down_urls(db: Session, budget: int | None = None,
     for post in candidates:
         if checked >= budget:
             break
-        if not _is_window_url(post.url) or "jobtiger" in (post.url or ""):
+        url = post.url
+        if not url or "jobtiger" in url:
             continue
         if checked:
             sleep(delay)
-        status = url_status(post.url)
         checked += 1
         post.last_checked_at = now
-        if status in (404, 410):
+        html = fetch_text(url)                       # follows the aggregator's redirect
+        if html is None:                             # couldn't read it -> confirm a hard 404/410
+            if url_status(url) in (404, 410):
+                post.is_live = False
+                retired += 1
+        elif _EXPIRED_RE.search(html):               # 200, but the page says the ad is dead
             post.is_live = False
             retired += 1
     db.commit()
@@ -566,6 +587,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     ptext = profile.as_text()
     from ...domain.skills import parse_skill_years
     skill_years = parse_skill_years(profile.skills) or None   # {skill: years}; once per search
+    from ...domain.role_family import families as _role_families
+    profile_families = _role_families(profile.target_roles or "")   # once per search
     from ...domain.salary import parse_salary, posting_salary, salary_factor
     expectation = parse_salary(profile.salary_expectation or "")   # once per search
     if profile.embedding is None:            # cached on the row; cleared on profile edit
@@ -592,9 +615,11 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     existing_by_post = {m.posting_id: m for m in db.execute(
         select(Match).where(Match.profile_id == profile.id)).scalars()}
     scored = filtered = matched = 0
+    seen: set = set()
     posts = db.execute(select(Posting).where(Posting.id.in_(relevant_ids))
                        .order_by(Posting.first_seen.desc())).scalars() if relevant_ids else []
     for post in posts:
+        seen.add(post.id)
         # A match the user can't act on is noise: postings without ANY link never create NEW
         # matches (junk/manually-scaffolded rows). Existing matches (the owner pasted the JD
         # via the manual form) still refresh their score.
@@ -620,14 +645,19 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             if stale is not None:
                 db.delete(stale)
             continue
-        # freshness, salary, language and seniority are soft multipliers on the base score —
-        # passed as one product (score() applies it after the blend, inside the gate cap)
+        # freshness, salary, language, seniority and role-family are soft multipliers on the base
+        # score — passed as one product (score() applies it after the blend, inside the gate cap)
         _f = soft_factors(profile, post, expectation)
-        soft = _f["freshness"] * _f["salary"] * _f["language"] * _f["seniority"]
+        soft = (_f["freshness"] * _f["salary"] * _f["language"]
+                * _f["seniority"] * _f["role_family"] * _f["location"])
+        # the posting IS the candidate's kind of role when their target family overlaps the title's
+        role_match = bool(profile_families & _role_families(post.title))
         sc, covered, missing = score(ptext, post.description or post.title, post.requirements,
                                      profile_vec=profile.embedding, posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
                                      freshness=soft, skill_years=skill_years,
+                                     role_match=role_match,
+                                     role_match_floor=settings.role_match_sem_floor,
                                      gate_cap=settings.must_gate_cap or None)
         existing = existing_by_post.get(post.id)
         if existing:
@@ -640,6 +670,17 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
             matched += 1
         if limit is not None and scored >= limit:
             break
+    # Zombie sweep: matches whose posting fell out of the recall set are never re-scored above, so
+    # one created under an older, laxer filter (e.g. a hybrid role before relocate/commute handling)
+    # could outlive it. Re-check each such leftover against the CURRENT hard filters and drop the
+    # ones that no longer qualify (or whose posting was retired).
+    for post_id, stale in existing_by_post.items():
+        if post_id in seen:
+            continue
+        zp = db.get(Posting, post_id)
+        if zp is None or not getattr(zp, "is_live", True) or not passes_hard_filters(
+                profile, zp.title, zp.location, zp.description)[0]:
+            db.delete(stale)
     try:
         db.commit()
     except IntegrityError:

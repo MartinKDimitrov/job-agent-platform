@@ -52,10 +52,16 @@ class Settings(BaseSettings):
     # takedown can't be proven). Below it, age enters the SCORE as freshness decay instead
     # (owner decision: no more blanket deletion at 30 days).
     posting_max_age_days: int = 90
+    # Never INGEST an ad the source dates older than this — a >2-month posting is not worth
+    # tracking (owner rule). Only applies when the source gives a posted_at; unknown-age ads
+    # still come in and age out via posting_max_age_days / freshness decay.
+    posting_max_ingest_age_days: int = 60
     # Freshness decay knees: full score through fresh_days, then linear to f30@30d, f60@60d.
-    freshness_fresh_days: float = 7.0
-    freshness_at_30d: float = 0.85
-    freshness_at_60d: float = 0.70
+    # Softened (owner) so a still-relevant older posting isn't buried: a 2-week grace window and
+    # gentler knees, since job ads commonly stay open well past a month.
+    freshness_fresh_days: float = 14.0
+    freshness_at_30d: float = 0.90
+    freshness_at_60d: float = 0.80
     # Must-gate: a ★5 must with zero coverage across its annotated alternatives caps the
     # score here (0 disables the gate).
     must_gate_cap: float = 0.40
@@ -92,6 +98,18 @@ class Settings(BaseSettings):
     # senior role for a junior candidate; over-qualified = a junior role for a senior candidate.
     seniority_underqualified_factor: float = 0.6
     seniority_overqualified_factor: float = 0.75
+    # Role-family soft signal (adjacent-but-different discipline the hard filter lets through):
+    # Data Scientist vs Data Engineer, Backend vs DevOps — related enough to show, different
+    # enough to rank below a same-family match. Non-adjacent mismatches (QA↔Backend) are dropped.
+    role_family_adjacent_factor: float = 0.8
+    # Location soft signal: a role in a different place than the candidate's preferred city/country
+    # (shown only because they'll relocate) ranks BELOW their preferred-location roles — relocation
+    # is a secondary option, not an equal one.
+    location_elsewhere_factor: float = 0.8
+    # Role-match floor: when the posting is the candidate's kind of role (target role-family in the
+    # title), its score is at least this fraction of the semantic similarity — a thorough JD or a
+    # truncated aggregator snippet can't sink an on-target role below what E5 sees.
+    role_match_sem_floor: float = 0.9
 
     # Shared "free" document generation for users WITHOUT their own key: the platform's LLM
     # (e.g. groq free tier or a local ollama at deploy), capped per user per day. Users with

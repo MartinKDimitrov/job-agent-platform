@@ -56,6 +56,8 @@ CATALOG: dict[str, str] = {
     "breakdown.salary_low": "salariu sub așteptări",
     "breakdown.salary_fit": "salariu conform",
     "breakdown.stale": "anunț mai vechi",
+    "breakdown.location_other": "altă locație",
+    "breakdown.role_family": "tip de rol diferit",
     "gaps.covered": "acoperite", "gaps.to_check": "de verificat",
     "gaps.tap": "vezi detalii", "gaps.you_cover": "Acoperi",
     "gaps.not_in_profile": "Nu e în profilul tău",
