@@ -462,12 +462,23 @@ def retire_unseen_board_postings(db: Session, hours: int = _UNSEEN_RETIRE_HOURS)
     return retired
 
 
+# Aggregators (Adzuna/Jooble/Careerjet) return the expired ad as a 200 page ("This listing went
+# offline", "The job position is no longer available") instead of a 404 — so a status check misses
+# them. Detect the expiry from the page content too.
+_EXPIRED_RE = re.compile(
+    r"no longer available|listing went offline|this (?:job|position|vacancy|listing) (?:has )?"
+    r"(?:expired|is expired|is closed|has closed|has been filled|is no longer)|"
+    r"job (?:position|posting|advert) is no longer|position has been filled|vacancy is closed|"
+    r"offer (?:has )?expired|обявата (?:е )?(?:изтекла|неактивна|затворена)|позицията е заета", re.I)
+
+
 def probe_taken_down_urls(db: Session, budget: int | None = None,
                           delay: float = 0.5, sleep=time.sleep) -> int:
-    """Takedown detection for WINDOW sources: politely GET the least-recently-checked live
-    postings' URLs; an explicit 404/410 retires the posting. Network errors / backoff leave
-    it untouched (only proof retires). JobTiger is excluded (its 30s crawl delay)."""
-    from ...data.sources.http import url_status
+    """Takedown detection: politely fetch the least-recently-checked live postings' pages. Retire
+    on an explicit 404/410 OR an 'expired / no longer available' page — the latter is how the
+    aggregators (Adzuna/Jooble/Careerjet) sign a dead ad while still returning HTTP 200. Network
+    errors / backoff leave it untouched (only proof retires). JobTiger is excluded (30s crawl delay)."""
+    from ...data.sources.http import url_status, fetch_text
     budget = settings.takedown_probe_budget if budget is None else budget
     if not budget:
         return 0
@@ -479,14 +490,19 @@ def probe_taken_down_urls(db: Session, budget: int | None = None,
     for post in candidates:
         if checked >= budget:
             break
-        if not _is_window_url(post.url) or "jobtiger" in (post.url or ""):
+        url = post.url
+        if not url or "jobtiger" in url:
             continue
         if checked:
             sleep(delay)
-        status = url_status(post.url)
         checked += 1
         post.last_checked_at = now
-        if status in (404, 410):
+        html = fetch_text(url)                       # follows the aggregator's redirect
+        if html is None:                             # couldn't read it -> confirm a hard 404/410
+            if url_status(url) in (404, 410):
+                post.is_live = False
+                retired += 1
+        elif _EXPIRED_RE.search(html):               # 200, but the page says the ad is dead
             post.is_live = False
             retired += 1
     db.commit()
