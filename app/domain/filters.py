@@ -174,10 +174,30 @@ _HYBRID_RE = re.compile(
 _FULLY_REMOTE_RE = re.compile(
     r"\b(?:fully|100\s*%|completely|entirely)[-\s]remote\b|\bremote[-\s]first\b|"
     r"изцяло\s*дистанционно|напълно\s*дистанционно", re.I)
+# A role that is itself remote even though the LOCATION field names the employer's city (a Berlin
+# company advertising an EU-remote position). Positive phrasings only — "no remote" is handled by
+# onsite_only, which callers check first.
+_REMOTE_ROLE_RE = re.compile(
+    r"\b(?:fully|100\s*%|completely|entirely|permanently)[-\s]*remote\b|\bremote[-\s]first\b|"
+    r"\bremote\s*(?:position|role|job|opportunity|work|working)\b|\bwork(?:ing)?\s+from\s+anywhere\b|"
+    r"\banywhere\s+in\s+(?:the\s+)?(?:eu|europe)\b|\b(?:eu|europe|european)[-\s]remote\b|"
+    r"\bremote\s*\((?:eu|europe|emea)\)|изцяло\s*дистанционно|напълно\s*дистанционно", re.I)
 
 
 def onsite_only(description: str) -> bool:
     return bool(_ONSITE_ONLY_RE.search(description or ""))
+
+
+def is_remote(title: str, location: str = "", description: str = "") -> bool:
+    """True when the ROLE itself is remote — the location field says so, the title flags it
+    ('Android Developer — Remote'), or the text offers full / EU-remote work. A Germany-based
+    company advertising an EU-remote position lists 'Berlin' as its location but the role is remote,
+    so it must reach a remote seeker. Callers should rule out onsite_only() first."""
+    if _has(location or "", _REMOTE):
+        return True
+    if "remote" in (title or "").lower():
+        return True
+    return bool(_REMOTE_ROLE_RE.search(f"{title or ''} {description or ''}"))
 
 
 def is_hybrid(text: str) -> bool:
@@ -237,13 +257,19 @@ def seniority_factor(profile, title: str, *, underqualified: float = 0.6,
 
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:
     """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority' / 'role'."""
-    if not location_ok(profile, location):
+    remote_pref = (profile.remote_pref or "").lower()
+    # A genuinely remote role suits a remote/hybrid seeker no matter where the employer sits, so it
+    # clears the location gate even when the location field names the company's city (a Berlin firm
+    # advertising an EU-remote position). onsite_only rules out "no remote" phrasing first.
+    remote_role = (remote_pref in ("remote", "hybrid") and not onsite_only(description)
+                   and is_remote(title, location, description))
+    if not remote_role and not location_ok(profile, location):
         return False, "location"
     # a "remote"-labeled posting whose text says otherwise is an onsite/hybrid posting. The
     # hybrid signal often lives ONLY in the description (dev.bg has no location field), so
     # location_ok can't see it — catch it here for a remote-only seeker. relocate doesn't exempt
     # it: work-TYPE is the hard filter, relocate only frees up geography.
-    if (profile.remote_pref or "").lower() == "remote" and (
+    if remote_pref == "remote" and not remote_role and (
             onsite_only(description) or is_hybrid(f"{location} {description}")):
         return False, "location"
     if not geo_ok(profile, location, description):

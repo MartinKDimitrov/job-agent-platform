@@ -9,7 +9,7 @@ from sqlalchemy import select
 import app.application.usecases.search as crawl
 from app.data.db import SessionLocal
 from app.data.models import Match
-from app.domain.filters import location_ok, passes_hard_filters
+from app.domain.filters import location_ok, passes_hard_filters, is_remote
 from tests.test_crawl import _make_profile_row
 from tests.test_recall import _post
 
@@ -41,6 +41,41 @@ def test_onsite_in_description_hidden_from_remote_seeker_regardless_of_relocate(
     for reloc in (False, True):
         ok, reason = passes_hard_filters(_Prof(relocate=reloc), "Backend Developer", "", onsite_desc)
         assert ok is False and reason == "location"
+
+
+# ---- a remote role reaches a remote seeker even when the location names the employer's city ----
+def test_is_remote_detects_role_from_text_and_title():
+    assert is_remote("Android Developer", "Berlin, Deutschland",
+                     "This is a 100% remote position.") is True
+    assert is_remote("Android Developer - Remote", "Warszawa", "Kotlin needed.") is True
+    assert is_remote("Android Developer", "Remote", "") is True
+    assert is_remote("Android Developer", "Berlin", "On-site role in our office.") is False
+
+
+def test_remote_role_with_city_location_reaches_remote_seeker():
+    # a Berlin company advertising an EU-remote position — location names a city, role is remote
+    ok, _ = passes_hard_filters(_Prof(remote_pref="remote", relocate=True),
+                                "Android Developer", "Berlin, Deutschland",
+                                "A 100% remote position, work from anywhere in the EU.")
+    assert ok is True
+    ok2, _ = passes_hard_filters(_Prof(remote_pref="remote", relocate=True),
+                                 "Android Developer - Remote", "Warszawa", "Kotlin needed.")
+    assert ok2 is True
+
+
+def test_onsite_role_with_city_still_hidden_from_remote_seeker():
+    ok, reason = passes_hard_filters(_Prof(remote_pref="remote", relocate=True),
+                                     "Android Developer", "Berlin, Deutschland",
+                                     "On-site role based in our Berlin office.")
+    assert ok is False and reason == "location"
+
+
+def test_no_remote_phrasing_not_treated_as_remote():
+    # 'not a remote position' must NOT slip through as remote
+    ok, reason = passes_hard_filters(_Prof(remote_pref="remote", relocate=True),
+                                     "Android Developer", "Berlin",
+                                     "This is not a remote position — office-based.")
+    assert ok is False and reason == "location"
 
 
 # ---- on-site seeker: relocate frees the city ----
