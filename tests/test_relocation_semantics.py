@@ -78,6 +78,32 @@ def test_no_remote_phrasing_not_treated_as_remote():
     assert ok is False and reason == "location"
 
 
+# ---- on-site seeker: symmetric guard — wants an office, in the right city ----
+def test_onsite_seeker_excludes_pure_remote_role():
+    p = _Prof(remote_pref="onsite")
+    assert passes_hard_filters(p, "Android Engineer", "Remote", "")[:2] == (False, "location")
+    assert passes_hard_filters(p, "Kotlin Developer", "", "Fully remote position.")[:2] \
+        == (False, "location")
+
+
+def test_onsite_seeker_keeps_hybrid_and_office_roles():
+    p = _Prof(remote_pref="onsite")
+    assert passes_hard_filters(p, "Android Engineer", "Sofia", "Office-based role.")[0] is True
+    assert passes_hard_filters(p, "Android Engineer", "",
+                               "Hybrid work, 2 days in the office.")[0] is True
+
+
+def test_onsite_seeker_with_city_drops_other_city_named_in_text():
+    # location_pref=Sofia, the posting is a Plovdiv role stated only in the text (empty location)
+    p = _Prof(remote_pref="onsite", location_pref="София")
+    assert passes_hard_filters(p, "Senior Android Developer", "",
+                               "Flexible hybrid work in Plovdiv, Bulgaria.")[:2] == (False, "location")
+    # the preferred city named -> kept
+    assert passes_hard_filters(p, "Android Developer", "", "On-site in our Sofia office.")[0] is True
+    # no city named at all -> can't tell, kept
+    assert passes_hard_filters(p, "Android Developer", "", "Great team, home office option.")[0] is True
+
+
 # ---- on-site seeker: relocate frees the city ----
 def test_onsite_seeker_with_relocate_takes_any_city():
     p = _Prof(remote_pref="onsite", relocate=True, location_pref="Sofia")

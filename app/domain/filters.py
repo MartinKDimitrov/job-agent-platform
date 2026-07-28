@@ -200,6 +200,34 @@ def is_remote(title: str, location: str = "", description: str = "") -> bool:
     return bool(_REMOTE_ROLE_RE.search(f"{title or ''} {description or ''}"))
 
 
+# Major Bulgarian cities (Latin + Cyrillic) — used to place an on-site posting whose location
+# field is empty (dev.bg carries none) from cues in its text, so an on-site candidate who named a
+# city isn't shown a job that's clearly in a different one.
+_BG_CITY_ALIASES = {
+    "sofia": ("sofia", "софия"), "plovdiv": ("plovdiv", "пловдив"),
+    "varna": ("varna", "варна"), "burgas": ("burgas", "бургас"),
+    "ruse": ("ruse", "русе"), "stara zagora": ("stara zagora", "стара загора"),
+    "pleven": ("pleven", "плевен"), "sliven": ("sliven", "сливен"),
+    "dobrich": ("dobrich", "добрич"), "shumen": ("shumen", "шумен"),
+    "pernik": ("pernik", "перник"), "haskovo": ("haskovo", "хасково"),
+    "pazardzhik": ("pazardzhik", "пазарджик"), "blagoevgrad": ("blagoevgrad", "благоевград"),
+    "veliko tarnovo": ("veliko tarnovo", "veliko turnovo", "велико търново"),
+    "gabrovo": ("gabrovo", "габрово"), "vratsa": ("vratsa", "враца"),
+    "kazanlak": ("kazanlak", "казанлък"), "vidin": ("vidin", "видин"),
+    "kardzhali": ("kardzhali", "кърджали"), "montana": ("montana", "монтана"),
+}
+_BG_CITY_RES = {
+    c: re.compile(r"(?<![a-zа-я])(?:" + "|".join(re.escape(a) for a in al) + r")(?![a-zа-я])", re.I)
+    for c, al in _BG_CITY_ALIASES.items()
+}
+
+
+def bg_cities_in(text: str) -> set[str]:
+    """Canonical BG-city keys named anywhere in the text."""
+    t = text or ""
+    return {c for c, rx in _BG_CITY_RES.items() if rx.search(t)}
+
+
 def is_hybrid(text: str) -> bool:
     """A hybrid (part-office) posting — office presence required some days, so NOT remote. A
     posting that also states full/100% remote isn't flagged (a remote seeker takes that option)."""
@@ -272,6 +300,20 @@ def passes_hard_filters(profile, title: str, location: str, description: str = "
     if remote_pref == "remote" and not remote_role and (
             onsite_only(description) or is_hybrid(f"{location} {description}")):
         return False, "location"
+    # symmetric guard for an ON-SITE seeker: they want an office. A purely remote role (remote
+    # location or fully-remote text, and not hybrid) gives them none -> drop it. And if they named
+    # a city, a posting whose text places it in a DIFFERENT BG city (its own field being empty, as
+    # on dev.bg) is the wrong location.
+    if remote_pref == "onsite":
+        _txt = f"{location} {description}"
+        if not is_hybrid(_txt) and (_has(location, _REMOTE)
+                                    or is_remote(title, location, description)):
+            return False, "location"
+        pref_cities = bg_cities_in(profile.location_pref or "")
+        if pref_cities and not getattr(profile, "relocate", False):   # relocate frees the city
+            found = bg_cities_in(f"{title} {location} {description}")
+            if found and not (found & pref_cities):
+                return False, "location"
     if not geo_ok(profile, location, description):
         return False, "location"
     if not seniority_ok(profile, title):
