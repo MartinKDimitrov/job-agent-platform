@@ -76,8 +76,16 @@ _BENEFIT_RE = re.compile(
     r"tick every box|sending us your|up-to-date cv|annual bonus|"
     r"only shortlisted|approved candidates|treated (?:strictly |with strict )?confidential|"
     r"data protection legislation|"
+    # perks that routinely slip a section header (a SumUp 'What we offer' block):
+    r"pension (?:scheme|plan|contribution)|stock options|share options|equity|vsop|esop|"
+    r"own a stake|referral bonus|sign-?on bonus|relocation (?:assistance|package|support)|"
+    r"sports club|gym membership|fitness|wellbeing|hack days?|hack week|kita|childcare|"
+    r"office lunch|free lunch|subsidi[sz]ed|meal (?:allowance|voucher)|flexible working hours|"
+    r"remote (?:work )?budget|home[- ]office (?:budget|setup)|equipment budget|"
+    r"opportunity to work (?:with|at|on)|healthy and safe workplace|prohibits harassment|"
+    r"work[- ]life balance|paid (?:sick|parental|maternity|paternity)|"
     r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
-    r"карта за транспорт|бонус за)\b", re.I)
+    r"карта за транспорт|бонус за|пенси\w*|релокац\w*|обяд\w*)\b", re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...")
 # plus what-the-company-gives-you sentences ("You will have the opportunity for fully remote...").
 _MARKETING_RE = re.compile(
