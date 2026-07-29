@@ -8,15 +8,15 @@ from app.data import taxonomy_repo as tx
 def _seed(db):
     db.add_all([
         OccupationGroup(isco_code="241", parent_code="24", level=3, vertical="finance",
-                        label_en="Finance professionals", label_bg="Финансови специалисти"),
+                        labels={"en": "Finance professionals", "bg": "Финансови специалисти"}),
         OccupationGroup(isco_code="2411", parent_code="241", level=4, vertical="finance",
-                        label_en="Accountants", label_bg="Одитори и счетоводители"),
+                        labels={"en": "Accountants", "bg": "Одитори и счетоводители"}),
     ])
     occ = Occupation(esco_uri="esco/occ/accountant", isco_code="2411", vertical="finance",
-                     label_en="accountant", label_bg="счетоводител")
+                     labels={"en": "accountant", "bg": "счетоводител"})
     db.add(occ)
-    s1 = TaxonomySkill(esco_uri="esco/s/depr", label_en="depreciation", label_bg="амортизация")
-    s2 = TaxonomySkill(esco_uri="esco/s/tax", label_en="tax legislation", label_bg="")  # no bg
+    s1 = TaxonomySkill(esco_uri="esco/s/depr", labels={"en": "depreciation", "bg": "амортизация"})
+    s2 = TaxonomySkill(esco_uri="esco/s/tax", labels={"en": "tax legislation"})  # no bg -> en fallback
     db.add_all([s1, s2])
     db.flush()
     db.add_all([
@@ -39,6 +39,8 @@ def test_drill_down_vertical_group_occupation():
         occs = tx.occupations(db, "2411", lang="bg")
         assert occs[0]["label"] == "счетоводител"
         assert tx.occupations(db, "2411", lang="en")[0]["label"] == "accountant"
+        # ru/uk aren't in ESCO -> fall back to en
+        assert tx.occupations(db, "2411", lang="ru")[0]["label"] == "accountant"
 
 
 def test_occupation_skills_essential_first_with_lang_fallback():

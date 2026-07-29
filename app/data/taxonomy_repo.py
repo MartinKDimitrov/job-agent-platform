@@ -9,9 +9,9 @@ from .models import OccupationGroup, Occupation, OccupationSkill, TaxonomySkill
 
 
 def _label(row, lang: str) -> str:
-    """The row's label in `lang`, falling back to the other language when empty."""
-    primary, other = (row.label_bg, row.label_en) if lang == "bg" else (row.label_en, row.label_bg)
-    return primary or other or ""
+    """The row's label in `lang`; ru/uk (not in ESCO) and any gap fall back to en, then any label."""
+    labels = row.labels or {}
+    return labels.get(lang) or labels.get("en") or next(iter(labels.values()), "")
 
 
 def verticals(db: Session) -> list[str]:
@@ -20,9 +20,11 @@ def verticals(db: Session) -> list[str]:
         .distinct().order_by(Occupation.vertical)).all()]
 
 
-def groups(db: Session, vertical: str, parent_code: str | None = None) -> list[dict]:
-    """Subcategory groups within a vertical. parent_code None -> the top groups of that vertical
-    (those whose parent isn't itself in the vertical), otherwise the direct children."""
+def groups(db: Session, vertical: str, parent_code: str | None = None,
+           lang: str = "bg") -> list[dict]:
+    """Subcategory groups within a vertical, labelled in `lang`. parent_code None -> the top groups
+    of that vertical (those whose parent isn't itself in the vertical), else the direct children.
+    A group also reports whether it has occupations directly under it (a leaf the picker can open)."""
     q = select(OccupationGroup).where(OccupationGroup.vertical == vertical)
     if parent_code is None:
         codes = {c for (c,) in db.execute(
@@ -31,7 +33,26 @@ def groups(db: Session, vertical: str, parent_code: str | None = None) -> list[d
     else:
         rows = list(db.execute(q.where(OccupationGroup.parent_code == parent_code)).scalars())
     rows.sort(key=lambda g: g.isco_code)
-    return [{"isco_code": g.isco_code, "level": g.level} for g in rows]
+    with_occ = {c for (c,) in db.execute(
+        select(Occupation.isco_code).where(Occupation.vertical == vertical).distinct()).all()}
+    has_children = {g.parent_code for g in db.execute(q).scalars()}
+    return [{"isco_code": g.isco_code, "level": g.level, "label": _label(g, lang),
+             "has_occupations": g.isco_code in with_occ,
+             "has_children": g.isco_code in has_children} for g in rows]
+
+
+def leaf_groups(db: Session, vertical: str, lang: str = "bg") -> list[dict]:
+    """Every group in a vertical that has occupations directly under it — the flat subcategory
+    list the onboarding shows after the user picks a vertical (intermediate ISCO levels skipped)."""
+    with_occ = {c for (c,) in db.execute(
+        select(Occupation.isco_code).where(Occupation.vertical == vertical).distinct()).all()}
+    if not with_occ:
+        return []
+    rows = db.execute(select(OccupationGroup).where(
+        OccupationGroup.vertical == vertical, OccupationGroup.isco_code.in_(with_occ))).scalars()
+    out = [{"isco_code": g.isco_code, "label": _label(g, lang)} for g in rows]
+    out.sort(key=lambda g: g["label"].lower())
+    return out
 
 
 def occupations(db: Session, isco_code: str, lang: str = "bg") -> list[dict]:
@@ -54,16 +75,20 @@ def occupation_skills(db: Session, occupation_id: int, lang: str = "bg") -> list
 
 
 def search_occupations(db: Session, query: str, lang: str = "bg", limit: int = 20) -> list[dict]:
-    """Free-text occupation search for the picker (matches either language)."""
+    """Free-text occupation search for the picker — matches ANY language's label (labels is JSON,
+    so we filter in Python; the occupation set is small). Prefers a prefix hit on the UI-language
+    label, then any substring."""
     q = (query or "").strip().lower()
-    if not q:
+    if len(q) < 2:
         return []
-    like = f"%{q}%"
-    rows = db.execute(
-        select(Occupation).where(
-            func.lower(Occupation.label_en).like(like) | func.lower(Occupation.label_bg).like(like))
-        .limit(limit)).scalars()
-    out = [{"id": o.id, "esco_uri": o.esco_uri, "label": _label(o, lang),
-            "vertical": o.vertical, "isco_code": o.isco_code} for o in rows]
-    out.sort(key=lambda o: o["label"].lower())
-    return out
+    out = []
+    for o in db.execute(select(Occupation)).scalars():
+        vals = [v for v in (o.labels or {}).values()]
+        if not any(q in v.lower() for v in vals):
+            continue
+        disp = _label(o, lang)
+        rank = 0 if disp.lower().startswith(q) else (1 if any(v.lower().startswith(q) for v in vals) else 2)
+        out.append((rank, disp.lower(), {"id": o.id, "esco_uri": o.esco_uri, "label": disp,
+                                         "vertical": o.vertical, "isco_code": o.isco_code}))
+    out.sort(key=lambda t: (t[0], t[1]))
+    return [r for _, _, r in out[:limit]]

@@ -23,11 +23,23 @@ from ..data.models import OccupationGroup, Occupation, TaxonomySkill, Occupation
 
 API = "https://ec.europa.eu/esco/api"
 
+# Platform UI languages that ESCO actually carries (ru/uk aren't EU languages -> read-side falls
+# back to en). One occupation/group/skill fetch returns preferredLabel in all of them at once.
+LANGS = ("en", "bg", "de", "el", "es", "fr", "hr", "it", "nl", "pl", "ro")
+
+
+def _labels(pref: dict | None, fallback: str = "") -> dict:
+    out = {lang: pref[lang] for lang in LANGS if (pref or {}).get(lang)}
+    if not out and fallback:
+        out["en"] = fallback
+    return out
+
 # vertical -> ISCO group anchors (ESCO concept codes) to descend from.
 VERTICALS: dict[str, tuple[str, ...]] = {
     "finance":    ("241", "331"),   # Finance professionals + financial associate professionals
     "healthcare": ("22",),          # Health professionals (doctors, nursing, pharmacy, therapy…)
     "sales":      ("243", "522"),   # Sales/marketing/PR professionals + shop salespersons
+    "ict":        ("25", "35"),     # ICT professionals + technicians — keeps IT in the unified flow
 }
 
 
@@ -61,62 +73,52 @@ class Esco:
 
 
 def _upsert_group(db: Session, code: str, parent: str | None, node: dict, vertical: str) -> None:
-    labels = node.get("preferredLabel", {}) or {}
     row = db.execute(select(OccupationGroup).where(
         OccupationGroup.isco_code == code)).scalar_one_or_none()
     if row is None:
         row = OccupationGroup(isco_code=code)
         db.add(row)
     row.parent_code, row.level, row.vertical = parent, len(code), vertical
-    row.label_en = labels.get("en", node.get("title", ""))[:255]
-    row.label_bg = (labels.get("bg") or "")[:255]
+    row.labels = _labels(node.get("preferredLabel"), node.get("title", ""))
 
 
-def _skill_row(db: Session, cache: dict, uri: str, label_en: str, label_bg: str) -> TaxonomySkill:
+def _skill_row(db: Session, esco: Esco, cache: dict, uri: str, fallback: str) -> TaxonomySkill:
+    """Get-or-create a skill; on first sight fetch its resource once for all-language labels."""
     row = cache.get(uri)
+    if row is not None:
+        return row
+    row = db.execute(select(TaxonomySkill).where(
+        TaxonomySkill.esco_uri == uri)).scalar_one_or_none()
     if row is None:
-        row = db.execute(select(TaxonomySkill).where(
-            TaxonomySkill.esco_uri == uri)).scalar_one_or_none()
-        if row is None:
-            row = TaxonomySkill(esco_uri=uri)
-            db.add(row)
-        cache[uri] = row
-    if label_en:
-        row.label_en = label_en[:255]
-    if label_bg:
-        row.label_bg = label_bg[:255]
+        res = esco.get("/resource/skill", uri=uri, language="en")
+        row = TaxonomySkill(esco_uri=uri, labels=_labels((res or {}).get("preferredLabel"), fallback))
+        db.add(row)
+        db.flush()
+    cache[uri] = row
     return row
 
 
 def _upsert_occupation(db: Session, esco: Esco, uri: str, isco: str, vertical: str,
                        skill_cache: dict) -> bool:
-    en = esco.get("/resource/occupation", uri=uri, language="en")
-    if not en:
+    node = esco.get("/resource/occupation", uri=uri, language="en")
+    if not node:
         return False
-    bg = esco.get("/resource/occupation", uri=uri, language="bg") or {}
-    labels = en.get("preferredLabel", {}) or {}
     occ = db.execute(select(Occupation).where(Occupation.esco_uri == uri)).scalar_one_or_none()
     if occ is None:
         occ = Occupation(esco_uri=uri)
         db.add(occ)
     occ.isco_code, occ.vertical = isco, vertical
-    occ.label_en = labels.get("en", en.get("title", ""))[:255]
-    occ.label_bg = (labels.get("bg") or "")[:255]
+    occ.labels = _labels(node.get("preferredLabel"), node.get("title", ""))
     db.flush()
 
-    # merge essential+optional skills across the en and bg fetches (bg gives Bulgarian titles)
-    bg_title = {s["uri"]: s.get("title", "")
-                for rel in ("hasEssentialSkill", "hasOptionalSkill") for s in esco.links(bg, rel)}
-    existing = {os.skill.esco_uri: os for os in occ.skills}
+    existing = {os.skill.esco_uri for os in occ.skills}
     for rel, essential in (("hasEssentialSkill", True), ("hasOptionalSkill", False)):
-        for s in esco.links(en, rel):
+        for s in esco.links(node, rel):
             suri = s["uri"]
-            skill = _skill_row(db, skill_cache, suri, s.get("title", ""), bg_title.get(suri, ""))
-            db.flush()
-            link = existing.get(suri)
-            if link is None:
+            skill = _skill_row(db, esco, skill_cache, suri, s.get("title", ""))
+            if suri not in existing:
                 db.add(OccupationSkill(occupation_id=occ.id, skill_id=skill.id, essential=essential))
-                existing[suri] = True
+                existing.add(suri)
     return True
 
 
@@ -137,11 +139,12 @@ def _descend(db: Session, esco: Esco, code: str, parent: str | None, vertical: s
 
 
 def run(session_factory=SessionLocal, verticals: tuple[str, ...] | None = None,
-        call_budget: int = 4000) -> dict:
+        call_budget: int = 12000) -> dict:
     Base.metadata.create_all(bind=engine)
     verticals = verticals or tuple(VERTICALS)
     esco = Esco(budget=call_budget)
     stats = {"groups": 0, "occupations": 0, "skills": 0}
+    skill_cache: dict = {}                         # shared across verticals -> each skill fetched once
     with session_factory() as db:
         for vertical in verticals:
             occ_uris: dict[str, str] = {}
@@ -149,8 +152,7 @@ def run(session_factory=SessionLocal, verticals: tuple[str, ...] | None = None,
             for anchor in VERTICALS[vertical]:
                 _descend(db, esco, anchor, None, vertical, seen, occ_uris)
             db.commit()
-            print(f"[{vertical}] {len(seen)} groups, {len(occ_uris)} occupations")
-            skill_cache: dict = {}
+            print(f"[{vertical}] {len(seen)} groups, {len(occ_uris)} occupations", flush=True)
             done = 0
             for uri, isco in occ_uris.items():
                 if _upsert_occupation(db, esco, uri, isco, vertical, skill_cache):
