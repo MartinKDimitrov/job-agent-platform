@@ -175,3 +175,36 @@ def test_long_fields_clamped_to_column_limits():
         ingest(db, [rp])
         p = db.execute(select(Posting)).scalars().one()
         assert len(p.title) == 512 and len(p.company) == 255 and len(p.location) == 255
+
+
+def test_bulk_insert_falls_back_to_per_row_on_concurrent_collision():
+    """A parallel drain may commit one of a batch's content_hashes between our batched existence
+    check and the bulk flush. _flush_new must roll the whole batch back, then re-insert the
+    survivors row by row and touch the racing winner — never raise, never double-insert."""
+    from datetime import datetime
+    from app.data.ingest import _flush_new
+    with SessionLocal() as db:
+        now = datetime.utcnow()
+        rp_a = _rp("rss", "https://race/a")            # the row a concurrent writer already has
+        db.add(Posting(title="X", company="Acme", url="https://race/a",
+                       apply_url="https://race/a", content_hash=rp_a.content_hash()))
+        db.commit()
+        rp_b = _rp("rss", "https://race/b")            # genuinely new — must survive the fallback
+
+        def kw(rp):
+            return dict(title=rp.title, company=rp.company, norm_company="acme", url=rp.url,
+                        apply_url=rp.apply_url, location="", description=None, requirements=None,
+                        posted_at=None, last_seen_at=now, content_hash=rp.content_hash(),
+                        source_id=None, salary_min=None, salary_max=None, salary_currency=None,
+                        salary_period=None, salary_raw=None)
+        recs = [kw(rp_a), kw(rp_b)]
+        added = _flush_new(db, [Posting(**r) for r in recs], recs, now)
+        db.commit()
+
+        assert added == 1                                              # only /b was really new
+        assert db.scalar(select(func.count()).select_from(Posting)) == 2   # /a once, /b once
+        winner = db.execute(select(Posting).where(
+            Posting.content_hash == rp_a.content_hash())).scalar_one()
+        assert winner.last_seen_at == now                             # racing winner got touched
+        assert db.execute(select(Posting).where(
+            Posting.content_hash == rp_b.content_hash())).scalar_one() is not None

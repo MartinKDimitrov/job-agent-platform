@@ -77,6 +77,8 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
                 select(Posting).where(Posting.content_hash.in_(batch_hashes))).scalars().all():
             by_hash[post.content_hash] = post
 
+    new_posts: list[Posting] = []      # brand-new rows, bulk-inserted in ONE flush after the loop
+    new_records: list[dict] = []       # their kwargs, parallel to new_posts, for the race fallback
     for rp in postings:
         chash = rp.content_hash()
         existing = by_hash.get(chash)
@@ -117,7 +119,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
         # clamp to column limits — Postgres rejects the whole INSERT batch otherwise
         # (a long Ashby multi-location string killed a live ingest; SQLite doesn't enforce)
         sal = parse_salary(f"{rp.title or ''}\n{rp.description or ''}")
-        post = Posting(
+        kwargs = dict(
             title=(rp.title or "")[:512], company=(rp.company or "")[:255],
             norm_company=norm_co,
             url=rp.url, apply_url=rp.apply_url,
@@ -130,22 +132,52 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             salary_period=sal["period"] if sal else None,
             salary_raw=sal["raw"][:64] if sal else None,
         )
-        # Insert inside a SAVEPOINT: with content_hash UNIQUE, a concurrent writer (parallel
-        # aggregators) may have inserted this same posting between our SELECT above and now.
-        # The savepoint lets that one racing row roll back without losing the rest of the batch;
-        # we then fetch the winner and touch it, so nothing is dropped or double-counted.
-        try:
-            with db.begin_nested():
-                db.add(post)
-                db.flush()
-        except IntegrityError:
-            existing = _existing_by_hash(db, chash)          # the concurrent winner
-            if existing is not None:
-                _touch(existing, now)
-            skipped += 1
-            continue
+        post = Posting(**kwargs)
+        new_posts.append(post)
+        new_records.append(kwargs)
         by_company.setdefault(norm_co, []).append(post)   # catch dups within the same batch too
         by_hash[chash] = post                              # and exact re-hashes later in the batch
-        added += 1
+
+    # Bulk-insert every new row in ONE flush instead of a SAVEPOINT+flush per row. Once dedup was
+    # batched, that per-row flush was the drain's remaining bottleneck — one tunnel round-trip per
+    # new posting (~90/wave). content_hash UNIQUE still needs race safety against the OTHER drain
+    # processes writing in parallel, so the bulk flush runs in a savepoint and, only if a concurrent
+    # writer actually collided, falls back to inserting row by row (rare — a real race, not routine).
+    added += _flush_new(db, new_posts, new_records, now)
     db.commit()
     return {"added": added, "skipped": skipped, "deduped": deduped}
+
+
+def _flush_new(db: Session, new_posts: list[Posting], new_records: list[dict],
+               now: datetime) -> int:
+    """Insert the batch's brand-new postings. Fast path: one bulk flush in a savepoint (no race →
+    single round-trip). If a parallel drain inserted a colliding content_hash between our batched
+    existence check and this flush, the savepoint rolls the WHOLE batch back; we then discard those
+    session objects and re-insert fresh copies one at a time, letting survivors persist and touching
+    the racing winner. The per-row path only runs on a genuine collision."""
+    if not new_posts:
+        return 0
+    try:
+        with db.begin_nested():
+            db.add_all(new_posts)
+            db.flush()
+        return len(new_posts)
+    except IntegrityError:
+        # The rolled-back batch's objects may linger in session.new — drop them so the outer commit
+        # doesn't retry (and re-collide on) them, then rebuild from the captured kwargs.
+        for post in new_posts:
+            if post in db:
+                db.expunge(post)
+        added = 0
+        for kwargs in new_records:
+            fresh = Posting(**kwargs)
+            try:
+                with db.begin_nested():
+                    db.add(fresh)
+                    db.flush()
+                added += 1
+            except IntegrityError:
+                winner = _existing_by_hash(db, kwargs["content_hash"])   # the concurrent writer's row
+                if winner is not None:
+                    _touch(winner, now)
+        return added
