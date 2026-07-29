@@ -19,7 +19,15 @@ import re
 # check can only ever fire on an explicit, self-declared discipline.
 FAMILIES: dict[str, tuple[str, ...]] = {
     "backend":      ("backend", "back-end", "back end", "server-side", "server side",
-                     "api engineer", "api developer"),
+                     "api engineer", "api developer",
+                     # server-stack developer titles that never say the word "backend" but are
+                     # unambiguously back-end work — so a "Java Developer" no longer slips through
+                     # family-less and scores on bare semantic overlap for e.g. an Android profile.
+                     # Deliberately phrase-anchored (…"developer"/"engineer"), never a bare
+                     # language token: "java" alone would wrongly tag a "Java/Kotlin" Android role.
+                     "java developer", "java engineer", "java software engineer",
+                     "spring boot", ".net developer", "c# developer", "php developer",
+                     "ruby on rails", "golang developer", "go developer"),
     "frontend":     ("frontend", "front-end", "front end", "ui engineer", "ui developer"),
     "fullstack":    ("fullstack", "full-stack", "full stack"),
     "android":      ("android", "mobile developer", "mobile engineer", "react native", "flutter",
@@ -57,7 +65,7 @@ _FAMILY_RES: dict[str, re.Pattern] = {
 _ADJACENT: set[frozenset] = {frozenset(p) for p in (
     ("backend", "frontend"), ("backend", "fullstack"), ("frontend", "fullstack"),
     ("backend", "devops"), ("backend", "data_eng"), ("backend", "security"),
-    ("backend", "ml"), ("backend", "embedded"), ("backend", "android"),
+    ("backend", "ml"), ("backend", "embedded"),
     ("frontend", "android"), ("frontend", "ios"), ("frontend", "design"),
     ("devops", "security"), ("devops", "data_eng"),
     ("data_eng", "data_science"), ("data_eng", "data_analyst"), ("data_eng", "ml"),
@@ -66,6 +74,9 @@ _ADJACENT: set[frozenset] = {frozenset(p) for p in (
     # note: android and ios are deliberately NOT adjacent — a pure iOS role is a hard mismatch for
     # an Android profile (different language/SDK); cross-platform titles (React Native, Flutter,
     # KMP, "Mobile Developer") carry BOTH families, so those still match either specialist.
+    # A pure backend role is likewise a HARD mismatch for a mobile profile (owner: Java/backend
+    # roles must not surface for an Android candidate) — an "Android + backend" title carries the
+    # android family too, so the overlap check keeps it. frontend/fullstack stay adjacent (UI overlap).
 )}
 
 

@@ -92,3 +92,35 @@ def test_role_family_ok_symmetry():
     # the check is symmetric: a QA candidate should not see a Backend posting either
     assert role_family_ok(_Prof(target_roles="QA Engineer"), "Backend Developer") is False
     assert role_family_ok(_Prof(target_roles="Backend Developer"), "QA Engineer") is False
+
+
+# ---- backend/Java roles must NOT surface for a mobile profile (owner tightening) ----
+def test_backend_language_titles_get_the_backend_family():
+    # server-stack titles that never say "backend" are still classified as backend
+    for title in ("Java Developer", "Java Software Engineer", "Spring Boot Developer",
+                  ".NET Developer", "C# Developer", "Golang Developer", "Backend Developer - Node.js"):
+        assert families(title) == {"backend"}, title
+
+
+def test_backend_is_a_hard_mismatch_for_android():
+    p = _Prof(target_roles="Android Developer")
+    assert conflict(families("Android Developer"), families("Java Developer")) == "hard"
+    for title in ("Java Software Engineer", "Senior Java Developer", "Spring Boot Developer",
+                  "Backend Developer"):
+        assert role_family_ok(p, title) is False, title
+        assert passes_hard_filters(p, title, "Remote", "")[:2] == (False, "role"), title
+
+
+def test_android_plus_backend_hybrid_still_matches():
+    # a title carrying BOTH families overlaps the profile -> kept (it IS an Android role)
+    p = _Prof(target_roles="Android Developer")
+    assert families("Android Developer with Java Backend Experience") == {"android", "backend"}
+    assert role_family_ok(p, "Android Developer with Java Backend Experience") is True
+    # a bare "Java/Kotlin Developer" stays family-less (undecidable) -> not dropped
+    assert families("Java/Kotlin Developer") == frozenset()
+
+
+def test_backend_still_adjacent_for_ml_and_data():
+    # tightening android↔backend must NOT touch the other backend adjacencies
+    assert conflict(families("Machine Learning Engineer"), families("Java Developer")) == "soft"
+    assert role_family_ok(_Prof(target_roles="Machine Learning Engineer"), "Backend Developer") is True
