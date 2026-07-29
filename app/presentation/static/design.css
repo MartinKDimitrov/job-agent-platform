@@ -289,13 +289,12 @@ input::placeholder, textarea::placeholder { color: #97a0af; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 11px;
-  /* subtle asymmetric radius adds a touch of personality without feeling gimmicky */
-  border-radius: 999px 12px 999px 12px;
+  padding: 5px 12px;
+  border-radius: 999px;   /* clean full pill — matches the Lovable chip style */
   background: var(--gray-soft);
   color: var(--ink);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
   border: 1px solid transparent;
   line-height: 1.2;
   white-space: nowrap;
@@ -402,12 +401,12 @@ tr:last-child td { border-bottom: 0; }
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 22px 24px;
+  padding: 24px 26px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 16px;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 20px;
+  gap: 22px;
   align-items: start;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
@@ -415,8 +414,8 @@ tr:last-child td { border-bottom: 0; }
 /* Circular progress ring score */
 .match-card .score {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   flex-shrink: 0;
   color: var(--muted);
 }
@@ -445,12 +444,16 @@ tr:last-child td { border-bottom: 0; }
 .match-card .score.low  { color: var(--muted); }
 
 .match-card .body { min-width: 0; }
-.match-card .title { font-size: 17px; font-weight: 700; margin: 0 0 8px; color: var(--ink); line-height: 1.35; }
-.match-card .meta  { font-size: 14px; color: var(--muted); margin: 0 0 14px; line-height: 1.6; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
-.match-card .meta .m { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; }
+.match-card .title { font-size: 17.5px; font-weight: 800; margin: 0 0 7px; color: var(--ink); line-height: 1.3; letter-spacing: -0.01em; }
+.match-card .meta  { font-size: 13.5px; color: var(--muted); margin: 0 0 12px; line-height: 1.5; display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: center; }
+.match-card .meta .m { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 500; }
 .match-card .meta .m .icon { width: 14px; height: 14px; stroke-width: 1.75; color: var(--muted); }
 .match-card .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.match-card .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.match-card .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+/* quiet "hide" pushed to the far right, ghost styling — matches the Lovable card */
+.match-card .actions > form:last-child { margin-left: auto; }
+.match-card .actions > form:last-child .btn { background: transparent; border-color: transparent; color: var(--muted); }
+.match-card .actions > form:last-child .btn:hover { background: var(--gray-soft); color: var(--ink); }
 /* Phase 6: component breakdown under the meta line — quiet, informational */
 .match-card .score-parts { color: var(--muted); margin: -8px 0 12px; font-size: 12.5px; }
 /* Phase 6: profile skills the posting doesn't ask for — muted chips inside the panel */
