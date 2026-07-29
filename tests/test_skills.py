@@ -81,8 +81,19 @@ def test_parse_skill_years_formats():
     assert parse_skill_years("react:2, React 5")["react"] == 5
 
 
+def test_parse_skill_courses_only():
+    from app.domain.skills import COURSES_ONLY
+    got = parse_skill_years("Excel (courses), SAP: tutorials, Python курсове, Git 4y")
+    assert got == {"excel": COURSES_ONLY, "sap": COURSES_ONLY,
+                   "python": COURSES_ONLY, "git": 4}
+    # real hands-on years outrank a courses-only mention of the same skill
+    assert parse_skill_years("Java (courses), Java 4y")["java"] == 4
+
+
 def test_experience_multiplier_curve():
+    from app.domain.skills import COURSES_ONLY
     assert experience_multiplier(None) == 1.0        # unspecified -> no penalty
+    assert experience_multiplier(COURSES_ONLY) == 0.6  # familiar via courses, no project
     assert experience_multiplier(0) == 0.7
     assert experience_multiplier(1) == 0.8
     assert experience_multiplier(2) == 0.9

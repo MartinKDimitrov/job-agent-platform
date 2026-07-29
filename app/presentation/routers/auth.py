@@ -53,7 +53,7 @@ def home(request: Request, db: Session = Depends(get_db)):
         lang = current_lang(request)
         body = (f"<div class='page-head'><div class='title-block'><h1>{escape(t('ob.welcome', lang))}</h1>"
                 f"<p class='sub'>{escape(t('ob.welcome_sub', lang))}</p></div></div>"
-                + onboarding_card(lang=lang))
+                + onboarding_card(lang=lang, db=db))
         return page(body, u, title=t("ob.title", lang), lang=lang, switch_urls=SWITCH_URLS)
     # one-page app: first profile active (tabs switch via /profiles/{id})
     from .profiles import render_app

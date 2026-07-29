@@ -97,7 +97,7 @@
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">Job Agent Platform · карта на изграждането · 28 юли 2026</p>
+    <p class="eyebrow">Job Agent Platform · карта на изграждането · 29 юли 2026</p>
     <h1>От идея до продукт — цялата имплементация</h1>
     <p class="sub">Потребителят описва уменията си → платформата <b>сама</b> намира отворени
       позиции в цяла Европа и дава директен apply-линк. Ето целия път: какво е построено, къде
@@ -108,7 +108,7 @@
       <div class="stat"><div class="v">67 168</div><div class="l">работодатели</div></div>
       <div class="stat"><div class="v">27</div><div class="l">адаптера (14 ATS + 13 борси)</div></div>
       <div class="stat"><div class="v">8</div><div class="l">агрегатора · 13 UI езика</div></div>
-      <div class="stat"><div class="v">584</div><div class="l">теста ✓</div></div>
+      <div class="stat"><div class="v">602</div><div class="l">теста ✓</div></div>
     </div>
 
     <div class="meter">
@@ -139,7 +139,7 @@
         <div class="items">
           <span class="it ok"><span class="m">✓</span> Auth (email+JWT, Google OAuth)</span>
           <span class="it ok"><span class="m">✓</span> Профили + валидация</span>
-          <span class="it ok"><span class="m">✓</span> Onboarding: occupation-first таксономия (BG)</span>
+          <span class="it ok"><span class="m">✓</span> Onboarding: йерархичен (общо→професия→квалификации), многоезичен</span>
           <span class="it ok"><span class="m">✓</span> GDPR експорт/изтриване</span>
           <span class="it ok"><span class="m">✓</span> SEO (meta/robots/sitemap/schema.org)</span>
           <span class="it ok"><span class="m">✓</span> i18n · 13 езика</span>
@@ -244,13 +244,14 @@
         <p class="desc">Дневната „жива" стойност за клиента и разширяване отвъд IT профилите.</p>
         <div class="items">
           <span class="it ok"><span class="m">✓</span> Дневен digest имейл (+ found_job / inactivity гейтове)</span>
-          <span class="it ok"><span class="m">✓</span> Onboarding таксономия (Етап 1)</span>
+          <span class="it ok"><span class="m">✓</span> ESCO таксономия — пилот (finance · health · sales · ict), многоезична (11 ез.)</span>
+          <span class="it ok"><span class="m">✓</span> EU gazetteer градове (>10k · 44 държави) — autocomplete</span>
           <span class="it ok"><span class="m">✓</span> Езиков сигнал в скора (3 нива)</span>
-          <span class="it ok"><span class="m">✓</span> Години опит per умение (skill:years)</span>
+          <span class="it ok"><span class="m">✓</span> Опит per умение: години <b>или</b> „само курсове"</span>
           <span class="it ok"><span class="m">✓</span> GEO/relocation слой · on-site down-weight</span>
           <span class="it wait"><span class="m">○</span> Auth hardening (reset/verify)</span>
-          <span class="it wait"><span class="m">○</span> Пълна ESCO таксономия (не-IT)</span>
-          <span class="it wait"><span class="m">○</span> Профил-темплейти · публични landing</span>
+          <span class="it wait"><span class="m">○</span> ESCO — всички ~3000 професии (след пилота)</span>
+          <span class="it wait"><span class="m">○</span> Локализирани имена на градове (alternateNames)</span>
         </div>
       </div>
     </div>
@@ -297,7 +298,7 @@
         <p class="desc">Работи паралелно с всичко останало.</p>
         <div class="items">
           <span class="it ok"><span class="m">✓</span> Clean Architecture (core/domain/data/app)</span>
-          <span class="it ok"><span class="m">✓</span> 584 теста (hermetic SQLite)</span>
+          <span class="it ok"><span class="m">✓</span> 587 теста (hermetic SQLite)</span>
           <span class="it ok"><span class="m">✓</span> pgvector HNSW на staging</span>
           <span class="it wait"><span class="m">○</span> Deployment (VPS) · Alembic миграции</span>
           <span class="it wait"><span class="m">○</span> Sentry + PostHog · CI (Pipelines)</span>

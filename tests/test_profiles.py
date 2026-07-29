@@ -162,13 +162,13 @@ def test_onboarding_page_in_bulgarian(auth_client):
     client, _ = auth_client
     client.get("/lang/bg")
     body = client.get("/onboarding").text
-    assert "Бърз старт — създай профила си" in body
-    assert "Професия" in body and "Създай профил" in body
-    assert "Ние намираме подходящи обяви" in body      # mini-steps
+    assert "Бърз старт — създай профила си" in body     # card heading (ob.head)
+    assert "Професия" in body and "Създай профил" in body  # step chip + submit
+    assert "За теб" in body and "Град" in body          # general step (city dropdown label)
     client.get("/lang/en")
     body = client.get("/onboarding").text
     assert "Quick start — build your profile" in body
-    assert "Create profile" in body
+    assert "Create profile" in body and "About you" in body
 
 
 def test_min_match_clamped(auth_client):

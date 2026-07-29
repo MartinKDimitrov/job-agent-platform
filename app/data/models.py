@@ -272,3 +272,64 @@ class Application(Base):
     reply_date: Mapped[str] = mapped_column(String(32), default="")
     next_step: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ---- Occupation taxonomy (ESCO/ISCO) — the hierarchical onboarding backbone (Stage 2) ----
+# Sourced from the ESCO API (occupations, ISCO grouping, essential/optional skills, BG+EN labels).
+# category -> subcategory -> unit group -> occupation -> skills. The onboarding drill-down walks
+# OccupationGroup by parent_code; Occupation hangs off the leaf (4-digit) ISCO group.
+# labels is {lang: label} across the platform's languages (ESCO returns all in one fetch). ru/uk
+# aren't in ESCO, so the read layer falls back to en for those UIs.
+class OccupationGroup(Base):
+    __tablename__ = "occupation_groups"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    isco_code: Mapped[str] = mapped_column(String(8), unique=True, index=True)   # "24","241","2411"
+    parent_code: Mapped[str | None] = mapped_column(String(8), index=True, nullable=True)
+    level: Mapped[int] = mapped_column(Integer)                    # 1..4 = ISCO digit depth
+    labels: Mapped[dict] = mapped_column(JSON, default=dict)       # {lang: label}
+    vertical: Mapped[str] = mapped_column(String(64), default="", index=True)  # pilot bucket
+
+
+class Occupation(Base):
+    __tablename__ = "occupations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    esco_uri: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    isco_code: Mapped[str] = mapped_column(String(8), index=True)   # the leaf group it belongs to
+    labels: Mapped[dict] = mapped_column(JSON, default=dict)        # {lang: label}
+    vertical: Mapped[str] = mapped_column(String(64), default="", index=True)
+    skills: Mapped[list["OccupationSkill"]] = relationship(
+        back_populates="occupation", cascade="all, delete-orphan")
+
+
+class TaxonomySkill(Base):
+    __tablename__ = "taxonomy_skills"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    esco_uri: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    labels: Mapped[dict] = mapped_column(JSON, default=dict)        # {lang: label}
+
+
+class OccupationSkill(Base):
+    __tablename__ = "occupation_skills"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    occupation_id: Mapped[int] = mapped_column(
+        ForeignKey("occupations.id", ondelete="CASCADE"), index=True)
+    skill_id: Mapped[int] = mapped_column(
+        ForeignKey("taxonomy_skills.id", ondelete="CASCADE"), index=True)
+    essential: Mapped[bool] = mapped_column(Boolean, default=True)
+    occupation: Mapped["Occupation"] = relationship(back_populates="skills")
+    skill: Mapped["TaxonomySkill"] = relationship()
+    __table_args__ = (UniqueConstraint("occupation_id", "skill_id", name="uq_occ_skill"),)
+
+
+# ---- City gazetteer (GeoNames) — all European settlements > 10k, multilingual, for the ----
+# location autocomplete. names is {lang: name} (endonym + localized exonyms); population lets us
+# rank bigger places first; country is the English country name matching the onboarding dropdown.
+class City(Base):
+    __tablename__ = "cities"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    geoname_id: Mapped[int | None] = mapped_column(Integer, unique=True, index=True, nullable=True)
+    country: Mapped[str] = mapped_column(String(64), index=True)      # English country name
+    country_code: Mapped[str] = mapped_column(String(2), index=True)  # ISO-3166-1 alpha-2
+    name_en: Mapped[str] = mapped_column(String(255), index=True)     # canonical/ascii, for search
+    names: Mapped[dict] = mapped_column(JSON, default=dict)           # {lang: localized name}
+    population: Mapped[int] = mapped_column(Integer, default=0, index=True)

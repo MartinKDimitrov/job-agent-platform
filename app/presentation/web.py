@@ -94,6 +94,8 @@ def _usermenu(user: User, lang: str, paused: bool | None) -> str:
             f"{escape(t('menu.resume', lang))}</button></form><div class='sep'></div>")
     name = user.name or user.email.split("@")[0]
     return f"""<details class='usermenu'><summary>{escape(name)}</summary><div class='menu'>
+<a href='/onboarding'><b>＋</b>&nbsp;{escape(t('form.new_profile', lang))}</a>
+<div class='sep'></div>
 {pause_item}<a href='/documents'>{icon('doc', 'icon sm')}{escape(t('nav.documents', lang))}</a>
 <a href='/account'>{icon('key', 'icon sm')}{escape(t('menu.settings', lang))}</a>
 <a href='/account/export'>{icon('download', 'icon sm')}{escape(t('menu.export', lang))}</a>
