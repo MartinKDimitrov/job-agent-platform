@@ -55,10 +55,11 @@ def _to_posting(it: dict) -> RawPosting | None:
 
 
 def fetch(search_terms: list[str] | None = None, location: str = "", pages: int = DEFAULT_PAGES,
-          max_terms: int | None = None, sleep=time.sleep) -> list[RawPosting]:
+          max_terms: int | None = None, start_page: int = 1, sleep=time.sleep) -> list[RawPosting]:
     """One POST per (term × page). With no terms, pulls Jooble's recent feed for `location`.
     `max_terms` caps the terms queried this run — Jooble's free tier allows only 500 requests
-    TOTAL, so an unbounded per-term sweep would exhaust the quota; keep runs small."""
+    TOTAL, so an unbounded per-term sweep would exhaust the quota; keep runs small. `start_page`
+    lets the bulk drain resume from a saved cursor."""
     if not _configured():
         return []                                # key not set -> silent no-op
     terms = [t for t in (search_terms or [""]) if search_terms is None or t] or [""]
@@ -68,7 +69,7 @@ def fetch(search_terms: list[str] | None = None, location: str = "", pages: int 
     out: list[RawPosting] = []
     seen: set[str] = set()
     for term in terms:
-        for page in range(1, pages + 1):
+        for page in range(start_page, start_page + pages):
             body = {"page": str(page)}
             if term:
                 body["keywords"] = term

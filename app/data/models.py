@@ -333,3 +333,18 @@ class City(Base):
     name_en: Mapped[str] = mapped_column(String(255), index=True)     # canonical/ascii, for search
     names: Mapped[dict] = mapped_column(JSON, default=dict)           # {lang: localized name}
     population: Mapped[int] = mapped_column(Integer, default=0, index=True)
+
+
+class AggregatorDrain(Base):
+    """Resumable cursor for the deep bulk drain of a keyword-less aggregator FEED (Careerjet /
+    Jooble). One row per (source, locale) — the drain fetches one page at a time, persists, then
+    advances next_page, so progress is durable and a killed run resumes exactly where it stopped."""
+    __tablename__ = "aggregator_drain"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(32), index=True)     # careerjet / jooble
+    locale: Mapped[str] = mapped_column(String(16))                 # market/country slice
+    next_page: Mapped[int] = mapped_column(Integer, default=1)      # page to fetch next
+    pulled: Mapped[int] = mapped_column(Integer, default=0)         # postings persisted from slice
+    done: Mapped[bool] = mapped_column(Boolean, default=False)      # feed exhausted (empty page)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("source", "locale", name="uq_agg_drain"),)

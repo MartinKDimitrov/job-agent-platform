@@ -93,8 +93,9 @@ def _to_posting(country: str, it: dict) -> RawPosting | None:
 
 
 def fetch(search_terms: list[str] | None = None, countries=tuple(LOCALES), pages: int = 1,
-          page_size: int = PAGE_SIZE, sleep=time.sleep) -> list[RawPosting]:
-    """One call per (term × country/locale × page). With no terms, pulls each locale's feed."""
+          page_size: int = PAGE_SIZE, start_page: int = 1, sleep=time.sleep) -> list[RawPosting]:
+    """One call per (term × country/locale × page). With no terms, pulls each locale's feed.
+    `start_page` lets the bulk drain resume deep pagination from a saved cursor."""
     if not _configured():
         return []                                # key not set -> silent no-op
     terms = [t for t in (search_terms or [""]) if search_terms is None or t] or [""]
@@ -105,7 +106,7 @@ def fetch(search_terms: list[str] | None = None, countries=tuple(LOCALES), pages
     for country in countries:
         locale = LOCALES.get(country, country)
         for term in terms:
-            for page in range(1, pages + 1):
+            for page in range(start_page, start_page + pages):
                 params = {"locale_code": locale, "page": page, "page_size": page_size,
                           "user_ip": user_ip, "user_agent": _UA}
                 if term:
