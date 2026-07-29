@@ -313,6 +313,8 @@ def _ob_style() -> str:
       font-weight:600;border:1px solid var(--line,#e5e8ee)}
     #ob .st.done{background:var(--green-soft);color:var(--navy);border-color:transparent}
     #ob .st.on{background:var(--navy);color:var(--on-accent);border-color:transparent}
+    #ob .st.nav{cursor:pointer}
+    #ob .st.nav:hover{border-color:var(--navy);color:var(--navy)}
     #ob .ob-panel{animation:obin .2s ease}
     #ob .ob-panel.hide{display:none}
     @keyframes obin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -369,10 +371,12 @@ def _ob_style() -> str:
     #ob .cs-opt.sel{background:var(--green-soft);color:var(--teal-ink);font-weight:600}
     #ob .cs-ck{color:var(--navy);opacity:0;flex-shrink:0}
     #ob .cs-opt.sel .cs-ck{opacity:1}
-    #ob .cats{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0}
+    #ob .cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0}
+    @media(max-width:640px){#ob .cats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:420px){#ob .cats{grid-template-columns:minmax(0,1fr)}}
     #ob .cat{border:1px solid var(--line);background:var(--card);border-radius:12px;
       padding:12px 16px;cursor:pointer;font-size:15px;text-align:left;
-      display:flex;align-items:center;gap:10px;min-width:150px;color:var(--ink)}
+      display:flex;align-items:center;gap:10px;min-width:0;color:var(--ink)}
     #ob .cat .ic{font-size:20px}
     #ob .cat:hover{border-color:var(--navy)}
     #ob #occsearch{width:100%;margin:6px 0 4px;padding:10px 12px}
@@ -398,6 +402,7 @@ def _ob_style() -> str:
     #ob .acc-item.open .ah-chev{transform:rotate(90deg)}
     #ob .ah-chev{transition:transform .15s ease;flex-shrink:0}
     #ob .acc-body{border-top:1px solid var(--line);padding:8px 14px 10px 22px}
+    #ob .acc-body.hide{display:none}
     #ob .acc-body-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
       color:var(--muted);padding:4px 6px}
     #ob .occ-list{display:flex;flex-direction:column;border-left:2px solid var(--green-soft);padding-left:6px}
@@ -466,11 +471,17 @@ def _ob_script(lang: str) -> str:
 (function(){
   var ob=document.getElementById('ob'); if(!ob) return;
   var qs=function(s){return ob.querySelector(s);};
+  var reached=1;  // furthest step the user has unlocked — steps up to here are clickable
   function show(n){
+    reached=Math.max(reached,n);
     ob.querySelectorAll('.ob-panel').forEach(function(p){p.classList.toggle('hide',p.dataset.s!=String(n));});
     ob.querySelectorAll('.st').forEach(function(s){var i=Number(s.dataset.s);
-      s.classList.toggle('on',i===n); s.classList.toggle('done',i<n);});
+      s.classList.toggle('on',i===n); s.classList.toggle('done',i<n);
+      s.classList.toggle('nav',i<=reached && i!==n);});
   }
+  // clickable stepper: jump to any step already reached
+  ob.querySelectorAll('.st').forEach(function(s){s.addEventListener('click',function(){
+    var i=Number(s.dataset.s); if(i<=reached) show(i);});});
   function debounce(fn,ms){var t;return function(){var a=arguments,c=this;clearTimeout(t);
     t=setTimeout(function(){fn.apply(c,a);},ms);};}
   async function getJSON(u){var r=await fetch(u);return r.json();}
