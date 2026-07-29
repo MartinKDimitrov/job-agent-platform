@@ -42,6 +42,36 @@ VERTICALS: dict[str, tuple[str, ...]] = {
     "ict":        ("25", "35"),     # ICT professionals + technicians — keeps IT in the unified flow
 }
 
+# Full-taxonomy mode: descend ALL ISCO major groups and bucket each occupation into a
+# user-friendly vertical by its ISCO code (longest prefix wins). Covers every profession.
+_ISCO_VERTICAL: dict[str, str] = {
+    "01": "military", "02": "military", "03": "military",
+    "11": "management", "12": "management", "13": "management", "14": "management",
+    "21": "engineering", "31": "engineering",
+    "22": "healthcare", "32": "healthcare", "53": "healthcare",
+    "23": "education",
+    "241": "finance", "331": "finance",
+    "243": "sales", "332": "sales", "52": "sales", "95": "sales",
+    "25": "ict", "35": "ict",
+    "26": "legal_culture", "34": "legal_culture",
+    "242": "admin", "41": "admin", "42": "admin", "43": "admin", "44": "admin",
+    "333": "admin", "334": "admin", "335": "admin",
+    "51": "personal_services", "54": "personal_services",
+    "61": "agriculture", "62": "agriculture", "63": "agriculture", "92": "agriculture",
+    "71": "construction",
+    "72": "crafts", "73": "crafts", "74": "crafts", "75": "crafts",
+    "81": "machine_ops", "82": "machine_ops", "83": "machine_ops",
+    "91": "elementary", "93": "elementary", "94": "elementary", "96": "elementary",
+}
+_MAJOR_GROUPS = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+
+
+def _vertical_of(code: str) -> str:
+    for n in (3, 2):
+        if code[:n] in _ISCO_VERTICAL:
+            return _ISCO_VERTICAL[code[:n]]
+    return "other"
+
 
 def _isco_from_uri(uri: str) -> str:
     # http://data.europa.eu/esco/isco/C2411 -> 2411
@@ -78,7 +108,8 @@ def _upsert_group(db: Session, code: str, parent: str | None, node: dict, vertic
     if row is None:
         row = OccupationGroup(isco_code=code)
         db.add(row)
-    row.parent_code, row.level, row.vertical = parent, len(code), vertical
+    row.parent_code, row.level = parent, len(code)
+    row.vertical = vertical or _vertical_of(code)
     row.labels = _labels(node.get("preferredLabel"), node.get("title", ""))
 
 
@@ -107,7 +138,8 @@ def _upsert_occupation(db: Session, esco: Esco, uri: str, isco: str, vertical: s
     if occ is None:
         occ = Occupation(esco_uri=uri)
         db.add(occ)
-    occ.isco_code, occ.vertical = isco, vertical
+    occ.isco_code = isco
+    occ.vertical = vertical or _vertical_of(isco)
     occ.labels = _labels(node.get("preferredLabel"), node.get("title", ""))
     db.flush()
 
@@ -145,20 +177,27 @@ def run(session_factory=SessionLocal, verticals: tuple[str, ...] | None = None,
     esco = Esco(budget=call_budget)
     stats = {"groups": 0, "occupations": 0, "skills": 0}
     skill_cache: dict = {}                         # shared across verticals -> each skill fetched once
+    # (label, anchors, vertical-arg): "all" is ONE pass over every ISCO major group, each occupation
+    # bucketed by its code (vertical=None -> derived); named verticals use their curated anchors.
+    if "all" in verticals:
+        passes = [("all", _MAJOR_GROUPS, None)]
+    else:
+        passes = [(v, VERTICALS[v], v) for v in verticals]
     with session_factory() as db:
-        for vertical in verticals:
+        for label, anchors, vertical in passes:
             occ_uris: dict[str, str] = {}
             seen: set[str] = set()
-            for anchor in VERTICALS[vertical]:
+            for anchor in anchors:
                 _descend(db, esco, anchor, None, vertical, seen, occ_uris)
             db.commit()
-            print(f"[{vertical}] {len(seen)} groups, {len(occ_uris)} occupations", flush=True)
+            print(f"[{label}] {len(seen)} groups, {len(occ_uris)} occupations", flush=True)
             done = 0
             for uri, isco in occ_uris.items():
                 if _upsert_occupation(db, esco, uri, isco, vertical, skill_cache):
                     done += 1
-                if done % 20 == 0:
+                if done % 50 == 0:
                     db.commit()
+                    print(f"  {label}: {done}/{len(occ_uris)}", flush=True)
             db.commit()
             stats["groups"] += len(seen)
             stats["occupations"] += done
@@ -175,5 +214,8 @@ if __name__ == "__main__":
         i = args.index("--calls")
         budget = int(args[i + 1])
         del args[i:i + 2]
-    vs = tuple(a for a in args if a in VERTICALS) or None
+    if "all" in args:
+        vs = ("all",)                              # full taxonomy — every ISCO major group
+    else:
+        vs = tuple(a for a in args if a in VERTICALS) or None
     run(verticals=vs, call_budget=budget)

@@ -27,8 +27,23 @@ _VERTICAL_META = {
     "finance":    {"bg": "Финанси и счетоводство", "en": "Finance & Accounting", "icon": "📊"},
     "healthcare": {"bg": "Здравеопазване", "en": "Healthcare", "icon": "🩺"},
     "sales":      {"bg": "Продажби и маркетинг", "en": "Sales & Marketing", "icon": "🛍️"},
+    "engineering": {"bg": "Инженерство и техника", "en": "Engineering & Science", "icon": "⚙️"},
+    "education":  {"bg": "Образование", "en": "Education", "icon": "🎓"},
+    "management": {"bg": "Мениджмънт", "en": "Management", "icon": "📈"},
+    "legal_culture": {"bg": "Право, социални и културни", "en": "Legal, Social & Culture", "icon": "⚖️"},
+    "admin":      {"bg": "Администрация", "en": "Administration", "icon": "🗂️"},
+    "personal_services": {"bg": "Услуги и гостоприемство", "en": "Services & Hospitality", "icon": "🛎️"},
+    "construction": {"bg": "Строителство", "en": "Construction", "icon": "🏗️"},
+    "crafts":     {"bg": "Занаяти и производство", "en": "Crafts & Manufacturing", "icon": "🔧"},
+    "machine_ops": {"bg": "Машини и транспорт", "en": "Machinery & Transport", "icon": "🚚"},
+    "agriculture": {"bg": "Селско стопанство", "en": "Agriculture", "icon": "🌾"},
+    "elementary": {"bg": "Общи услуги", "en": "Elementary Occupations", "icon": "🧹"},
+    "military":   {"bg": "Отбрана и сигурност", "en": "Defence & Security", "icon": "🛡️"},
+    "other":      {"bg": "Други", "en": "Other", "icon": "•"},
 }
-_VERTICAL_ORDER = ["ict", "finance", "healthcare", "sales"]
+_VERTICAL_ORDER = ["ict", "finance", "healthcare", "sales", "engineering", "education", "management",
+                   "legal_culture", "admin", "personal_services", "construction", "crafts",
+                   "machine_ops", "agriculture", "elementary", "military"]
 
 # Country → its cities (dependent dropdowns). Cities mirror the matcher's vocabulary
 # (filters._CITY_ALIASES) so a chosen location is one the geo filter actually understands.
