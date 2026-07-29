@@ -81,6 +81,24 @@ def test_parse_skill_years_formats():
     assert parse_skill_years("react:2, React 5")["react"] == 5
 
 
+def test_esco_cross_language_skills_unify():
+    from app.domain.skills import canon_skill, extract_skills, _ESCO_CANON
+    if not _ESCO_CANON:
+        import pytest
+        pytest.skip("ESCO skill data not generated in this environment")
+    # a Bulgarian skill and its English name collapse to one canonical
+    assert canon_skill("амортизация") == canon_skill("depreciation")
+    assert canon_skill("данъчно законодателство") == canon_skill("tax legislation")
+    # the tech dictionary still wins for its own entries (ESCO never shadows it)
+    assert canon_skill("React.js") == "react"
+    # a BG profile skill covers an EN job requirement via the shared canonical
+    jd = extract_skills("ensure compliance with accounting regulations; depreciation schedules")
+    prof = extract_skills("амортизация, счетоводни правила")
+    assert jd & prof                                   # non-empty overlap across languages
+    # multi-word ESCO phrases are matched by n-gram, not just single tokens
+    assert "tax legislation" in extract_skills("must know tax legislation and IFRS")
+
+
 def test_parse_skill_courses_only():
     from app.domain.skills import COURSES_ONLY
     got = parse_skill_years("Excel (courses), SAP: tutorials, Python курсове, Git 4y")

@@ -148,6 +148,50 @@ _ALIAS_RE = re.compile(
     + r")(?![a-z0-9+#])", re.I)
 
 
+# --- ESCO cross-language skill layer -----------------------------------------------------------
+# ESCO skills are natural-language phrases in many languages ("depreciation" / "амортизация" /
+# "Abschreibung"). Matching 27k+ aliases through the special-char regex above is far too slow
+# (~24ms/call), so these are matched by token n-gram lookup instead — O(text length), and it
+# never shadows a tech-dictionary entry (the regex layer still owns C++/.NET/etc.).
+_WORD = re.compile(r"\w+", re.UNICODE)
+
+
+def _norm_phrase(s: str) -> str:
+    return " ".join(_WORD.findall((s or "").lower()))
+
+
+try:
+    from .esco_skills_data import ESCO_SKILLS
+except ImportError:                                  # data file not generated yet
+    ESCO_SKILLS = {}
+
+_ESCO_CANON: dict[str, str] = {}
+for _en, _als in ESCO_SKILLS.items():
+    _cen = _norm_phrase(_en)
+    if not _cen or _cen in _CANON:                   # a tech-dictionary skill keeps its meaning
+        continue
+    _ESCO_CANON.setdefault(_cen, _cen)
+    for _a in _als:
+        _ca = _norm_phrase(_a)
+        if _ca and _ca not in _CANON:
+            _ESCO_CANON.setdefault(_ca, _cen)
+_ESCO_MAXN = min(max((len(p.split()) for p in _ESCO_CANON), default=1), 6)
+
+
+def _esco_skills(text: str) -> set[str]:
+    """Canonical ESCO skills found in text via 1..N-gram lookup (handles any language's phrase)."""
+    if not _ESCO_CANON:
+        return set()
+    toks = _WORD.findall((text or "").lower())
+    out: set[str] = set()
+    for i in range(len(toks)):
+        for n in range(1, min(_ESCO_MAXN, len(toks) - i) + 1):
+            c = _ESCO_CANON.get(" ".join(toks[i:i + n]))
+            if c:
+                out.add(c)
+    return out
+
+
 def canon_skill(s: str) -> str:
     """Canonical form of one skill string ('React.js' -> 'react'); unknowns lowercase as-is.
     The LLM annotator emits hyphen-joined tags ('jetpack-compose'); if the raw form isn't in the
@@ -158,7 +202,10 @@ def canon_skill(s: str) -> str:
     if low in _CANON:
         return _CANON[low]
     spaced = low.replace("-", " ").replace("_", " ")
-    return _CANON.get(spaced, low)
+    if spaced in _CANON:
+        return _CANON[spaced]
+    esco = _ESCO_CANON.get(_norm_phrase(low))        # cross-language ESCO skill
+    return esco if esco else low
 
 
 def is_known(s: str) -> bool:
@@ -166,8 +213,10 @@ def is_known(s: str) -> bool:
 
 
 def extract_skills(text: str) -> set[str]:
-    """All canonical skills mentioned in free text (profile skills field, requirement text)."""
-    return {_CANON[m.group(1).lower()] for m in _ALIAS_RE.finditer(text or "")}
+    """All canonical skills in free text — the tech dictionary (special-char regex) plus the
+    ESCO cross-language layer (token n-gram), so BG/EN/… skill names collapse together."""
+    return ({_CANON[m.group(1).lower()] for m in _ALIAS_RE.finditer(text or "")}
+            | _esco_skills(text))
 
 
 # "skill:5", "Java 3y", "Kotlin (5 years)", "Python:2г" — a trailing years count on a skill.
