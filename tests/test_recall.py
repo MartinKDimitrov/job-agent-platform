@@ -74,7 +74,7 @@ def test_cache_invalidation_on_ingest(monkeypatch):
     monkeypatch.setattr(crawl, "embed_passage", lambda text: [1.0, 0.0])
     monkeypatch.setattr(crawl, "embed_query", lambda text: [1.0, 0.0])
     with SessionLocal() as db:
-        p = _make_profile_row(db, target_roles="Backend", skills="Python")
+        p = _make_profile_row(db, target_roles="Android", skills="Kotlin")
         assert crawl.search_db(db, p)["scored"] == 0   # cache loaded: empty index
         crawl.ingest_from_sources(db)                  # adds postings + invalidates cache
         res = crawl.search_db(db, p)

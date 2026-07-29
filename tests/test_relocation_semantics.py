@@ -15,10 +15,11 @@ from tests.test_recall import _post
 
 
 class _Prof:
-    def __init__(self, remote_pref="remote", relocate=False, location_pref="", country="Bulgaria"):
+    def __init__(self, remote_pref="remote", relocate=False, location_pref="", country="Bulgaria",
+                 target_roles="Backend Developer"):
         self.remote_pref, self.relocate = remote_pref, relocate
         self.location_pref, self.country = location_pref, country
-        self.target_roles = "Backend Developer"
+        self.target_roles = target_roles
         self.experience = ""
 
 
@@ -55,11 +56,13 @@ def test_is_remote_detects_role_from_text_and_title():
 
 def test_remote_role_with_city_location_reaches_remote_seeker():
     # a Berlin company advertising an EU-remote position — location names a city, role is remote
-    ok, _ = passes_hard_filters(_Prof(remote_pref="remote", relocate=True),
+    ok, _ = passes_hard_filters(_Prof(remote_pref="remote", relocate=True,
+                                      target_roles="Android Developer"),
                                 "Android Developer", "Berlin, Deutschland",
                                 "A 100% remote position, work from anywhere in the EU.")
     assert ok is True
-    ok2, _ = passes_hard_filters(_Prof(remote_pref="remote", relocate=True),
+    ok2, _ = passes_hard_filters(_Prof(remote_pref="remote", relocate=True,
+                                       target_roles="Android Developer"),
                                  "Android Developer - Remote", "Warszawa", "Kotlin needed.")
     assert ok2 is True
 
@@ -88,7 +91,7 @@ def test_onsite_seeker_excludes_pure_remote_role():
 
 
 def test_onsite_seeker_keeps_hybrid_and_office_roles():
-    p = _Prof(remote_pref="onsite")
+    p = _Prof(remote_pref="onsite", target_roles="Android Developer")
     assert passes_hard_filters(p, "Android Engineer", "Sofia", "Office-based role.")[0] is True
     assert passes_hard_filters(p, "Android Engineer", "",
                                "Hybrid work, 2 days in the office.")[0] is True
@@ -96,7 +99,7 @@ def test_onsite_seeker_keeps_hybrid_and_office_roles():
 
 def test_onsite_seeker_with_city_drops_other_city_named_in_text():
     # location_pref=Sofia, the posting is a Plovdiv role stated only in the text (empty location)
-    p = _Prof(remote_pref="onsite", location_pref="София")
+    p = _Prof(remote_pref="onsite", location_pref="София", target_roles="Android Developer")
     assert passes_hard_filters(p, "Senior Android Developer", "",
                                "Flexible hybrid work in Plovdiv, Bulgaria.")[:2] == (False, "location")
     # the preferred city named -> kept
