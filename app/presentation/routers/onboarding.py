@@ -242,8 +242,9 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
       </div>
       <label style='margin-top:14px;display:block'>{escape(S['more'])}
         <input id='extra' name='extra_skills' placeholder='{escape(S['more_ph'])}'></label>
-      <p class='ob-nav'><a href='#' class='back' data-back='3'>{escape(S['back'])}</a>
-        <button class='btn big' id='create'>{escape(S['create'])}</button></p>
+      <div class='ob-nav s4-nav'><a href='#' class='back' data-back='3'>{escape(S['back'])}</a>
+        <span class='s4-right'><span id='sk-count' class='sk-count small'></span>
+        <button class='btn big' id='create'>{escape(S['create'])}</button></span></div>
     </section>
   </form>
 </div>
@@ -252,6 +253,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
 window.OB_SHOW={json.dumps(S['show_more'])};window.OB_HIDE={json.dumps(S['hide_more'])};
 window.OB_NPROF={json.dumps(S['n_prof'])};window.OB_OCCIN={json.dumps(S['occ_in'])};window.OB_NOMATCH={json.dumps(S['no_match'])};
 window.OB_LANGS={langs_json};window.OB_LANGLVL={json.dumps(S['lang_lvl'])};window.OB_LANGNONE={json.dumps(S['lang_none'])};
+window.OB_SKCOUNT={json.dumps(S['s4_count'])};
 {_ob_script(lang)}</script>"""
 
 
@@ -276,6 +278,7 @@ def _step_strings(lang: str) -> dict:
         "lang_sub": L("Добавете езиците, които владеете, и посочете ниво по желание.",
                       "Add the languages you speak, optionally with a level."),
         "s4_h": L("Твоите квалификации", "Your qualifications"),
+        "s4_count": L("избрани умения", "selected skills"),
         "s4_hint": L("Отбележи какво владееш и въведи години практика за всяко.",
                      "Mark what you have and enter years of practice for each."),
         "country": L("Държава", "Country"), "city": L("Град", "City"),
@@ -306,9 +309,10 @@ def _step_strings(lang: str) -> dict:
 def _ob_style() -> str:
     return """<style>
     #ob .ob-steps{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 26px;font-size:13.5px}
-    #ob .st{padding:8px 16px;border-radius:999px;background:var(--gray-soft);color:var(--muted);
-      font-weight:600}
-    #ob .st.on{background:var(--navy);color:var(--on-accent)}
+    #ob .st{padding:7px 14px;border-radius:999px;background:transparent;color:var(--muted);
+      font-weight:600;border:1px solid var(--line,#e5e8ee)}
+    #ob .st.done{background:var(--green-soft);color:var(--navy);border-color:transparent}
+    #ob .st.on{background:var(--navy);color:var(--on-accent);border-color:transparent}
     #ob .ob-panel{animation:obin .2s ease}
     #ob .ob-panel.hide{display:none}
     @keyframes obin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -420,20 +424,36 @@ def _ob_style() -> str:
     #ob .opt-toggle .opt-n{color:var(--muted,#889);font-weight:400;margin-left:2px}
     #ob #skills-opt{margin-top:10px}
     #ob #skills-opt.hide{display:none}
-    #ob .skills{display:flex;flex-wrap:wrap;gap:8px}
-    #ob .skill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e5e8ee);
-      border-radius:20px;padding:4px 6px 4px 12px;font-size:13px;opacity:.55}
-    #ob .skill.on{opacity:1;border-color:var(--navy);background:var(--green-soft)}
-    #ob .skill.ess .lbl::after{content:' •';color:var(--navy)}
-    #ob .skill .lbl{cursor:pointer}
-    #ob .skill .yrs{width:44px;padding:2px 4px;font-size:12px;border-radius:6px;
-      border:1px solid var(--line,#e5e8ee);display:none}
+    #ob .skills{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+    @media(max-width:560px){#ob .skills{grid-template-columns:minmax(0,1fr)}}
+    #ob .skill{display:flex;align-items:center;gap:10px;cursor:pointer;min-width:0;
+      border:1px solid var(--line,#e5e8ee);border-radius:12px;padding:11px 13px;
+      font-size:14px;background:var(--card,#fff);transition:border-color .12s,background .12s}
+    #ob .skill:hover{border-color:var(--navy)}
+    #ob .skill.on{border-color:var(--navy);background:var(--green-soft)}
+    #ob .skill .sk-cb{flex:none;width:20px;height:20px;border-radius:6px;
+      border:1.5px solid var(--line,#cdd3de);background:var(--card,#fff);
+      display:flex;align-items:center;justify-content:center;transition:all .12s}
+    #ob .skill .sk-cb::after{content:'✓';color:#fff;font-size:13px;font-weight:700;
+      line-height:1;opacity:0;transform:scale(.6);transition:all .12s}
+    #ob .skill.on .sk-cb{background:var(--navy);border-color:var(--navy)}
+    #ob .skill.on .sk-cb::after{opacity:1;transform:scale(1)}
+    #ob .skill .sk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #ob .skill.ess .sk-name::after{content:' •';color:var(--navy)}
+    #ob .skill .yrs{width:48px;padding:4px 6px;font-size:13px;border-radius:8px;
+      border:1px solid var(--line,#e5e8ee);display:none;background:var(--card,#fff)}
     #ob .skill.on .yrs{display:inline-block}
-    #ob .skill .yl{font-size:11px;color:var(--muted,#889);display:none}
+    #ob .skill .yl{font-size:12px;color:var(--muted,#889);display:none}
     #ob .skill.on .yl{display:inline}
-    #ob .skill .crs{display:none;font-size:11px;padding:1px 7px;border-radius:10px;cursor:pointer;
-      border:1px dashed var(--line,#c9cfdb);color:var(--muted,#778)}
+    #ob .skill .crs{display:none;font-size:11px;padding:3px 9px;border-radius:10px;cursor:pointer;
+      border:1px dashed var(--line,#c9cfdb);color:var(--muted,#778);white-space:nowrap}
     #ob .skill.on .crs{display:inline}
+    #ob .skill.crs-on .crs{border-style:solid;border-color:var(--navy);
+      color:var(--navy);background:var(--green-soft)}
+    #ob .skill.crs-on .yrs,#ob .skill.crs-on .yl{opacity:.35}
+    #ob .s4-nav{display:flex;align-items:center;justify-content:space-between}
+    #ob .s4-nav .s4-right{display:flex;align-items:center;gap:14px}
+    #ob .sk-count{color:var(--muted,#889);font-size:13px}
     #ob .skill.crs-on .crs{background:var(--navy);color:#fff;border-style:solid}
     #ob .skill.crs-on .yrs,#ob .skill.crs-on .yl{opacity:.35}
     #ob .ob-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
@@ -448,7 +468,8 @@ def _ob_script(lang: str) -> str:
   var qs=function(s){return ob.querySelector(s);};
   function show(n){
     ob.querySelectorAll('.ob-panel').forEach(function(p){p.classList.toggle('hide',p.dataset.s!=String(n));});
-    ob.querySelectorAll('.st').forEach(function(s){s.classList.toggle('on',Number(s.dataset.s)<=n);});
+    ob.querySelectorAll('.st').forEach(function(s){var i=Number(s.dataset.s);
+      s.classList.toggle('on',i===n); s.classList.toggle('done',i<n);});
   }
   function debounce(fn,ms){var t;return function(){var a=arguments,c=this;clearTimeout(t);
     t=setTimeout(function(){fn.apply(c,a);},ms);};}
@@ -594,10 +615,10 @@ def _ob_script(lang: str) -> str:
   qs('#occsearch').addEventListener('keydown',function(e){if(e.key==='Enter')e.preventDefault();});
 
   function makeChip(s, selected){
-    var chip=document.createElement('span'); chip.className='skill'+(s.essential?' ess':'')+(selected?' on':'');
+    var chip=document.createElement('div'); chip.className='skill'+(selected?' on':'');
     chip.dataset.label=s.label;
-    var lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=s.label;
-    lbl.onclick=function(){chip.classList.toggle('on');};
+    var cb=document.createElement('span'); cb.className='sk-cb';
+    var nm=document.createElement('span'); nm.className='sk-name'; nm.textContent=s.label;
     var yr=document.createElement('input'); yr.type='number'; yr.min=0; yr.max=50;
     yr.className='yrs'; yr.placeholder='0';
     var yl=document.createElement('span'); yl.className='yl'; yl.textContent=window.OB_YRS||'yrs';
@@ -605,10 +626,14 @@ def _ob_script(lang: str) -> str:
     var crs=document.createElement('span'); crs.className='crs'; crs.textContent=window.OB_CRS||'courses';
     crs.title=window.OB_CRS; crs.onclick=function(e){e.stopPropagation();
       chip.classList.toggle('crs-on'); yr.disabled=chip.classList.contains('crs-on');
-      if(chip.classList.contains('crs-on'))chip.classList.add('on');};
-    chip.appendChild(lbl); chip.appendChild(yr); chip.appendChild(yl); chip.appendChild(crs);
+      if(chip.classList.contains('crs-on'))chip.classList.add('on'); updateCount();};
+    yr.onclick=function(e){e.stopPropagation();};
+    chip.onclick=function(e){if(e.target===yr||e.target===crs)return; chip.classList.toggle('on'); updateCount();};
+    chip.appendChild(cb); chip.appendChild(nm); chip.appendChild(yr); chip.appendChild(yl); chip.appendChild(crs);
     return chip;
   }
+  function updateCount(){var n=ob.querySelectorAll('.skills .skill.on').length;
+    var el=qs('#sk-count'); if(el)el.textContent=n+' '+(window.OB_SKCOUNT||'');}
   async function pickOcc(o){
     f_occ.value=o.id; qs('#pickedocc').textContent='· '+o.label;
     var sk=await getJSON('/onboarding/api/skills?occupation_id='+o.id);
@@ -621,7 +646,7 @@ def _ob_script(lang: str) -> str:
     qs('#opt-group').style.display = nopt ? '' : 'none';
     qs('#opt-n').textContent = nopt ? ('('+nopt+')') : '';
     opt.classList.add('hide'); qs('#opt-verb').textContent = window.OB_SHOW||'Show more';
-    show(4);
+    updateCount(); show(4);
   }
   qs('#opt-toggle').onclick=function(){
     var hidden=qs('#skills-opt').classList.toggle('hide');
