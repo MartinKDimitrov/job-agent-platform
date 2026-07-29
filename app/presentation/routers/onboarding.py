@@ -160,8 +160,6 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
                              for v, bg, en in _LANGUAGES], ensure_ascii=False)
     return f"""
 <div class='card ob' id='ob'>
-  <h2 class='ob-title'>{escape(heading)}</h2>
-  <p class='small'>{escape(sub)}</p>
   <div class='ob-steps'>
     <span class='st on' data-s='1'>1 · {escape(S['s1'])}</span>
     <span class='st' data-s='2'>2 · {escape(S['s2'])}</span>
@@ -186,7 +184,6 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
         <label>{escape(S['english'])}<select name='english_level' class='cselect'>{cefr}</select></label>
         <div class='wide lang-picker'>
           <label>{escape(S['langs'])}</label>
-          <p class='small lp-sub'>{escape(S['lang_sub'])}</p>
           <div class='lp-search-wrap'>
             <input type='search' id='lang-search' placeholder='{escape(S['lang_ph'])}' autocomplete='off'>
             <div id='lang-sugg' class='lp-sugg hide'></div>
