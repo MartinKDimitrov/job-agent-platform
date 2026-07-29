@@ -306,8 +306,12 @@ def _step_strings(lang: str) -> dict:
 def _ob_style() -> str:
     return """<style>
     #ob .ob-steps{display:flex;gap:8px;margin:4px 0 26px;font-size:13.5px}
-    #ob .st{flex:1;text-align:center;padding:7px 14px;border-radius:999px;background:transparent;
-      color:var(--muted);font-weight:600;border:1px solid var(--line,#e5e8ee)}
+    #ob .st{flex:1;text-align:center;white-space:nowrap;padding:7px 14px;border-radius:999px;
+      background:transparent;color:var(--muted);font-weight:600;border:1px solid var(--line,#e5e8ee)}
+    @media(max-width:560px){
+      #ob .ob-steps{flex-wrap:wrap;gap:6px}
+      #ob .st{flex:0 0 auto;font-size:12.5px;padding:6px 12px}
+    }
     #ob .st.done{background:var(--green-soft);color:var(--navy);border-color:transparent}
     #ob .st.on{background:var(--navy);color:var(--on-accent);border-color:transparent}
     #ob .st.nav{cursor:pointer}
@@ -448,6 +452,7 @@ def _ob_style() -> str:
     #ob .skill.on .sk-cb{background:var(--navy);border-color:var(--navy)}
     #ob .skill.on .sk-cb::after{opacity:1;transform:scale(1)}
     #ob .skill .sk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    @media(max-width:560px){#ob .skill .sk-name{white-space:normal;overflow-wrap:anywhere}}
     #ob .skill.ess .sk-name::after{content:' •';color:var(--navy)}
     #ob .skill .yrs{width:48px;padding:4px 6px;font-size:13px;border-radius:8px;
       border:1px solid var(--line,#e5e8ee);display:none;background:var(--card,#fff)}
