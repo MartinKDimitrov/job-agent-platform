@@ -44,13 +44,15 @@ def groups(db: Session, vertical: str, parent_code: str | None = None,
 def leaf_groups(db: Session, vertical: str, lang: str = "bg") -> list[dict]:
     """Every group in a vertical that has occupations directly under it — the flat subcategory
     list the onboarding shows after the user picks a vertical (intermediate ISCO levels skipped)."""
-    with_occ = {c for (c,) in db.execute(
-        select(Occupation.isco_code).where(Occupation.vertical == vertical).distinct()).all()}
-    if not with_occ:
+    counts = dict(db.execute(
+        select(Occupation.isco_code, func.count()).where(Occupation.vertical == vertical)
+        .group_by(Occupation.isco_code)).all())
+    if not counts:
         return []
     rows = db.execute(select(OccupationGroup).where(
-        OccupationGroup.vertical == vertical, OccupationGroup.isco_code.in_(with_occ))).scalars()
-    out = [{"isco_code": g.isco_code, "label": _label(g, lang)} for g in rows]
+        OccupationGroup.vertical == vertical, OccupationGroup.isco_code.in_(counts))).scalars()
+    out = [{"isco_code": g.isco_code, "label": _label(g, lang), "count": counts.get(g.isco_code, 0)}
+           for g in rows]
     out.sort(key=lambda g: g["label"].lower())
     return out
 

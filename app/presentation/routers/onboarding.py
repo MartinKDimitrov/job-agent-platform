@@ -182,9 +182,14 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
     <!-- STEP 3 — subcategory + occupation -->
     <section class='ob-panel hide' data-s='3'>
       <h2>{escape(S['s3_h'])}</h2>
+      <p class='small'>{escape(S['s3_sub'])}</p>
+      <div class='field-box'><span class='fb-ic' id='fb-ic'></span>
+        <div><div class='fb-label'>{escape(S['field_label'])}</div>
+          <div class='fb-name' id='fb-name'></div></div></div>
       <input type='search' id='occsearch' placeholder='{escape(S['search'])}' autocomplete='off'>
-      <div id='subcats' class='cats sub'></div>
-      <div id='occlist' class='cats occ'></div>
+      <div class='groups-h' id='groups-h'>{escape(S['groups_h'])}</div>
+      <div id='subcats' class='acc'></div>
+      <div id='searchres' class='searchres'></div>
       <p class='ob-nav'><a href='#' class='back' data-back='2'>{escape(S['back'])}</a></p>
     </section>
 
@@ -218,6 +223,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
 {_ob_style()}
 <script>window.OB_YRS={json.dumps(S['yrs'])};window.OB_CRS={json.dumps(S['courses'])};
 window.OB_SHOW={json.dumps(S['show_more'])};window.OB_HIDE={json.dumps(S['hide_more'])};
+window.OB_NPROF={json.dumps(S['n_prof'])};window.OB_OCCIN={json.dumps(S['occ_in'])};window.OB_NOMATCH={json.dumps(S['no_match'])};
 {_ob_script(lang)}</script>"""
 
 
@@ -228,7 +234,14 @@ def _step_strings(lang: str) -> dict:
         "s3": L("Професия", "Occupation"), "s4": L("Умения", "Skills"),
         "s1_h": L("Първо накратко за теб", "First, a bit about you"),
         "s2_h": L("В коя област търсиш работа?", "Which field are you in?"),
-        "s3_h": L("Избери своята професия", "Pick your occupation"),
+        "s3_h": L("Коя е вашата професия?", "What's your occupation?"),
+        "s3_sub": L("Изберете група професии, после конкретната позиция под нея.",
+                    "Pick an occupation group, then the specific role under it."),
+        "field_label": L("Сфера", "Field"),
+        "groups_h": L("Групи професии", "Occupation groups"),
+        "occ_in": L("Професии в", "Occupations in"),
+        "n_prof": L("професии", "occupations"),
+        "no_match": L("Няма съвпадения за", "No matches for"),
         "s4_h": L("Твоите квалификации", "Your qualifications"),
         "s4_hint": L("Отбележи какво владееш и въведи години практика за всяко.",
                      "Mark what you have and enter years of practice for each."),
@@ -280,14 +293,45 @@ def _ob_style() -> str:
     #ob .ac div{padding:8px 12px;cursor:pointer;font-size:14px}
     #ob .ac div:hover,#ob .ac div.sel{background:var(--line,#eef1f6)}
     #ob .cats{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0}
-    #ob .cat,#ob .sc,#ob .oc{border:1px solid var(--line,#e5e8ee);background:var(--card);
-      border-radius:10px;padding:12px 16px;cursor:pointer;font-size:15px;text-align:left}
-    #ob .cat{display:flex;align-items:center;gap:10px;min-width:150px}
+    #ob .cat{border:1px solid var(--line);background:var(--card);border-radius:12px;
+      padding:12px 16px;cursor:pointer;font-size:15px;text-align:left;
+      display:flex;align-items:center;gap:10px;min-width:150px;color:var(--ink)}
     #ob .cat .ic{font-size:20px}
-    #ob .sc.on,#ob .oc.on,#ob .cat:hover,#ob .sc:hover,#ob .oc:hover{border-color:var(--navy)}
-    #ob .cats.sub .sc{font-size:14px;padding:9px 13px}
-    #ob .cats.sub,#ob .cats.occ{flex-direction:column;margin-top:10px}
-    #ob #occsearch{width:100%;margin:6px 0 4px;padding:9px 12px}
+    #ob .cat:hover{border-color:var(--navy)}
+    #ob #occsearch{width:100%;margin:6px 0 4px;padding:10px 12px}
+    /* step 3 — field box (parent group) + accordion of occupation groups */
+    #ob .field-box{display:flex;align-items:center;gap:12px;margin:6px 0 14px;padding:12px 16px;
+      background:var(--green-soft);border:1px solid var(--navy);border-radius:12px}
+    #ob .fb-ic{font-size:22px}
+    #ob .fb-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    #ob .fb-name{font-size:14px;font-weight:700;color:var(--ink)}
+    #ob .fb-name .chev{color:var(--muted);font-weight:400}
+    #ob .groups-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+      color:var(--muted);margin:16px 0 8px}
+    #ob .acc{display:flex;flex-direction:column;gap:10px}
+    #ob .acc-item{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+    #ob .acc-item.open{border-color:var(--navy)}
+    #ob .acc-head{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+      padding:13px 16px;background:none;border:0;cursor:pointer;text-align:left;color:var(--ink)}
+    #ob .acc-head:hover{background:var(--gray-soft)}
+    #ob .acc-item.open .acc-head{background:var(--navy);color:var(--on-accent)}
+    #ob .ah-title{display:block;font-size:14px;font-weight:700}
+    #ob .ah-count{display:block;font-size:12px;color:var(--muted)}
+    #ob .acc-item.open .ah-count{color:var(--on-accent);opacity:.85}
+    #ob .acc-item.open .ah-chev{transform:rotate(90deg)}
+    #ob .ah-chev{transition:transform .15s ease;flex-shrink:0}
+    #ob .acc-body{border-top:1px solid var(--line);padding:8px 14px 10px 22px}
+    #ob .acc-body-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+      color:var(--muted);padding:4px 6px}
+    #ob .occ-list{display:flex;flex-direction:column;border-left:2px solid var(--green-soft);padding-left:6px}
+    #ob .searchres .occ-list{border-left:0;padding-left:0}
+    #ob .occ{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+      padding:10px 12px;background:none;border:0;border-radius:9px;cursor:pointer;text-align:left;
+      font-size:14px;color:var(--ink)}
+    #ob .occ:hover{background:var(--gray-soft)}
+    #ob .occ .oa{color:var(--muted);flex-shrink:0}
+    #ob .no-match{padding:22px;text-align:center;color:var(--muted);border:1px solid var(--line);
+      border-radius:12px;background:var(--card)}
     #ob .bulk-years{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0 14px;
       padding:12px 14px;background:var(--green-soft);border:1px solid var(--line,#dbe3ea);
       border-radius:10px}
@@ -355,24 +399,61 @@ def _ob_script(lang: str) -> str:
   city.addEventListener('focus',loadCities);
   document.addEventListener('click',function(e){if(!clist.contains(e.target)&&e.target!=city)clist.classList.remove('show');});
 
-  // category -> subcats -> occupations
+  // category -> field box + accordion of occupation GROUPS -> nested occupations
   var f_occ=qs('#f_occ');
+  function occRow(o){
+    var b=document.createElement('button'); b.type='button'; b.className='occ';
+    var l=document.createElement('span'); l.className='ol'; l.textContent=o.label;
+    var a=document.createElement('span'); a.className='oa'; a.textContent='→';
+    b.appendChild(l); b.appendChild(a); b.onclick=function(){pickOcc(o);}; return b;
+  }
+  function occList(list){var ul=document.createElement('div'); ul.className='occ-list';
+    list.forEach(function(o){ul.appendChild(occRow(o));}); return ul;}
   ob.querySelectorAll('.cat').forEach(function(b){b.onclick=async function(){
-    show(3); qs('#occsearch').value=''; qs('#occlist').innerHTML='';
+    show(3); qs('#occsearch').value='';
+    var ic=(b.querySelector('.ic')||{}).textContent||'';
+    qs('#fb-ic').textContent=ic;
+    qs('#fb-name').innerHTML=''; var nm=document.createElement('span');
+    nm.textContent=b.textContent.replace(ic,'').trim();
+    var cv=document.createElement('span'); cv.className='chev'; cv.textContent=' ›';
+    qs('#fb-name').appendChild(nm); qs('#fb-name').appendChild(cv);
+    var sr=qs('#searchres'); sr.innerHTML=''; sr.classList.remove('show'); qs('#groups-h').style.display='';
     var data=await getJSON('/onboarding/api/subcats?vertical='+encodeURIComponent(b.dataset.v));
-    var box=qs('#subcats'); box.innerHTML='';
-    data.forEach(function(g){var s=document.createElement('button');s.type='button';s.className='sc';
-      s.textContent=g.label;s.onclick=function(){selectSub(s);loadOccs(g.isco_code);};box.appendChild(s);});
+    var box=qs('#subcats'); box.innerHTML=''; box.style.display='';
+    data.forEach(function(g){
+      var item=document.createElement('div'); item.className='acc-item';
+      var head=document.createElement('button'); head.type='button'; head.className='acc-head';
+      var lwrap=document.createElement('span'); lwrap.className='ah-l';
+      var ti=document.createElement('span'); ti.className='ah-title'; ti.textContent=g.label;
+      var cn=document.createElement('span'); cn.className='ah-count'; cn.textContent=g.count+' '+(window.OB_NPROF||'');
+      lwrap.appendChild(ti); lwrap.appendChild(cn);
+      var chev=document.createElement('span'); chev.className='ah-chev'; chev.textContent='▸';
+      head.appendChild(lwrap); head.appendChild(chev);
+      var body=document.createElement('div'); body.className='acc-body hide';
+      head.onclick=async function(){
+        var open=item.classList.toggle('open'); body.classList.toggle('hide',!open);
+        if(open && !body.dataset.loaded){
+          body.dataset.loaded='1';
+          var occs=await getJSON('/onboarding/api/occupations?isco='+encodeURIComponent(g.isco_code));
+          var oh=document.createElement('div'); oh.className='acc-body-h';
+          oh.textContent=(window.OB_OCCIN||'')+' „'+g.label+'"';
+          body.appendChild(oh); body.appendChild(occList(occs));
+        }
+      };
+      item.appendChild(head); item.appendChild(body); box.appendChild(item);
+    });
   };});
-  function selectSub(el){qs('#subcats').querySelectorAll('.sc').forEach(function(x){x.classList.remove('on');});el.classList.add('on');}
-  async function loadOccs(isco){renderOccs(await getJSON('/onboarding/api/occupations?isco='+encodeURIComponent(isco)));}
-  function renderOccs(list){var box=qs('#occlist');box.innerHTML='';
-    list.forEach(function(o){var b=document.createElement('button');b.type='button';b.className='oc';
-      b.textContent=o.label;b.onclick=function(){pickOcc(o);};box.appendChild(b);});}
+  // search -> flat results (hides the accordion)
   qs('#occsearch').addEventListener('input',debounce(async function(e){
-    var q=e.target.value.trim(); if(q.length<2){return;}
-    qs('#subcats').querySelectorAll('.sc').forEach(function(x){x.classList.remove('on');});
-    renderOccs(await getJSON('/onboarding/api/search?q='+encodeURIComponent(q)));},220));
+    var q=e.target.value.trim(); var box=qs('#subcats'), gh=qs('#groups-h'), sr=qs('#searchres');
+    if(q.length<2){box.style.display='';gh.style.display='';sr.innerHTML='';sr.classList.remove('show');return;}
+    box.style.display='none'; gh.style.display='none';
+    var res=await getJSON('/onboarding/api/search?q='+encodeURIComponent(q));
+    sr.innerHTML=''; sr.classList.add('show');
+    if(!res.length){var nm=document.createElement('div');nm.className='no-match';
+      nm.textContent=(window.OB_NOMATCH||'')+' „'+q+'"';sr.appendChild(nm);return;}
+    sr.appendChild(occList(res));
+  },220));
   qs('#occsearch').addEventListener('keydown',function(e){if(e.key==='Enter')e.preventDefault();});
 
   function makeChip(s, selected){
