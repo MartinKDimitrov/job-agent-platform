@@ -56,6 +56,12 @@ if __name__ == "__main__":
         src = mode.split("_")[0]
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else None
         print(aggregator_drain.run_drain(src, SessionLocal, call_budget=budget))
+    elif mode in ("careerjet_fast", "jooble_fast"):
+        # concurrent bulk-drain (AGG_CONCURRENCY=8): <mode> [call_budget]
+        from .application.usecases import aggregator_drain
+        src = mode.split("_")[0]
+        budget = int(sys.argv[2]) if len(sys.argv) > 2 else None
+        print(aggregator_drain.run_drain_concurrent(src, SessionLocal, call_budget=budget))
     elif mode == "eures":
         # blanket-pull EURES (the EU countries other sources miss) + persist. pages default 2.
         from .data.sources import eures
