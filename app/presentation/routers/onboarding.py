@@ -561,7 +561,7 @@ def _ob_script(lang: str) -> str:
   var f_occ=qs('#f_occ');
   function occRow(o){
     var b=document.createElement('button'); b.type='button'; b.className='occ';
-    var l=document.createElement('span'); l.className='ol'; l.textContent=o.label;
+    var l=document.createElement('span'); l.className='ol'; l.textContent=o.label; l.title=o.label;
     var a=document.createElement('span'); a.className='oa'; a.textContent='→';
     b.appendChild(l); b.appendChild(a); b.onclick=function(){pickOcc(o);}; return b;
   }
@@ -593,9 +593,7 @@ def _ob_script(lang: str) -> str:
         if(open && !body.dataset.loaded){
           body.dataset.loaded='1';
           var occs=await getJSON('/onboarding/api/occupations?isco='+encodeURIComponent(g.isco_code));
-          var oh=document.createElement('div'); oh.className='acc-body-h';
-          oh.textContent=(window.OB_OCCIN||'')+' „'+g.label+'"';
-          body.appendChild(oh); body.appendChild(occList(occs));
+          body.appendChild(occList(occs));
         }
       };
       item.appendChild(head); item.appendChild(body); box.appendChild(item);
@@ -618,7 +616,7 @@ def _ob_script(lang: str) -> str:
     var chip=document.createElement('div'); chip.className='skill'+(selected?' on':'');
     chip.dataset.label=s.label;
     var cb=document.createElement('span'); cb.className='sk-cb';
-    var nm=document.createElement('span'); nm.className='sk-name'; nm.textContent=s.label;
+    var nm=document.createElement('span'); nm.className='sk-name'; nm.textContent=s.label; nm.title=s.label;
     var yr=document.createElement('input'); yr.type='number'; yr.min=0; yr.max=50;
     yr.className='yrs'; yr.placeholder='0';
     var yl=document.createElement('span'); yl.className='yl'; yl.textContent=window.OB_YRS||'yrs';
