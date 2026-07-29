@@ -140,26 +140,45 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
 # a 15-min host backoff (http._note_429). So 4 is the sweet spot. (429 is the hard limit; 503 is
 # soft per-request load-shedding — see the adzuna-limit-fallback memo.)
 DEFAULT_CONCURRENCY = int(os.getenv("ADZUNA_CONCURRENCY", "4"))
+# Adzuna serves "full" pages arbitrarily deep, but past ~page 100 it recycles content: measured
+# yield on slices already >page 100 was ~0.7 new jobs kept per 50-job page (~1.4%). So a slice that
+# never hits a short page would otherwise be paged to depth 1000+ forever for almost nothing. Cap
+# the depth and also retire a slice the moment a non-shallow page yields zero new — that window is
+# exhausted (cross-source dedup already has those jobs).
+DEFAULT_MAX_PAGE = int(os.getenv("ADZUNA_MAX_PAGE", "100"))
+_DRY_PAGE_FLOOR = 25            # only trust a zero-yield "exhausted" signal from page >= this
 
 
 def run_drain_concurrent(session_factory, *, max_calls: int = 20000,
-                         concurrency: int = DEFAULT_CONCURRENCY, countries=COUNTRIES,
-                         board_path: str | None = None, wave_backoff: float = 30.0,
-                         log=print, sleep=time.sleep) -> dict:
-    """Max-throughput resumable drain. Each wave: pick ``concurrency`` distinct least-pulled slices,
-    fetch their next page IN PARALLEL (the slow part — Adzuna's ~1.5s latency overlaps), then persist
-    the whole wave through ONE db session/commit so the flaky staging tunnel only ever sees a single
-    connection. Cursor durability is preserved (commit per wave). A 503/None page leaves its cursor
-    for next time; a wave that wholly fails (429 host-backoff or 503 storm) sleeps ``wave_backoff``
-    before trying again instead of spinning."""
+                         concurrency: int = DEFAULT_CONCURRENCY, max_page: int = DEFAULT_MAX_PAGE,
+                         countries=COUNTRIES, board_path: str | None = None,
+                         wave_backoff: float = 30.0, log=print, sleep=time.sleep) -> dict:
+    """Max-throughput resumable drain. Each wave: pick ``concurrency`` distinct least-pulled slices
+    (page <= ``max_page`` — deeper is recycled dupes), fetch their next page IN PARALLEL (the slow
+    part — Adzuna's ~1.5s latency overlaps), then persist the whole wave through ONE db
+    session/commit so the flaky staging tunnel only ever sees a single connection. Cursor durability
+    is preserved (commit per wave). A 503/None page leaves its cursor for next time; a wave that
+    wholly fails (429 host-backoff or 503 storm) sleeps ``wave_backoff`` before trying again. A slice
+    retires (done) on a short page, at the depth cap, or on a zero-yield page past ``_DRY_PAGE_FLOOR``."""
     if not adzuna._configured():
         return {"configured": False, "calls": 0, "added": 0, "waves": 0, "failed": 0}
     ensure_slices(session_factory, countries)
-    calls = added = waves = failed = 0
+    # One-time cleanup: retire slices already paged past the cap (legacy runaway to depth 1000+).
+    with session_factory() as db:
+        capped = db.execute(
+            select(AdzunaPull).where(AdzunaPull.done.is_(False),
+                                     AdzunaPull.next_page > max_page)).scalars().all()
+        for row in capped:
+            row.done = True
+        if capped:
+            db.commit()
+            log(f"retired {len(capped)} slices already past page {max_page} (recycled-dupe depth)")
+    calls = added = waves = failed = retired = 0
     while calls < max_calls:
         with session_factory() as db:
             rows = db.execute(
                 select(AdzunaPull).where(AdzunaPull.done.is_(False),
+                                         AdzunaPull.next_page <= max_page,
                                          AdzunaPull.country.in_(countries))
                 .order_by(AdzunaPull.pulled.asc(), AdzunaPull.category.asc(),
                           AdzunaPull.country.asc()).limit(concurrency)).scalars().all()
@@ -191,8 +210,12 @@ def run_drain_concurrent(session_factory, *, max_calls: int = 20000,
                 row.pulled += res["added"]
                 row.total = total or row.total
                 row.next_page = page + 1
-                if len(posts) < RESULTS_PER_PAGE:
+                # retire the slice when its useful window is spent: a short/empty page (truly
+                # drained), the depth cap, or a zero-yield page past the dry floor (recycled dupes).
+                if (len(posts) < RESULTS_PER_PAGE or row.next_page > max_page
+                        or (res["added"] == 0 and page >= _DRY_PAGE_FLOOR)):
                     row.done = True
+                    retired += 1
                 row.updated_at = datetime.utcnow()
                 wave_added += res["added"]
             db.commit()
@@ -210,7 +233,7 @@ def run_drain_concurrent(session_factory, *, max_calls: int = 20000,
             log(f"adzuna wave: +{wave_added} added, {ok_in_wave}/{len(results)} ok, "
                 f"total calls={calls}")
     return {"configured": True, "calls": calls, "added": added, "waves": waves, "failed": failed,
-            "concurrency": concurrency}
+            "retired": retired, "concurrency": concurrency, "max_page": max_page}
 
 
 def status(db) -> dict:
