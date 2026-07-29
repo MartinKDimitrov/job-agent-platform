@@ -75,6 +75,22 @@ _COUNTRY_CITIES: dict[str, list[str]] = {
 }
 
 
+# Language picker options: (stored EN value, BG label, EN label). Stored value is the English name
+# so the matcher (English-keyed) reads it consistently; the UI shows the localized label.
+_LANGUAGES = [
+    ("Bulgarian", "Български", "Bulgarian"), ("English", "Английски", "English"),
+    ("German", "Немски", "German"), ("French", "Френски", "French"),
+    ("Spanish", "Испански", "Spanish"), ("Italian", "Италиански", "Italian"),
+    ("Dutch", "Нидерландски", "Dutch"), ("Polish", "Полски", "Polish"),
+    ("Romanian", "Румънски", "Romanian"), ("Greek", "Гръцки", "Greek"),
+    ("Swedish", "Шведски", "Swedish"), ("Portuguese", "Португалски", "Portuguese"),
+    ("Czech", "Чешки", "Czech"), ("Hungarian", "Унгарски", "Hungarian"),
+    ("Croatian", "Хърватски", "Croatian"), ("Turkish", "Турски", "Turkish"),
+    ("Russian", "Руски", "Russian"), ("Ukrainian", "Украински", "Ukrainian"),
+    ("Arabic", "Арабски", "Arabic"), ("Chinese", "Китайски", "Chinese"),
+]
+
+
 def _L(lang: str, bg: str, en: str) -> str:
     return bg if lang == "bg" else en
 
@@ -140,6 +156,8 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
     cefr = "".join(f"<option{' selected' if lv == 'B2' else ''}>{lv}</option>"
                    for lv in ("A1", "A2", "B1", "B2", "C1", "C2"))
     S = _step_strings(lang)
+    langs_json = json.dumps([{"v": v, "l": (bg if lang == "bg" else en)}
+                             for v, bg, en in _LANGUAGES], ensure_ascii=False)
     return f"""
 <div class='card ob' id='ob'>
   <h2 class='ob-title'>{escape(heading)}</h2>
@@ -166,7 +184,16 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
           <div id='citylist' class='ac'></div></label>
         <label>{escape(S['work'])}<select name='remote_pref' class='cselect'>{remote_opts}</select></label>
         <label>{escape(S['english'])}<select name='english_level' class='cselect'>{cefr}</select></label>
-        <label class='wide'>{escape(S['langs'])}<input name='languages' value='Bulgarian, English'></label>
+        <div class='wide lang-picker'>
+          <label>{escape(S['langs'])}</label>
+          <p class='small lp-sub'>{escape(S['lang_sub'])}</p>
+          <div class='lp-search-wrap'>
+            <input type='search' id='lang-search' placeholder='{escape(S['lang_ph'])}' autocomplete='off'>
+            <div id='lang-sugg' class='lp-sugg hide'></div>
+          </div>
+          <div id='lang-chips' class='lp-chips'></div>
+          <input type='hidden' name='languages' id='f_languages'>
+        </div>
         <label class='chk'><input type='checkbox' name='relocate' value='1'> {escape(S['relocate'])}</label>
       </div>
       <p class='ob-nav'><button type='button' class='btn big block' data-next='2'>{escape(S['next'])}</button></p>
@@ -224,6 +251,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
 <script>window.OB_YRS={json.dumps(S['yrs'])};window.OB_CRS={json.dumps(S['courses'])};
 window.OB_SHOW={json.dumps(S['show_more'])};window.OB_HIDE={json.dumps(S['hide_more'])};
 window.OB_NPROF={json.dumps(S['n_prof'])};window.OB_OCCIN={json.dumps(S['occ_in'])};window.OB_NOMATCH={json.dumps(S['no_match'])};
+window.OB_LANGS={langs_json};window.OB_LANGLVL={json.dumps(S['lang_lvl'])};window.OB_LANGNONE={json.dumps(S['lang_none'])};
 {_ob_script(lang)}</script>"""
 
 
@@ -242,6 +270,11 @@ def _step_strings(lang: str) -> dict:
         "occ_in": L("Професии в", "Occupations in"),
         "n_prof": L("професии", "occupations"),
         "no_match": L("Няма съвпадения за", "No matches for"),
+        "lang_ph": L("Търсете език и го добавете…", "Search a language and add it…"),
+        "lang_none": L("Още няма добавени езици.", "No languages added yet."),
+        "lang_lvl": L("Ниво", "Level"),
+        "lang_sub": L("Добавете езиците, които владеете, и посочете ниво по желание.",
+                      "Add the languages you speak, optionally with a level."),
         "s4_h": L("Твоите квалификации", "Your qualifications"),
         "s4_hint": L("Отбележи какво владееш и въведи години практика за всяко.",
                      "Mark what you have and enter years of practice for each."),
@@ -292,6 +325,26 @@ def _ob_style() -> str:
     #ob .ac.show{display:block}
     #ob .ac div{padding:8px 12px;cursor:pointer;font-size:14px}
     #ob .ac div:hover,#ob .ac div.sel{background:var(--line,#eef1f6)}
+    /* language picker */
+    #ob .lang-picker .lp-sub{margin:2px 0 10px}
+    #ob .lp-search-wrap{position:relative}
+    #ob .lp-sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;max-height:220px;
+      overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;
+      box-shadow:var(--shadow-md,0 10px 28px rgba(0,0,0,.14))}
+    #ob .lp-sugg.hide{display:none}
+    #ob .lp-sug{display:block;width:100%;padding:9px 12px;border:0;border-radius:8px;background:none;
+      cursor:pointer;text-align:left;font-size:14px;color:var(--ink)}
+    #ob .lp-sug:hover{background:var(--gray-soft)}
+    #ob .lp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    #ob .lp-none{color:var(--muted);margin:6px 0 0}
+    #ob .lp-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;
+      border:1px solid var(--navy);background:var(--green-soft);border-radius:12px}
+    #ob .lp-name{font-size:13.5px;font-weight:600;color:var(--ink)}
+    #ob .lp-lvl{width:auto;min-height:30px;padding:4px 8px;font-size:12.5px;border-radius:8px;
+      border:1px solid var(--line-strong);background:var(--card);color:var(--ink)}
+    #ob .lp-rm{width:28px;height:28px;padding:0;border:0;border-radius:8px;background:none;cursor:pointer;
+      color:var(--muted);font-size:18px;line-height:1}
+    #ob .lp-rm:hover{background:var(--card);color:var(--ink)}
     /* custom dropdown (opens below, green check) */
     #ob .csw{position:relative}
     #ob .cs-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
@@ -427,6 +480,43 @@ def _ob_script(lang: str) -> str:
     wrap.appendChild(btn); wrap.appendChild(panel); wrap.appendChild(sel); sync();
   }
   ob.querySelectorAll('select.cselect').forEach(enhanceSelect);
+
+  // language picker: search + add as chips with optional CEFR level -> hidden #f_languages
+  (function(){
+    var search=qs('#lang-search'), sugg=qs('#lang-sugg'), chipbox=qs('#lang-chips'), hidden=qs('#f_languages');
+    if(!search) return;
+    var chosen=[], LEVELS=['','A1','A2','B1','B2','C1','C2'];
+    function serialize(){hidden.value=chosen.map(function(c){return c.level?(c.v+' '+c.level):c.v;}).join(', ');}
+    function render(){
+      chipbox.innerHTML='';
+      if(!chosen.length){var e=document.createElement('p');e.className='small lp-none';e.textContent=window.OB_LANGNONE||'';chipbox.appendChild(e);serialize();return;}
+      chosen.forEach(function(c,idx){
+        var chip=document.createElement('span'); chip.className='lp-chip';
+        var nm=document.createElement('span'); nm.className='lp-name'; nm.textContent=c.l;
+        var sel=document.createElement('select'); sel.className='lp-lvl';
+        LEVELS.forEach(function(lv){var o=document.createElement('option');o.value=lv;o.textContent=lv||(window.OB_LANGLVL||'—');if(lv===c.level)o.selected=true;sel.appendChild(o);});
+        sel.onchange=function(){c.level=sel.value;serialize();};
+        var rm=document.createElement('button'); rm.type='button'; rm.className='lp-rm'; rm.textContent='×';
+        rm.setAttribute('aria-label','×'); rm.onclick=function(){chosen.splice(idx,1);render();};
+        chip.appendChild(nm); chip.appendChild(sel); chip.appendChild(rm); chipbox.appendChild(chip);
+      });
+      serialize();
+    }
+    function suggest(){
+      var q=search.value.trim().toLowerCase(), taken={}; chosen.forEach(function(c){taken[c.v]=1;});
+      var res=(window.OB_LANGS||[]).filter(function(L){return !taken[L.v]&&(!q||L.l.toLowerCase().indexOf(q)>=0);}).slice(0,8);
+      sugg.innerHTML='';
+      if(!res.length){sugg.classList.add('hide');return;}
+      res.forEach(function(L){var b=document.createElement('button');b.type='button';b.className='lp-sug';b.textContent=L.l;
+        b.onmousedown=function(e){e.preventDefault();};b.onclick=function(){chosen.push({v:L.v,l:L.l,level:''});search.value='';sugg.classList.add('hide');render();};
+        sugg.appendChild(b);});
+      sugg.classList.remove('hide');
+    }
+    search.addEventListener('focus',suggest); search.addEventListener('input',suggest);
+    document.addEventListener('click',function(e){if(!sugg.contains(e.target)&&e.target!==search)sugg.classList.add('hide');});
+    ['Bulgarian','English'].forEach(function(v){var L=(window.OB_LANGS||[]).find(function(x){return x.v===v;});if(L)chosen.push({v:L.v,l:L.l,level:''});});
+    render();
+  })();
 
   // step nav
   ob.querySelectorAll('[data-next]').forEach(function(b){b.onclick=function(){show(Number(b.dataset.next));};});
