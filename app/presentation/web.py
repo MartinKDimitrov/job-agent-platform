@@ -73,6 +73,7 @@ _SVG_DEFS = """<svg width="0" height="0" style="position:absolute" aria-hidden="
 <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
 <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
 <symbol id="i-logo" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="var(--green)"/><path d="M16 8 L23 16 L16 24 L9 16 Z" fill="#fff"/></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
 </defs></svg>"""
 
 
@@ -143,6 +144,8 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
     content = body if full_bleed else f'<main class="wrap">{body}</main>'
     loading_msg = t("app.loading", lang)
     return f"""<!doctype html><html lang="{escape(lang)}"><head><meta charset="utf-8">
+<script>(function(){{try{{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}}catch(e){{}}}})();
+function __toggleTheme(){{var d=document.documentElement,n=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=n;try{{localStorage.setItem('theme',n)}}catch(e){{}}}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(title)}</title>
 {seo}
 {hl}
@@ -153,7 +156,7 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
 </head><body>
 {_SVG_DEFS}
 <header><span class="brand"><a href="/">{icon('logo', 'logo')}Job Agent</a></span>
-<span class="right">{right}</span></header>
+<span class="right"><button type="button" class="theme-toggle" onclick="__toggleTheme()" aria-label="Тема" title="Светла / тъмна тема">{icon('theme', 'icon')}</button>{right}</span></header>
 {content}
 <footer class="site">Job Agent</footer>
 <div id="loading-overlay" role="status" aria-live="polite">

@@ -21,6 +21,7 @@
   --green: oklch(63% .145 162);
   --green-hover: oklch(55% .14 162);
   --green-soft: oklch(94.5% .04 162);
+  --on-accent: #fff;   /* text on a green/accent background — flips dark on the brighter dark-mode green */
   /* Secondary accent — used sparingly (step numbers, ring end-cap, one hero word) */
   --amber: #e8963a;
   --amber-ink: #8a5410;
@@ -37,6 +38,37 @@
   --radius: 12px;
   --radius-sm: 9px;
   --sans: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Dark theme (ported from Lovable): brighter green accent, dark blue-grey ground. A tiny head
+   script stamps data-theme on <html> from localStorage or the OS preference, so this one block
+   drives every component (all read the same tokens). --on-accent flips dark for the brighter green. */
+:root[data-theme="dark"] {
+  --navy: oklch(80% .155 165);
+  --navy-hover: oklch(72% .15 165);
+  --navy-soft: oklch(32% .055 165);
+  --navy-blob: oklch(28% .04 165);
+  --ink: oklch(95.5% .006 240);
+  --muted: oklch(73% .014 240);
+  --line: oklch(100% 0 0 / .12);
+  --line-strong: oklch(100% 0 0 / .20);
+  --bg: oklch(18.5% .014 240);
+  --card: oklch(22.5% .015 240);
+  --green: oklch(80% .155 165);
+  --green-hover: oklch(72% .15 165);
+  --green-soft: oklch(32% .055 165);
+  --on-accent: oklch(19% .04 165);
+  --amber: oklch(80% .12 75);
+  --amber-ink: oklch(87% .10 75);
+  --amber-soft: oklch(30% .05 75);
+  --teal: oklch(80% .155 165);
+  --teal-ink: oklch(89% .10 165);
+  --teal-soft: oklch(32% .055 165);
+  --red: oklch(70% .17 22);
+  --red-soft: oklch(31% .07 22);
+  --gray-soft: oklch(28% .016 240);
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.35);
+  --shadow-md: 0 10px 28px oklch(0% 0 0 / 0.45);
 }
 
 * { box-sizing: border-box; }
@@ -134,6 +166,15 @@ header select.langsw {
   max-width: 130px;
   cursor: pointer;
 }
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; padding: 0; flex-shrink: 0;
+  border: 1px solid var(--line-strong); border-radius: 9px;
+  background: var(--card); color: var(--muted); cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle:hover { color: var(--navy); border-color: var(--navy); }
+.theme-toggle .icon { width: 18px; height: 18px; }
 
 /* ---------- Cards ---------- */
 
@@ -166,7 +207,7 @@ header select.langsw {
   padding: 10px 18px;
   border-radius: var(--radius-sm);
   background: var(--navy);
-  color: #fff;
+  color: var(--on-accent);
   font-family: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -176,7 +217,7 @@ header select.langsw {
   transition: background 0.15s ease, border-color 0.15s ease;
   line-height: 1;
 }
-.btn:hover { background: var(--navy-hover); border-color: var(--navy-hover); text-decoration: none; color: #fff; }
+.btn:hover { background: var(--navy-hover); border-color: var(--navy-hover); text-decoration: none; color: var(--on-accent); }
 .btn:focus-visible { outline: 3px solid var(--navy-soft); outline-offset: 1px; }
 
 .btn.green { background: var(--green); border-color: var(--green); }
@@ -281,7 +322,7 @@ input::placeholder, textarea::placeholder { color: #97a0af; }
 }
 .breakdown .factor.down { background: var(--amber-soft); color: var(--amber-ink); }
 .breakdown .factor.up   { background: var(--teal-soft); color: var(--teal-ink); }
-.chip.toggle.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.chip.toggle.on { background: var(--navy); color: var(--on-accent); border-color: var(--navy); }
 .chip.more { background: transparent; color: var(--muted); }
 
 /* ---------- Badges ---------- */
@@ -803,7 +844,7 @@ footer.site {
   min-height: 40px;
 }
 .profile-tabs .tab:hover { background: var(--gray-soft); color: var(--ink); text-decoration: none; }
-.profile-tabs .tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.profile-tabs .tab.active { background: var(--navy); color: var(--on-accent); border-color: var(--navy); }
 .profile-tabs .tab.add { border-style: dashed; color: var(--navy); }
 .profile-tabs .tab.add:hover { background: var(--navy-soft); }
 
