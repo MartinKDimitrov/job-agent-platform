@@ -368,6 +368,13 @@ def _ob_style() -> str:
     #ob .cs-opt.sel{background:var(--green-soft);color:var(--teal-ink);font-weight:600}
     #ob .cs-ck{color:var(--navy);opacity:0;flex-shrink:0}
     #ob .cs-opt.sel .cs-ck{opacity:1}
+    /* compact variant when the custom dropdown sits inside a language chip */
+    #ob .lp-chip .csw{flex-shrink:0}
+    #ob .lp-chip .cs-btn{min-height:30px;width:auto;padding:4px 8px;font-size:12.5px;
+      border-radius:8px;gap:6px}
+    #ob .lp-chip .csw.open .cs-btn{box-shadow:0 0 0 2px var(--green-soft)}
+    #ob .lp-chip .cs-panel{left:0;right:auto;min-width:118px}
+    #ob .lp-chip .cs-opt{padding:7px 10px;font-size:13px}
     #ob .cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0}
     @media(max-width:640px){#ob .cats{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:420px){#ob .cats{grid-template-columns:minmax(0,1fr)}}
@@ -527,7 +534,7 @@ def _ob_script(lang: str) -> str:
         sel.onchange=function(){c.level=sel.value;serialize();};
         var rm=document.createElement('button'); rm.type='button'; rm.className='lp-rm'; rm.textContent='×';
         rm.setAttribute('aria-label','×'); rm.onclick=function(){chosen.splice(idx,1);render();};
-        chip.appendChild(nm); chip.appendChild(sel); chip.appendChild(rm); chipbox.appendChild(chip);
+        chip.appendChild(nm); chip.appendChild(sel); enhanceSelect(sel); chip.appendChild(rm); chipbox.appendChild(chip);
       });
       serialize();
     }
