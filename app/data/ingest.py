@@ -66,9 +66,20 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
                 select(Posting).where(Posting.norm_company.in_(batch_norms))).scalars().all():
             by_company.setdefault(post.norm_company, []).append(post)
 
+    # Exact-dedup layer, batched the same way: ONE query for every content_hash in this page
+    # instead of a per-posting SELECT. The per-row _existing_by_hash was the bulk drain's real
+    # bottleneck — ~200 sequential round-trips/page over the flaky staging tunnel (~33s/wave
+    # measured); one IN(...) lookup collapses that to a single round-trip.
+    batch_hashes = {rp.content_hash() for rp in postings}
+    by_hash: dict[str, Posting] = {}
+    if batch_hashes:
+        for post in db.execute(
+                select(Posting).where(Posting.content_hash.in_(batch_hashes))).scalars().all():
+            by_hash[post.content_hash] = post
+
     for rp in postings:
         chash = rp.content_hash()
-        existing = _existing_by_hash(db, chash)
+        existing = by_hash.get(chash)
         if existing is not None:
             # cheap backfill: rows ingested before posted_at existed learn their source date
             # the next time the source shows them (age filter needs it)
@@ -134,6 +145,7 @@ def ingest(db: Session, postings: list[RawPosting], source_id: int | None = None
             skipped += 1
             continue
         by_company.setdefault(norm_co, []).append(post)   # catch dups within the same batch too
+        by_hash[chash] = post                              # and exact re-hashes later in the batch
         added += 1
     db.commit()
     return {"added": added, "skipped": skipped, "deduped": deduped}

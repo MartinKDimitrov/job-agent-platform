@@ -35,6 +35,12 @@ if __name__ == "__main__":
         cap = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
         board = sys.argv[3] if len(sys.argv) > 3 else None
         print(adzuna_bulk.run_drain(SessionLocal, max_calls=cap, board_path=board))
+    elif mode == "adzuna_fast":
+        # max-throughput concurrent drain: fetch ADZUNA_CONCURRENCY(=4) pages in parallel, one
+        # db writer per wave. adzuna_fast [max_calls] [board_path]
+        cap = int(sys.argv[2]) if len(sys.argv) > 2 else 20000
+        board = sys.argv[3] if len(sys.argv) > 3 else None
+        print(adzuna_bulk.run_drain_concurrent(SessionLocal, max_calls=cap, board_path=board))
     elif mode == "adzuna_recent":
         # cheap nightly maintenance: catch only NEW postings (date-sorted, stop at first-seen)
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else 300

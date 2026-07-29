@@ -14,6 +14,7 @@ economical on the trial quota.
 """
 from __future__ import annotations
 
+import os
 import time
 from datetime import datetime
 
@@ -30,7 +31,10 @@ COUNTRIES = ("de", "fr", "it", "gb", "es", "nl", "pl", "at", "be", "ch")
 _ISO2_COUNTRY = {"de": "DE", "fr": "FR", "it": "IT", "gb": "GB", "es": "ES", "nl": "NL",
                  "pl": "PL", "at": "AT", "be": "BE", "ch": "CH"}
 RESULTS_PER_PAGE = 50
-CALL_DELAY = 0.3
+# Delay between SEQUENTIAL calls (run_bulk / nightly recency). The high-throughput bulk path is
+# run_drain_concurrent, which paces via bounded concurrency (~4) instead — 503 is soft per-request
+# load-shedding, the hard limit is 429 at high concurrency. Env-overridable.
+CALL_DELAY = float(os.getenv("ADZUNA_CALL_DELAY", "0.3"))
 
 
 def _configured() -> bool:

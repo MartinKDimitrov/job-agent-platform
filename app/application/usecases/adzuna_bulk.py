@@ -15,7 +15,9 @@ fans out across professions/countries instead of sinking into one huge category 
 from __future__ import annotations
 
 import html as _html
+import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from sqlalchemy import select
@@ -130,6 +132,85 @@ def run_bulk(session_factory, *, call_budget: int = DEFAULT_CALL_BUDGET,
             touched += 1
     return {"configured": True, "calls": calls, "added": added, "slices_touched": touched,
             "failed": failed}
+
+
+# Measured 2026-07-29: Adzuna fetch latency ~1.5s/page, so SEQUENTIAL paging tops out at ~0.5 req/s
+# (~27 jobs/s). Fetching a few pages CONCURRENTLY multiplies that — but there's a hard ceiling:
+#   K=1 -> 0.5 req/s, 0% err   |   K=4 -> 2.6 req/s (~130 jobs/s), 0% err   |   K>=8 -> 429 storm +
+# a 15-min host backoff (http._note_429). So 4 is the sweet spot. (429 is the hard limit; 503 is
+# soft per-request load-shedding — see the adzuna-limit-fallback memo.)
+DEFAULT_CONCURRENCY = int(os.getenv("ADZUNA_CONCURRENCY", "4"))
+
+
+def run_drain_concurrent(session_factory, *, max_calls: int = 20000,
+                         concurrency: int = DEFAULT_CONCURRENCY, countries=COUNTRIES,
+                         board_path: str | None = None, wave_backoff: float = 30.0,
+                         log=print, sleep=time.sleep) -> dict:
+    """Max-throughput resumable drain. Each wave: pick ``concurrency`` distinct least-pulled slices,
+    fetch their next page IN PARALLEL (the slow part — Adzuna's ~1.5s latency overlaps), then persist
+    the whole wave through ONE db session/commit so the flaky staging tunnel only ever sees a single
+    connection. Cursor durability is preserved (commit per wave). A 503/None page leaves its cursor
+    for next time; a wave that wholly fails (429 host-backoff or 503 storm) sleeps ``wave_backoff``
+    before trying again instead of spinning."""
+    if not adzuna._configured():
+        return {"configured": False, "calls": 0, "added": 0, "waves": 0, "failed": 0}
+    ensure_slices(session_factory, countries)
+    calls = added = waves = failed = 0
+    while calls < max_calls:
+        with session_factory() as db:
+            rows = db.execute(
+                select(AdzunaPull).where(AdzunaPull.done.is_(False),
+                                         AdzunaPull.country.in_(countries))
+                .order_by(AdzunaPull.pulled.asc(), AdzunaPull.category.asc(),
+                          AdzunaPull.country.asc()).limit(concurrency)).scalars().all()
+            wave = [(r.id, r.country, r.category, r.next_page) for r in rows]
+        if not wave:
+            break                                   # every slice drained
+
+        def _fetch(task):
+            sid, country, category, page = task
+            posts, total = adzuna.fetch_page(country, page, category=category,
+                                             results_per_page=RESULTS_PER_PAGE)
+            return sid, page, posts, total
+        with ThreadPoolExecutor(max_workers=len(wave)) as ex:
+            results = list(ex.map(_fetch, wave))
+        calls += len(results)
+
+        wave_added = 0
+        ok_in_wave = 0
+        with session_factory() as db:               # single writer — one tunnel connection
+            for sid, page, posts, total in results:
+                row = db.get(AdzunaPull, sid)
+                if row is None:
+                    continue
+                if posts is None:                   # 503/timeout/429-skip: leave cursor, retry later
+                    failed += 1
+                    continue
+                ok_in_wave += 1
+                res = persist_postings(db, posts)
+                row.pulled += res["added"]
+                row.total = total or row.total
+                row.next_page = page + 1
+                if len(posts) < RESULTS_PER_PAGE:
+                    row.done = True
+                row.updated_at = datetime.utcnow()
+                wave_added += res["added"]
+            db.commit()
+        added += wave_added
+        waves += 1
+        if board_path:
+            with session_factory() as db:
+                st = status(db)
+            with open(board_path, "w", encoding="utf-8") as fh:
+                fh.write(render_board(st))
+        if ok_in_wave == 0:                          # whole wave failed → back off, don't hammer
+            log(f"adzuna wave all-failed ({len(results)} calls) — backing off {wave_backoff:.0f}s")
+            sleep(wave_backoff)
+        else:
+            log(f"adzuna wave: +{wave_added} added, {ok_in_wave}/{len(results)} ok, "
+                f"total calls={calls}")
+    return {"configured": True, "calls": calls, "added": added, "waves": waves, "failed": failed,
+            "concurrency": concurrency}
 
 
 def status(db) -> dict:
