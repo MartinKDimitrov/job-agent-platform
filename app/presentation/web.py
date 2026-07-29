@@ -72,7 +72,7 @@ _SVG_DEFS = """<svg width="0" height="0" style="position:absolute" aria-hidden="
 <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
 <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
 <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
-<symbol id="i-logo" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#1f3864" stroke-width="2"/><path d="M16 5 L19.5 16 L16 27 L12.5 16 Z" fill="#1f3864" stroke="none"/><circle cx="16" cy="16" r="2.6" fill="#e8963a" stroke="none"/></symbol>
+<symbol id="i-logo" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="var(--green)"/><path d="M16 8 L23 16 L16 24 L9 16 Z" fill="#fff"/></symbol>
 </defs></svg>"""
 
 
@@ -147,6 +147,8 @@ def page(body: str, user: User | None = None, *, title: str = "Job Agent",
 {seo}
 {hl}
 {head_extra}
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/static/design.css?v={_CSS_VERSION}">
 </head><body>
 {_SVG_DEFS}
