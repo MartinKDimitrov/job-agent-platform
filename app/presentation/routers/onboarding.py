@@ -151,7 +151,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
           <div id='citylist' class='ac'></div></label>
         <label>{escape(S['work'])}<select name='remote_pref'>{remote_opts}</select></label>
         <label>{escape(S['english'])}<select name='english_level'>{cefr}</select></label>
-        <label>{escape(S['langs'])}<input name='languages' value='Bulgarian, English'></label>
+        <label class='wide'>{escape(S['langs'])}<input name='languages' value='Bulgarian, English'></label>
         <label class='chk'><input type='checkbox' name='relocate' value='1'> {escape(S['relocate'])}</label>
       </div>
       <p class='ob-nav'><button type='button' class='btn big block' data-next='2'>{escape(S['next'])}</button></p>
@@ -226,7 +226,10 @@ def _ob_style() -> str:
     @keyframes obin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
     #ob .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     #ob .grid2 label{display:flex;flex-direction:column;gap:4px;font-size:13px}
-    #ob .grid2 label.chk{flex-direction:row;align-items:center;gap:8px;grid-column:1/-1}
+    #ob .grid2 label.wide{grid-column:1/-1}
+    #ob .grid2 label.chk{flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;
+      margin-top:2px;cursor:pointer;font-size:13.5px}
+    #ob .grid2 label.chk input{width:16px;height:16px;flex:0 0 auto}
     #ob .ac-wrap{position:relative}
     #ob .ac{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--panel,#fff);
       border:1px solid var(--line,#e5e8ee);border-radius:8px;margin-top:2px;max-height:220px;

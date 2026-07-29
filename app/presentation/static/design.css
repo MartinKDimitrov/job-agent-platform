@@ -774,7 +774,7 @@ footer.site {
 .profile-tabs {
   display: flex;
   gap: 6px;
-  overflow-x: auto;
+  flex-wrap: wrap;          /* wrap so the "+ New" tab is never scrolled out of sight */
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-bottom: 2px;
