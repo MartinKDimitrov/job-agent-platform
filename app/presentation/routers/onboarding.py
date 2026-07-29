@@ -159,13 +159,13 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
     <section class='ob-panel' data-s='1'>
       <h2>{escape(S['s1_h'])}</h2>
       <div class='grid2'>
-        <label>{escape(S['country'])}<select name='country' id='f_country'>{country_opts}</select></label>
+        <label>{escape(S['country'])}<select name='country' id='f_country' class='cselect'>{country_opts}</select></label>
         <label class='ac-wrap'>{escape(S['city'])}
           <input name='location_pref' id='f_city' autocomplete='off' value='Sofia'
                  placeholder='{escape(S['city_ph'])}'>
           <div id='citylist' class='ac'></div></label>
-        <label>{escape(S['work'])}<select name='remote_pref'>{remote_opts}</select></label>
-        <label>{escape(S['english'])}<select name='english_level'>{cefr}</select></label>
+        <label>{escape(S['work'])}<select name='remote_pref' class='cselect'>{remote_opts}</select></label>
+        <label>{escape(S['english'])}<select name='english_level' class='cselect'>{cefr}</select></label>
         <label class='wide'>{escape(S['langs'])}<input name='languages' value='Bulgarian, English'></label>
         <label class='chk'><input type='checkbox' name='relocate' value='1'> {escape(S['relocate'])}</label>
       </div>
@@ -292,6 +292,26 @@ def _ob_style() -> str:
     #ob .ac.show{display:block}
     #ob .ac div{padding:8px 12px;cursor:pointer;font-size:14px}
     #ob .ac div:hover,#ob .ac div.sel{background:var(--line,#eef1f6)}
+    /* custom dropdown (opens below, green check) */
+    #ob .csw{position:relative}
+    #ob .cs-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+      min-height:44px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:9px;
+      background:var(--card);color:var(--ink);font-size:15px;cursor:pointer;text-align:left}
+    #ob .csw.open .cs-btn{border-color:var(--navy);box-shadow:0 0 0 3px var(--green-soft)}
+    #ob .cs-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #ob .cs-chev{color:var(--muted);flex-shrink:0;transition:transform .15s ease}
+    #ob .csw.open .cs-chev{transform:rotate(180deg)}
+    #ob .cs-panel{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;max-height:260px;
+      overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;
+      box-shadow:var(--shadow-md,0 10px 28px rgba(0,0,0,.14))}
+    #ob .cs-panel.hide{display:none}
+    #ob .cs-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+      padding:10px 12px;border:0;border-radius:8px;background:none;cursor:pointer;text-align:left;
+      font-size:14px;color:var(--ink)}
+    #ob .cs-opt:hover{background:var(--gray-soft)}
+    #ob .cs-opt.sel{background:var(--green-soft);color:var(--teal-ink);font-weight:600}
+    #ob .cs-ck{color:var(--navy);opacity:0;flex-shrink:0}
+    #ob .cs-opt.sel .cs-ck{opacity:1}
     #ob .cats{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0}
     #ob .cat{border:1px solid var(--line);background:var(--card);border-radius:12px;
       padding:12px 16px;cursor:pointer;font-size:15px;text-align:left;
@@ -380,6 +400,33 @@ def _ob_script(lang: str) -> str:
   function debounce(fn,ms){var t;return function(){var a=arguments,c=this;clearTimeout(t);
     t=setTimeout(function(){fn.apply(c,a);},ms);};}
   async function getJSON(u){var r=await fetch(u);return r.json();}
+
+  // custom dropdown — replaces native <select class=cselect>: opens BELOW, green check on selected,
+  // keeps the native select (hidden) for form submission + change events (country->city dependency)
+  function enhanceSelect(sel){
+    var wrap=document.createElement('div'); wrap.className='csw';
+    var btn=document.createElement('button'); btn.type='button'; btn.className='cs-btn';
+    var lbl=document.createElement('span'); lbl.className='cs-lbl';
+    var chev=document.createElement('span'); chev.className='cs-chev'; chev.textContent='▾';
+    btn.appendChild(lbl); btn.appendChild(chev);
+    var panel=document.createElement('div'); panel.className='cs-panel hide';
+    function sync(){var o=sel.options[sel.selectedIndex]; lbl.textContent=o?o.text:'';
+      [].forEach.call(panel.children,function(it,i){it.classList.toggle('sel',i===sel.selectedIndex);});}
+    [].forEach.call(sel.options,function(o,i){
+      var it=document.createElement('button'); it.type='button'; it.className='cs-opt';
+      var t=document.createElement('span'); t.textContent=o.text;
+      var ck=document.createElement('span'); ck.className='cs-ck'; ck.textContent='✓';
+      it.appendChild(t); it.appendChild(ck);
+      it.onclick=function(){sel.selectedIndex=i; sync();
+        sel.dispatchEvent(new Event('change',{bubbles:true})); panel.classList.add('hide'); wrap.classList.remove('open');};
+      panel.appendChild(it);
+    });
+    btn.onclick=function(){var h=panel.classList.toggle('hide'); wrap.classList.toggle('open',!h);};
+    document.addEventListener('click',function(e){if(!wrap.contains(e.target)){panel.classList.add('hide');wrap.classList.remove('open');}});
+    sel.style.display='none'; sel.parentNode.insertBefore(wrap,sel);
+    wrap.appendChild(btn); wrap.appendChild(panel); wrap.appendChild(sel); sync();
+  }
+  ob.querySelectorAll('select.cselect').forEach(enhanceSelect);
 
   // step nav
   ob.querySelectorAll('[data-next]').forEach(function(b){b.onclick=function(){show(Number(b.dataset.next));};});
