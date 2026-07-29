@@ -17,6 +17,11 @@ import httpx
 log = logging.getLogger(__name__)
 
 _BACKOFF_DEFAULT = 900.0            # 15 min unless the host says otherwise
+# Per-host overrides where 15 min is wrong. Adzuna's 429 is a transient ROLLING-rate throttle
+# (a gentle request succeeds seconds later — measured 2026-07-29), so a 15-min stall there turns
+# one trip into a dead bulk drain; 60s lets the paced drain recover. Workable's is a real per-IP
+# detection ban and keeps the long default.
+_BACKOFF_BY_HOST = {"api.adzuna.com": 60.0}
 _backoff_until: dict[str, float] = {}   # host -> monotonic deadline
 
 
@@ -38,11 +43,12 @@ def _blocked(url: str) -> bool:
 
 
 def _note_429(url: str, response: httpx.Response) -> None:
+    host = _host(url)
     try:
         cooldown = float(response.headers.get("Retry-After", ""))
     except ValueError:
-        cooldown = _BACKOFF_DEFAULT
-    _backoff_until[_host(url)] = time.monotonic() + max(cooldown, 60.0)
+        cooldown = _BACKOFF_BY_HOST.get(host, _BACKOFF_DEFAULT)
+    _backoff_until[host] = time.monotonic() + max(cooldown, 60.0)
     log.warning("%s rate-limited us (429) — backing off %s for %.0fs",
                 _host(url), _host(url), max(cooldown, 60.0))
 

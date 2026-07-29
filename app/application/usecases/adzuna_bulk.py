@@ -147,11 +147,19 @@ DEFAULT_CONCURRENCY = int(os.getenv("ADZUNA_CONCURRENCY", "4"))
 # exhausted (cross-source dedup already has those jobs).
 DEFAULT_MAX_PAGE = int(os.getenv("ADZUNA_MAX_PAGE", "100"))
 _DRY_PAGE_FLOOR = 25            # only trust a zero-yield "exhausted" signal from page >= this
+# Adzuna's trial key has a ROLLING request quota separate from the instantaneous concurrency
+# ceiling: a short K=4 burst is fine, but K=4 sustained (~2.6 req/s) accrues past the window quota
+# and 429s (measured 2026-07-29). A single gentle request succeeds throughout, so it's a rate cap,
+# not a lockout. Pace between waves to hold the sustained rate under the quota — the old sequential
+# ~0.5 req/s never tripped it. concurrency=2 + wave_pace=2s ≈ 0.5 req/s and keeps the depth-cap /
+# batch-dedup yield wins without ever arming the 15-min 429 host-backoff.
+DEFAULT_WAVE_PACE = float(os.getenv("ADZUNA_WAVE_PACE", "2.0"))
 
 
 def run_drain_concurrent(session_factory, *, max_calls: int = 20000,
                          concurrency: int = DEFAULT_CONCURRENCY, max_page: int = DEFAULT_MAX_PAGE,
-                         countries=COUNTRIES, board_path: str | None = None,
+                         wave_pace: float = DEFAULT_WAVE_PACE, countries=COUNTRIES,
+                         board_path: str | None = None,
                          wave_backoff: float = 30.0, log=print, sleep=time.sleep) -> dict:
     """Max-throughput resumable drain. Each wave: pick ``concurrency`` distinct least-pulled slices
     (page <= ``max_page`` — deeper is recycled dupes), fetch their next page IN PARALLEL (the slow
@@ -232,6 +240,8 @@ def run_drain_concurrent(session_factory, *, max_calls: int = 20000,
         else:
             log(f"adzuna wave: +{wave_added} added, {ok_in_wave}/{len(results)} ok, "
                 f"total calls={calls}")
+            if wave_pace:                            # hold sustained rate under the rolling quota
+                sleep(wave_pace)
     return {"configured": True, "calls": calls, "added": added, "waves": waves, "failed": failed,
             "retired": retired, "concurrency": concurrency, "max_page": max_page}
 
