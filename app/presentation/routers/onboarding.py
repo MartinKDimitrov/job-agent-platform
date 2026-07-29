@@ -305,9 +305,9 @@ def _step_strings(lang: str) -> dict:
 
 def _ob_style() -> str:
     return """<style>
-    #ob .ob-steps{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 26px;font-size:13.5px}
-    #ob .st{padding:7px 14px;border-radius:999px;background:transparent;color:var(--muted);
-      font-weight:600;border:1px solid var(--line,#e5e8ee)}
+    #ob .ob-steps{display:flex;gap:8px;margin:4px 0 26px;font-size:13.5px}
+    #ob .st{flex:1;text-align:center;padding:7px 14px;border-radius:999px;background:transparent;
+      color:var(--muted);font-weight:600;border:1px solid var(--line,#e5e8ee)}
     #ob .st.done{background:var(--green-soft);color:var(--navy);border-color:transparent}
     #ob .st.on{background:var(--navy);color:var(--on-accent);border-color:transparent}
     #ob .st.nav{cursor:pointer}
