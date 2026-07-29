@@ -15,4 +15,13 @@ When the duplicate arrives from an **ATS** (canonical apply URL), the stored pos
 at persistence time; in-memory index per call — a persisted `dedup_key` column arrives with
 Alembic, ROADMAP step 35).
 
-**Tests:** `tests/test_dedup.py`.
+**Batched persistence (perf).** Under the bulk drains every DB round-trip crosses the flaky
+staging tunnel, so `ingest()` is round-trip-frugal: both the cross-source candidate load and the
+`content_hash` existence check are single `IN(...)` queries per page (not per posting), and the
+batch's brand-new rows are inserted in **one bulk flush** rather than a SAVEPOINT+flush each. The
+`content_hash` UNIQUE still guards against the parallel drains (`adzuna_fast` + `careerjet_fast`
+write at once): the bulk flush runs inside a savepoint and, only on a genuine concurrent collision,
+falls back to per-row inserts — survivors persist, the racing winner is touched. This took a page's
+persist from ~200 sequential round-trips to a handful.
+
+**Tests:** `tests/test_dedup.py` (incl. the concurrent-collision fallback).

@@ -34,10 +34,31 @@ same platform. Tools:
 - **always verify a probe hit's identity** before crawling (feed/channel names, offices) —
   greenhouse/bulgaria was capSpire, personio/kbc a Munich firm; phantom boards mislabel data.
 
+**Aggregator firehose + bulk drains** (`data/sources/{adzuna,careerjet,jooble,eures}.py`,
+`application/usecases/{adzuna_bulk,aggregator_drain}.py`): the post-pivot volume comes from EU
+job-board APIs drained country×category (Adzuna) or country-locale feed (Careerjet/Jooble), with a
+durable resumable cursor (`AdzunaPull` / `AggregatorDrain`) committed per page so a killed run
+resumes exactly. Jobs modes: `adzuna_fast`, `careerjet_fast`, `jooble_fast` (concurrent), and the
+sequential `adzuna_drain` / `careerjet_drain` / `jooble_drain`. Profiled 2026-07-29:
+- **Concurrent fetch waves** — sequential paging is latency-bound (Adzuna ~1.5s/page → ~0.5 req/s);
+  a wave fetches N pages in parallel then persists through ONE db writer (tunnel sees one
+  connection). `ADZUNA_CONCURRENCY` / `AGG_CONCURRENCY`.
+- **Rate ceilings differ per source.** Adzuna: `503` is soft per-request load-shedding (ignore),
+  the hard limit is a **rolling `429` quota** — a short K=4 burst is fine but sustained K≥4 trips it,
+  so the drain paces (K=2 + `ADZUNA_WAVE_PACE`≈2s ≈ 0.5 req/s). Careerjet has no visible limit up to
+  K=8. A single gentle request succeeds throughout a 429 storm → it's a rate cap, not a lockout.
+- **Depth cap** (`ADZUNA_MAX_PAGE`=100) + zero-yield retire — Adzuna serves "full" pages
+  arbitrarily deep but recycles dupes past ~page 100 (~1.4% yield), so slices retire at the cap
+  instead of paging to depth 1000+ for nothing.
+
+Boards render per source (`adzuna_board`, `aggregator_board <src>`, `eures_board`) and publish as
+Claude Artifacts. Owner rule: no demo data — only real pulls.
+
 **Shared HTTP** (`data/sources/http.py`): browser-like headers, JSON GET/POST, `url_status`,
-and a **per-host 429 backoff cache** (Retry-After honoured, 15 min default) — one rate-limit
-answer silences the whole host instead of extending its penalty window (Workable sent a
-Retry-After of 8 hours once).
+and a **per-host 429 backoff cache** (Retry-After honoured, 15 min default, but per-host overrides
+where wrong — `api.adzuna.com`→60s, since its 429 is a transient rolling-rate throttle a 15-min
+stall would turn into a dead drain) — one rate-limit answer silences the whole host instead of
+extending its penalty window (Workable sent a Retry-After of 8 hours once).
 
 **Deliberately skipped:** jobs.bg (403s everything — we don't scrape against a site's
 expressed will), LinkedIn auto-search (ToS). The /sources page lists ONLY platforms an
