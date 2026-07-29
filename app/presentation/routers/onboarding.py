@@ -192,6 +192,12 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
     <section class='ob-panel hide' data-s='4'>
       <h2>{escape(S['s4_h'])} <span class='small' id='pickedocc'></span></h2>
       <p class='small'>{escape(S['s4_hint'])}</p>
+      <div class='bulk-years'>
+        <label>{escape(S['bulk_label'])}
+          <input id='bulkyears' type='number' min='0' max='50' placeholder='5'></label>
+        <button type='button' id='bulkapply' class='btn gray small'>{escape(S['bulk_apply'])}</button>
+        <span class='small bh'>{escape(S['bulk_hint'])}</span>
+      </div>
       <div id='skills' class='skills'></div>
       <label style='margin-top:14px;display:block'>{escape(S['more'])}
         <input id='extra' name='extra_skills' placeholder='{escape(S['more_ph'])}'></label>
@@ -228,6 +234,10 @@ def _step_strings(lang: str) -> dict:
         "create": L("Създай профил", "Create profile"),
         "yrs": L("год.", "yrs"),
         "courses": L("само курс", "courses"),
+        "bulk_label": L("Общ професионален стаж", "Total years of experience"),
+        "bulk_apply": L("Попълни на избраните", "Apply to selected"),
+        "bulk_hint": L("бърз старт — после можеш да коригираш всяко поотделно",
+                       "quick start — you can fine-tune each afterwards"),
     }
 
 
@@ -261,6 +271,13 @@ def _ob_style() -> str:
     #ob .cats.sub .sc{font-size:14px;padding:9px 13px}
     #ob .cats.occ{flex-direction:column;margin-top:10px}
     #ob #occsearch{width:100%;margin:6px 0 4px;padding:9px 12px}
+    #ob .bulk-years{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0 14px;
+      padding:12px 14px;background:var(--accent-soft,#eef4ff);border:1px solid var(--line,#dbe3ea);
+      border-radius:10px}
+    #ob .bulk-years label{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+    #ob .bulk-years input{width:64px;padding:5px 8px;border-radius:7px;
+      border:1px solid var(--line,#c9cfdb)}
+    #ob .bulk-years .bh{color:var(--muted,#778);font-weight:400;flex:1 1 160px}
     #ob .skills{display:flex;flex-wrap:wrap;gap:8px}
     #ob .skill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e5e8ee);
       border-radius:20px;padding:4px 6px 4px 12px;font-size:13px;opacity:.55}
@@ -368,6 +385,18 @@ def _ob_script(lang: str) -> str:
     });
     qs('#f_skills').value=parts.join(', ');
   });
+
+  // bulk years: one "total experience" value fills the years of every selected skill at once
+  function bulkApply(){
+    var y=parseInt(qs('#bulkyears').value,10);
+    if(!(y>=0)) return;
+    ob.querySelectorAll('#skills .skill.on').forEach(function(c){
+      if(c.classList.contains('crs-on')) return;      // courses-only keeps its marker
+      c.querySelector('.yrs').value=y;
+    });
+  }
+  qs('#bulkapply').onclick=bulkApply;
+  qs('#bulkyears').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();bulkApply();}});
 })();
 """
 
