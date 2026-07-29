@@ -272,3 +272,51 @@ class Application(Base):
     reply_date: Mapped[str] = mapped_column(String(32), default="")
     next_step: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ---- Occupation taxonomy (ESCO/ISCO) — the hierarchical onboarding backbone (Stage 2) ----
+# Sourced from the ESCO API (occupations, ISCO grouping, essential/optional skills, BG+EN labels).
+# category -> subcategory -> unit group -> occupation -> skills. The onboarding drill-down walks
+# OccupationGroup by parent_code; Occupation hangs off the leaf (4-digit) ISCO group.
+class OccupationGroup(Base):
+    __tablename__ = "occupation_groups"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    isco_code: Mapped[str] = mapped_column(String(8), unique=True, index=True)   # "24","241","2411"
+    parent_code: Mapped[str | None] = mapped_column(String(8), index=True, nullable=True)
+    level: Mapped[int] = mapped_column(Integer)                    # 1..4 = ISCO digit depth
+    label_en: Mapped[str] = mapped_column(String(255), default="")
+    label_bg: Mapped[str] = mapped_column(String(255), default="")
+    vertical: Mapped[str] = mapped_column(String(64), default="", index=True)  # pilot bucket
+
+
+class Occupation(Base):
+    __tablename__ = "occupations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    esco_uri: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    isco_code: Mapped[str] = mapped_column(String(8), index=True)   # the leaf group it belongs to
+    label_en: Mapped[str] = mapped_column(String(255), default="")
+    label_bg: Mapped[str] = mapped_column(String(255), default="")
+    vertical: Mapped[str] = mapped_column(String(64), default="", index=True)
+    skills: Mapped[list["OccupationSkill"]] = relationship(
+        back_populates="occupation", cascade="all, delete-orphan")
+
+
+class TaxonomySkill(Base):
+    __tablename__ = "taxonomy_skills"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    esco_uri: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    label_en: Mapped[str] = mapped_column(String(255), default="")
+    label_bg: Mapped[str] = mapped_column(String(255), default="")
+
+
+class OccupationSkill(Base):
+    __tablename__ = "occupation_skills"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    occupation_id: Mapped[int] = mapped_column(
+        ForeignKey("occupations.id", ondelete="CASCADE"), index=True)
+    skill_id: Mapped[int] = mapped_column(
+        ForeignKey("taxonomy_skills.id", ondelete="CASCADE"), index=True)
+    essential: Mapped[bool] = mapped_column(Boolean, default=True)
+    occupation: Mapped["Occupation"] = relationship(back_populates="skills")
+    skill: Mapped["TaxonomySkill"] = relationship()
+    __table_args__ = (UniqueConstraint("occupation_id", "skill_id", name="uq_occ_skill"),)
