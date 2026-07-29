@@ -259,9 +259,10 @@ def _step_strings(lang: str) -> dict:
 
 def _ob_style() -> str:
     return """<style>
-    #ob .ob-steps{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px;font-size:12px}
-    #ob .st{padding:4px 10px;border-radius:20px;background:var(--line,#e5e8ee);color:var(--muted,#667)}
-    #ob .st.on{background:var(--accent,#2f6feb);color:#fff}
+    #ob .ob-steps{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 26px;font-size:13.5px}
+    #ob .st{padding:8px 16px;border-radius:999px;background:var(--gray-soft);color:var(--muted);
+      font-weight:600}
+    #ob .st.on{background:var(--navy);color:var(--on-accent)}
     #ob .ob-panel{animation:obin .2s ease}
     #ob .ob-panel.hide{display:none}
     @keyframes obin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -272,23 +273,23 @@ def _ob_style() -> str:
       margin-top:2px;cursor:pointer;font-size:13.5px}
     #ob .grid2 label.chk input{width:16px;height:16px;flex:0 0 auto}
     #ob .ac-wrap{position:relative}
-    #ob .ac{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--panel,#fff);
+    #ob .ac{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--card);
       border:1px solid var(--line,#e5e8ee);border-radius:8px;margin-top:2px;max-height:220px;
       overflow:auto;display:none;box-shadow:0 6px 20px rgba(0,0,0,.08)}
     #ob .ac.show{display:block}
     #ob .ac div{padding:8px 12px;cursor:pointer;font-size:14px}
     #ob .ac div:hover,#ob .ac div.sel{background:var(--line,#eef1f6)}
     #ob .cats{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0}
-    #ob .cat,#ob .sc,#ob .oc{border:1px solid var(--line,#e5e8ee);background:var(--panel,#fff);
+    #ob .cat,#ob .sc,#ob .oc{border:1px solid var(--line,#e5e8ee);background:var(--card);
       border-radius:10px;padding:12px 16px;cursor:pointer;font-size:15px;text-align:left}
     #ob .cat{display:flex;align-items:center;gap:10px;min-width:150px}
     #ob .cat .ic{font-size:20px}
-    #ob .sc.on,#ob .oc.on,#ob .cat:hover,#ob .sc:hover,#ob .oc:hover{border-color:var(--accent,#2f6feb)}
+    #ob .sc.on,#ob .oc.on,#ob .cat:hover,#ob .sc:hover,#ob .oc:hover{border-color:var(--navy)}
     #ob .cats.sub .sc{font-size:14px;padding:9px 13px}
-    #ob .cats.occ{flex-direction:column;margin-top:10px}
+    #ob .cats.sub,#ob .cats.occ{flex-direction:column;margin-top:10px}
     #ob #occsearch{width:100%;margin:6px 0 4px;padding:9px 12px}
     #ob .bulk-years{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0 14px;
-      padding:12px 14px;background:var(--accent-soft,#eef4ff);border:1px solid var(--line,#dbe3ea);
+      padding:12px 14px;background:var(--green-soft);border:1px solid var(--line,#dbe3ea);
       border-radius:10px}
     #ob .bulk-years label{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
     #ob .bulk-years input{width:64px;padding:5px 8px;border-radius:7px;
@@ -298,15 +299,15 @@ def _ob_style() -> str:
     #ob .sk-head{font-size:13px;font-weight:600;color:var(--ink,#222);margin:0 0 8px}
     #ob .sk-sub{font-weight:400;color:var(--muted,#889);font-size:12px}
     #ob .opt-toggle{background:none;border:1px dashed var(--line,#c9cfdb);border-radius:8px;
-      padding:8px 12px;cursor:pointer;font-size:13px;color:var(--accent-ink,#2b62d6);font-weight:600}
+      padding:8px 12px;cursor:pointer;font-size:13px;color:var(--teal-ink);font-weight:600}
     #ob .opt-toggle .opt-n{color:var(--muted,#889);font-weight:400;margin-left:2px}
     #ob #skills-opt{margin-top:10px}
     #ob #skills-opt.hide{display:none}
     #ob .skills{display:flex;flex-wrap:wrap;gap:8px}
     #ob .skill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e5e8ee);
       border-radius:20px;padding:4px 6px 4px 12px;font-size:13px;opacity:.55}
-    #ob .skill.on{opacity:1;border-color:var(--accent,#2f6feb);background:var(--accent-soft,#eef4ff)}
-    #ob .skill.ess .lbl::after{content:' •';color:var(--accent,#2f6feb)}
+    #ob .skill.on{opacity:1;border-color:var(--navy);background:var(--green-soft)}
+    #ob .skill.ess .lbl::after{content:' •';color:var(--navy)}
     #ob .skill .lbl{cursor:pointer}
     #ob .skill .yrs{width:44px;padding:2px 4px;font-size:12px;border-radius:6px;
       border:1px solid var(--line,#e5e8ee);display:none}
@@ -316,7 +317,7 @@ def _ob_style() -> str:
     #ob .skill .crs{display:none;font-size:11px;padding:1px 7px;border-radius:10px;cursor:pointer;
       border:1px dashed var(--line,#c9cfdb);color:var(--muted,#778)}
     #ob .skill.on .crs{display:inline}
-    #ob .skill.crs-on .crs{background:var(--accent,#2f6feb);color:#fff;border-style:solid}
+    #ob .skill.crs-on .crs{background:var(--navy);color:#fff;border-style:solid}
     #ob .skill.crs-on .yrs,#ob .skill.crs-on .yl{opacity:.35}
     #ob .ob-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
     #ob .ob-nav .back{color:var(--muted,#667);font-size:14px}

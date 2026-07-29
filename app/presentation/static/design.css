@@ -449,7 +449,9 @@ tr:last-child td { border-bottom: 0; }
 .match-card .meta .m { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 500; }
 .match-card .meta .m .icon { width: 14px; height: 14px; stroke-width: 1.75; color: var(--muted); }
 .match-card .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.match-card .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.match-card .breakdown { margin: 12px 0 0; }
+.match-card .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
 /* quiet "hide" pushed to the far right, ghost styling — matches the Lovable card */
 .match-card .actions > form:last-child { margin-left: auto; }
 .match-card .actions > form:last-child .btn { background: transparent; border-color: transparent; color: var(--muted); }
