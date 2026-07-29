@@ -52,6 +52,28 @@ FAMILIES: dict[str, tuple[str, ...]] = {
                      "graphic designer", "web designer", "ux researcher"),
     "embedded":     ("embedded", "firmware"),
     "gamedev":      ("game developer", "gameplay", "unreal engine", "unity developer"),
+    # ---- non-tech pilot verticals (ESCO): specific profession cues, never bare generics ----
+    "finance":      ("accountant", "accounting", "bookkeeper", "bookkeeping", "auditor",
+                     "financial analyst", "financial controller", "financial adviser",
+                     "financial advisor", "investment adviser", "investment advisor",
+                     "credit analyst", "credit officer", "loan officer", "tax advisor",
+                     "tax consultant", "tax accountant", "actuary", "treasury", "payroll",
+                     "accounts payable", "accounts receivable", "loss adjuster", "underwriter"),
+    "healthcare":   ("nurse", "nursing", "physician", "medical doctor", "pharmacist", "dentist",
+                     "dental", "physiotherapist", "physical therapist", "podiatrist",
+                     "radiographer", "speech therapist", "speech and language therapist",
+                     "chiropractor", "veterinarian", "orthoptist", "midwife", "paramedic",
+                     "occupational therapist", "recreational therapist", "optometrist",
+                     "caregiver", "medical assistant", "healthcare assistant"),
+    "sales":        ("salesperson", "sales assistant", "sales representative", "sales engineer",
+                     "sales processor", "sales agent", "sales manager", "account executive",
+                     "account manager", "business developer", "business development",
+                     "shop assistant", "shop supervisor", "specialised seller", "personal shopper",
+                     "store manager", "retail", "cashier", "telesales"),
+    "marketing":    ("marketing", "marketeer", "brand manager", "advertising", "copywriter",
+                     "market research", "public relations", "pr officer", "pr specialist",
+                     "community manager", "creative director", "media buyer", "fundraising",
+                     "public affairs", "communications specialist"),
 }
 
 _FAMILY_RES: dict[str, re.Pattern] = {
@@ -71,6 +93,9 @@ _ADJACENT: set[frozenset] = {frozenset(p) for p in (
     ("data_eng", "data_science"), ("data_eng", "data_analyst"), ("data_eng", "ml"),
     ("data_science", "ml"), ("data_science", "data_analyst"),
     ("android", "gamedev"), ("android", "embedded"), ("ios", "gamedev"), ("embedded", "gamedev"),
+    ("sales", "marketing"),   # sales & marketing overlap heavily — related, not the same
+    # every other non-tech family (finance/healthcare/sales/marketing) is disjoint from the rest
+    # and from all IT families -> a hard mismatch (an accountant profile won't see dev/nurse roles).
     # note: android and ios are deliberately NOT adjacent — a pure iOS role is a hard mismatch for
     # an Android profile (different language/SDK); cross-platform titles (React Native, Flutter,
     # KMP, "Mobile Developer") carry BOTH families, so those still match either specialist.

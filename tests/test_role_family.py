@@ -124,3 +124,30 @@ def test_backend_still_adjacent_for_ml_and_data():
     # tightening android↔backend must NOT touch the other backend adjacencies
     assert conflict(families("Machine Learning Engineer"), families("Java Developer")) == "soft"
     assert role_family_ok(_Prof(target_roles="Machine Learning Engineer"), "Backend Developer") is True
+
+
+# ---- non-tech verticals (ESCO pilot): classified, and hard-mismatched across disciplines ----
+def test_non_tech_families_detected():
+    assert families("Tax Accountant") == {"finance"}
+    assert families("Registered Nurse") == {"healthcare"}
+    assert families("Sales Representative") == {"sales"}
+    assert families("Brand Manager") == {"marketing"}
+    # a bare "Manager" / "Specialist" still names no family (conservative)
+    assert families("Manager") == frozenset()
+
+
+def test_accountant_keeps_finance_drops_other_disciplines():
+    p = _Prof(target_roles="bookkeeper, accountant, счетоводител")
+    assert families(p.target_roles) == {"finance"}
+    for keep in ("Operational Accountant", "Financial Controller", "Financial Analyst", "Auditor"):
+        assert role_family_ok(p, keep) is True, keep
+    for drop in ("Android Developer", "Backend Engineer", "Registered Nurse", "Sales Representative"):
+        assert role_family_ok(p, drop) is False, drop
+        assert passes_hard_filters(p, drop, "Remote", "")[:2] == (False, "role"), drop
+
+
+def test_it_profile_does_not_match_non_tech_and_vice_versa():
+    assert role_family_ok(_Prof(target_roles="Android Developer"), "Tax Accountant") is False
+    assert role_family_ok(_Prof(target_roles="Registered Nurse"), "Backend Developer") is False
+    # sales and marketing overlap -> adjacent (soft), still shown
+    assert conflict(families("Sales Representative"), families("Marketing Manager")) == "soft"
