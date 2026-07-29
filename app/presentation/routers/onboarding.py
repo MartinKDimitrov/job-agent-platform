@@ -198,7 +198,16 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
         <button type='button' id='bulkapply' class='btn gray small'>{escape(S['bulk_apply'])}</button>
         <span class='small bh'>{escape(S['bulk_hint'])}</span>
       </div>
-      <div id='skills' class='skills'></div>
+      <div class='sk-group'>
+        <div class='sk-head'>{escape(S['core_skills'])} <span class='sk-sub'>· {escape(S['core_sub'])}</span></div>
+        <div id='skills-ess' class='skills'></div>
+      </div>
+      <div class='sk-group' id='opt-group' style='display:none'>
+        <button type='button' class='opt-toggle' id='opt-toggle'>
+          {escape(S['more_skills'])} · <span id='opt-verb'>{escape(S['show_more'])}</span>
+          <span id='opt-n' class='opt-n'></span></button>
+        <div id='skills-opt' class='skills hide'></div>
+      </div>
       <label style='margin-top:14px;display:block'>{escape(S['more'])}
         <input id='extra' name='extra_skills' placeholder='{escape(S['more_ph'])}'></label>
       <p class='ob-nav'><a href='#' class='back' data-back='3'>{escape(S['back'])}</a>
@@ -208,6 +217,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
 </div>
 {_ob_style()}
 <script>window.OB_YRS={json.dumps(S['yrs'])};window.OB_CRS={json.dumps(S['courses'])};
+window.OB_SHOW={json.dumps(S['show_more'])};window.OB_HIDE={json.dumps(S['hide_more'])};
 {_ob_script(lang)}</script>"""
 
 
@@ -238,6 +248,12 @@ def _step_strings(lang: str) -> dict:
         "bulk_apply": L("Попълни на избраните", "Apply to selected"),
         "bulk_hint": L("бърз старт — после можеш да коригираш всяко поотделно",
                        "quick start — you can fine-tune each afterwards"),
+        "core_skills": L("Основни умения", "Core skills"),
+        "core_sub": L("типични за професията — маркирани по подразбиране",
+                      "typical for this occupation — selected by default"),
+        "more_skills": L("Допълнителни умения", "Additional skills"),
+        "show_more": L("Покажи още", "Show more"),
+        "hide_more": L("Скрий", "Hide"),
     }
 
 
@@ -278,6 +294,14 @@ def _ob_style() -> str:
     #ob .bulk-years input{width:64px;padding:5px 8px;border-radius:7px;
       border:1px solid var(--line,#c9cfdb)}
     #ob .bulk-years .bh{color:var(--muted,#778);font-weight:400;flex:1 1 160px}
+    #ob .sk-group{margin-bottom:14px}
+    #ob .sk-head{font-size:13px;font-weight:600;color:var(--ink,#222);margin:0 0 8px}
+    #ob .sk-sub{font-weight:400;color:var(--muted,#889);font-size:12px}
+    #ob .opt-toggle{background:none;border:1px dashed var(--line,#c9cfdb);border-radius:8px;
+      padding:8px 12px;cursor:pointer;font-size:13px;color:var(--accent-ink,#2b62d6);font-weight:600}
+    #ob .opt-toggle .opt-n{color:var(--muted,#889);font-weight:400;margin-left:2px}
+    #ob #skills-opt{margin-top:10px}
+    #ob #skills-opt.hide{display:none}
     #ob .skills{display:flex;flex-wrap:wrap;gap:8px}
     #ob .skill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e5e8ee);
       border-radius:20px;padding:4px 6px 4px 12px;font-size:13px;opacity:.55}
@@ -350,34 +374,46 @@ def _ob_script(lang: str) -> str:
     renderOccs(await getJSON('/onboarding/api/search?q='+encodeURIComponent(q)));},220));
   qs('#occsearch').addEventListener('keydown',function(e){if(e.key==='Enter')e.preventDefault();});
 
+  function makeChip(s, selected){
+    var chip=document.createElement('span'); chip.className='skill'+(s.essential?' ess':'')+(selected?' on':'');
+    chip.dataset.label=s.label;
+    var lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=s.label;
+    lbl.onclick=function(){chip.classList.toggle('on');};
+    var yr=document.createElement('input'); yr.type='number'; yr.min=0; yr.max=50;
+    yr.className='yrs'; yr.placeholder='0';
+    var yl=document.createElement('span'); yl.className='yl'; yl.textContent=window.OB_YRS||'yrs';
+    // "courses only" — familiar via tutorials/courses, no real project; disables the years input
+    var crs=document.createElement('span'); crs.className='crs'; crs.textContent=window.OB_CRS||'courses';
+    crs.title=window.OB_CRS; crs.onclick=function(e){e.stopPropagation();
+      chip.classList.toggle('crs-on'); yr.disabled=chip.classList.contains('crs-on');
+      if(chip.classList.contains('crs-on'))chip.classList.add('on');};
+    chip.appendChild(lbl); chip.appendChild(yr); chip.appendChild(yl); chip.appendChild(crs);
+    return chip;
+  }
   async function pickOcc(o){
     f_occ.value=o.id; qs('#pickedocc').textContent='· '+o.label;
     var sk=await getJSON('/onboarding/api/skills?occupation_id='+o.id);
-    var box=qs('#skills'); box.innerHTML='';
+    var ess=qs('#skills-ess'), opt=qs('#skills-opt'); ess.innerHTML=''; opt.innerHTML='';
+    var nopt=0;
     sk.forEach(function(s){
-      var chip=document.createElement('span'); chip.className='skill'+(s.essential?' ess on':'');
-      chip.dataset.label=s.label;
-      var lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=s.label;
-      lbl.onclick=function(){chip.classList.toggle('on');};
-      var yr=document.createElement('input'); yr.type='number'; yr.min=0; yr.max=50;
-      yr.className='yrs'; yr.placeholder='0';
-      var yl=document.createElement('span'); yl.className='yl'; yl.textContent=window.OB_YRS||'yrs';
-      // "courses only" — familiar via tutorials/courses, no real project; disables the years input
-      var crs=document.createElement('span'); crs.className='crs'; crs.textContent=window.OB_CRS||'courses';
-      crs.title=window.OB_CRS; crs.onclick=function(e){e.stopPropagation();
-        chip.classList.toggle('crs-on'); yr.disabled=chip.classList.contains('crs-on');
-        if(chip.classList.contains('crs-on'))chip.classList.add('on');};
-      chip.appendChild(lbl); chip.appendChild(yr); chip.appendChild(yl); chip.appendChild(crs);
-      box.appendChild(chip);
+      if(s.essential){ ess.appendChild(makeChip(s, true)); }
+      else { opt.appendChild(makeChip(s, false)); nopt++; }
     });
+    qs('#opt-group').style.display = nopt ? '' : 'none';
+    qs('#opt-n').textContent = nopt ? ('('+nopt+')') : '';
+    opt.classList.add('hide'); qs('#opt-verb').textContent = window.OB_SHOW||'Show more';
     show(4);
   }
+  qs('#opt-toggle').onclick=function(){
+    var hidden=qs('#skills-opt').classList.toggle('hide');
+    qs('#opt-verb').textContent = hidden ? (window.OB_SHOW||'Show more') : (window.OB_HIDE||'Hide');
+  };
 
   // submit: build "Skill Ny" / "Skill (courses)" from selected chips
   qs('#obform').addEventListener('submit',function(e){
     if(!f_occ.value){e.preventDefault();show(2);return;}
     var parts=[];
-    ob.querySelectorAll('#skills .skill.on').forEach(function(c){
+    ob.querySelectorAll('.skills .skill.on').forEach(function(c){
       var lab=c.dataset.label;
       if(c.classList.contains('crs-on')){parts.push(lab+' (courses)');return;}
       var y=parseInt(c.querySelector('.yrs').value,10);
@@ -390,7 +426,7 @@ def _ob_script(lang: str) -> str:
   function bulkApply(){
     var y=parseInt(qs('#bulkyears').value,10);
     if(!(y>=0)) return;
-    ob.querySelectorAll('#skills .skill.on').forEach(function(c){
+    ob.querySelectorAll('.skills .skill.on').forEach(function(c){
       if(c.classList.contains('crs-on')) return;      // courses-only keeps its marker
       c.querySelector('.yrs').value=y;
     });
