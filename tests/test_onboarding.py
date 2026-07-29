@@ -83,6 +83,20 @@ def test_onboarding_creates_profile_with_years(auth_client):
         assert p.relocate is True and p.english_level == "C1"
 
 
+def test_onboarding_stores_courses_only_skill(auth_client):
+    from app.domain.skills import parse_skill_years, COURSES_ONLY
+    client, _ = auth_client
+    with SessionLocal() as db:
+        oid = _seed_occupation(db)
+    client.post("/onboarding", data={"occupation_id": str(oid),
+                "skills_blob": "tax legislation 4y, depreciation (courses)"})
+    with SessionLocal() as db:
+        p = db.execute(select(Profile)).scalars().one()
+        assert "(courses)" in p.skills
+        parsed = parse_skill_years(p.skills)
+        assert parsed["depreciation"] == COURSES_ONLY and parsed["tax legislation"] == 4
+
+
 def test_onboarding_dedupes_skills_by_name(auth_client):
     client, _ = auth_client
     with SessionLocal() as db:

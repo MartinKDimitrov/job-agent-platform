@@ -111,9 +111,11 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
         f"<span class='ic'>{_VERTICAL_META.get(v, {}).get('icon', '•')}</span>"
         f"{escape(_VERTICAL_META.get(v, {}).get(lang) or v.title())}</button>"
         for v in verts)
+    from ...data import city_repo
+    country_list = city_repo.countries(db, _COUNTRY_CITIES) if db is not None else list(_COUNTRY_CITIES)
     country_opts = "".join(
         f"<option{' selected' if c == 'Bulgaria' else ''}>{escape(c)}</option>"
-        for c in _COUNTRY_CITIES)
+        for c in country_list)
     remote_opts = "".join(
         f"<option value='{v}'{' selected' if v == 'remote' else ''}>{escape(lbl)}</option>"
         for v, lbl in (("remote", _L(lang, "Дистанционно", "Remote")),
@@ -184,7 +186,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
   </form>
 </div>
 {_ob_style()}
-<script>window.OB_YRS={json.dumps(S['yrs'])};
+<script>window.OB_YRS={json.dumps(S['yrs'])};window.OB_CRS={json.dumps(S['courses'])};
 {_ob_script(lang)}</script>"""
 
 
@@ -210,6 +212,7 @@ def _step_strings(lang: str) -> dict:
         "next": L("Напред →", "Next →"), "back": L("← Назад", "← Back"),
         "create": L("Създай профил", "Create profile"),
         "yrs": L("год.", "yrs"),
+        "courses": L("само курс", "courses"),
     }
 
 
@@ -251,6 +254,11 @@ def _ob_style() -> str:
     #ob .skill.on .yrs{display:inline-block}
     #ob .skill .yl{font-size:11px;color:var(--muted,#889);display:none}
     #ob .skill.on .yl{display:inline}
+    #ob .skill .crs{display:none;font-size:11px;padding:1px 7px;border-radius:10px;cursor:pointer;
+      border:1px dashed var(--line,#c9cfdb);color:var(--muted,#778)}
+    #ob .skill.on .crs{display:inline}
+    #ob .skill.crs-on .crs{background:var(--accent,#2f6feb);color:#fff;border-style:solid}
+    #ob .skill.crs-on .yrs,#ob .skill.crs-on .yl{opacity:.35}
     #ob .ob-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
     #ob .ob-nav .back{color:var(--muted,#667);font-size:14px}
     </style>"""
@@ -319,18 +327,26 @@ def _ob_script(lang: str) -> str:
       var yr=document.createElement('input'); yr.type='number'; yr.min=0; yr.max=50;
       yr.className='yrs'; yr.placeholder='0';
       var yl=document.createElement('span'); yl.className='yl'; yl.textContent=window.OB_YRS||'yrs';
-      chip.appendChild(lbl); chip.appendChild(yr); chip.appendChild(yl); box.appendChild(chip);
+      // "courses only" — familiar via tutorials/courses, no real project; disables the years input
+      var crs=document.createElement('span'); crs.className='crs'; crs.textContent=window.OB_CRS||'courses';
+      crs.title=window.OB_CRS; crs.onclick=function(e){e.stopPropagation();
+        chip.classList.toggle('crs-on'); yr.disabled=chip.classList.contains('crs-on');
+        if(chip.classList.contains('crs-on'))chip.classList.add('on');};
+      chip.appendChild(lbl); chip.appendChild(yr); chip.appendChild(yl); chip.appendChild(crs);
+      box.appendChild(chip);
     });
     show(4);
   }
 
-  // submit: build "Skill Ny, …" from selected chips
+  // submit: build "Skill Ny" / "Skill (courses)" from selected chips
   qs('#obform').addEventListener('submit',function(e){
     if(!f_occ.value){e.preventDefault();show(2);return;}
     var parts=[];
     ob.querySelectorAll('#skills .skill.on').forEach(function(c){
+      var lab=c.dataset.label;
+      if(c.classList.contains('crs-on')){parts.push(lab+' (courses)');return;}
       var y=parseInt(c.querySelector('.yrs').value,10);
-      parts.push(c.dataset.label+(y>0?(' '+y+'y'):''));
+      parts.push(lab+(y>0?(' '+y+'y'):''));
     });
     qs('#f_skills').value=parts.join(', ');
   });

@@ -7,6 +7,15 @@ from sqlalchemy.orm import Session
 from .models import City
 
 
+def countries(db: Session, fallback: dict | None = None) -> list[str]:
+    """Countries available in the gazetteer (for the onboarding dropdown); curated keys until it
+    loads. Bulgaria floats to the top (primary market), the rest alphabetical."""
+    rows = [c for (c,) in db.execute(select(City.country).distinct()).all()]
+    names = rows or list(fallback or {})
+    names = sorted(set(names))
+    return (["Bulgaria"] if "Bulgaria" in names else []) + [n for n in names if n != "Bulgaria"]
+
+
 def search(db: Session, country: str, q: str, lang: str = "bg",
            fallback: dict | None = None, limit: int = 15) -> list[dict]:
     q = (q or "").strip().lower()

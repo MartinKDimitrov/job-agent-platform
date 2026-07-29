@@ -176,32 +176,49 @@ _SKILL_YEARS_RE = re.compile(
     r"^(?P<skill>.+?)[\s:\-(]+\(?\s*(?P<yrs>\d{1,2})\s*\+?\s*"
     r"(?:years?|yrs?|y|г\.?|години)?\s*\)?$", re.I)
 
+# "Kotlin (courses)", "SAP: tutorials", "Excel курсове" — familiar via courses/tutorials, but not
+# used on a real project. A weaker coverage signal than any hands-on time.
+COURSES_ONLY = -1
+_SKILL_COURSES_RE = re.compile(
+    r"^(?P<skill>.+?)[\s:\-(]+\(?\s*"
+    r"(?:courses?|course-only|tutorials?|self[-\s]?taught|курсове|обучени[ея]|самоук)\s*\)?$", re.I)
+
 
 def parse_skill_years(skills: str) -> dict[str, int | None]:
-    """Parse the comma-separated skills field into {canonical_skill: years}. A skill with no
-    stated years maps to None (no experience signal). Repeated skills keep the max years."""
+    """Parse the comma-separated skills field into {canonical_skill: years}. No annotation -> None
+    (no signal); a courses/tutorials marker -> COURSES_ONLY. Repeated skills keep the best signal
+    (real years beat courses beat nothing)."""
     out: dict[str, int | None] = {}
     for part in (skills or "").split(","):
         part = part.strip()
         if not part:
             continue
         m = _SKILL_YEARS_RE.match(part)
-        name, yrs = (m.group("skill"), int(m.group("yrs"))) if m else (part, None)
+        if m:
+            name, yrs = m.group("skill"), int(m.group("yrs"))
+        else:
+            mc = _SKILL_COURSES_RE.match(part)
+            name, yrs = (mc.group("skill"), COURSES_ONLY) if mc else (part, None)
         cs = canon_skill(name.strip())
         if not cs:
             continue
-        if cs in out and yrs is not None:
-            out[cs] = yrs if out[cs] is None else max(out[cs], yrs)
-        elif cs not in out:
-            out[cs] = yrs
+        if yrs is None:
+            out.setdefault(cs, None)
+        elif out.get(cs) is None:
+            out[cs] = yrs                          # first real signal (years or courses)
+        else:
+            out[cs] = max(out[cs], yrs)            # real years (>=0) outrank COURSES_ONLY (-1)
     return out
 
 
 def experience_multiplier(years: int | None) -> float:
-    """How fully a skill's coverage counts, by stated years. Unspecified -> 1.0 (no signal, so
-    users who don't annotate aren't penalised); low years discount; 3+ years counts fully."""
+    """How fully a skill's coverage counts, by stated experience. Unspecified -> 1.0 (no signal, so
+    users who don't annotate aren't penalised); courses-only is the weakest positive signal; low
+    years discount; 3+ years counts fully."""
     if years is None:
         return 1.0
+    if years == COURSES_ONLY:
+        return 0.6
     if years <= 0:
         return 0.7
     if years == 1:
