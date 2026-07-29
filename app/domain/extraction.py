@@ -121,6 +121,20 @@ _COMPANY_BOAST_RE = re.compile(
     r"millions? of (?:people|users|customers)|trusted by|founded in \d{4}|our mission is|"
     r"years? in business|we serve|we['’]?ve grown|our clients|proud to", re.I)
 
+# DEI / "apply anyway" encouragement closers. They contain qualification words ("skills",
+# "requirements") so the marketing filter and the req-signal override let them through as musts —
+# but they're never a requirement (an accountant JD's "we recognize everyone carries a unique set
+# of valuable skills" / "if you think you could have an impact even though you don't meet 100% of
+# the requirements"). Dropped outright so they don't sit in the gaps panel as uncoverable musts.
+_ENCOURAGEMENT_RE = re.compile(
+    r"we recognize that everyone|unique set of (?:valuable )?(?:skills|experience)|"
+    r"if you think you (?:could|can|might)|even (?:though|if) you (?:do\s*n['’]?t|don['’]?t) "
+    r"(?:meet|have|tick|check)|do\s*n['’]?t meet (?:100%|all|every|the)|"
+    r"we (?:strongly )?encourage(?:d)? (?:you|everyone|all|applicants)|encouraged to apply|"
+    r"equal[- ]opportunit|we (?:value|celebrate|embrace) diversity|diverse and inclusive|"
+    r"regardless of (?:race|gender|age|religion|sexual|disability|background)|"
+    r"an inclusive (?:workplace|environment)|committed to (?:diversity|inclusion|equal)", re.I)
+
 # Personality / soft-skill lines ("Team player with strong communication skills...",
 # "Performance-oriented mindset—you care about..."). Nobody lists these in a skills profile,
 # so scoring them as gaps is noise — they become kind="soft": extracted for transparency,
@@ -185,6 +199,8 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
     if _BENEFIT_RE.search(cleaned):
         return False
     if _COMPANY_BOAST_RE.search(cleaned):   # employer self-praise, even if it says "N years…"
+        return False
+    if _ENCOURAGEMENT_RE.search(cleaned):   # DEI / "apply even if you don't meet everything"
         return False
     if _MARKETING_RE.match(cleaned) and not _STRONG_SIGNAL_RE.search(cleaned):
         return False

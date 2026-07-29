@@ -58,6 +58,24 @@ def test_boilerplate_and_benefits_dropped():
     assert "fast-growing" not in all_text  # the About intro
 
 
+def test_dei_and_apply_anyway_closers_dropped():
+    # non-tech JDs end with encouragement/DEI prose that carries "skills"/"requirements" and so
+    # slipped past the marketing filter as uncoverable musts — must be dropped now.
+    jd = ("Requirements:\n"
+          "- Minimum 3 years of experience in accounting\n"
+          "- Proficiency in Excel\n"
+          "We recognize that everyone carries a unique set of valuable skills.\n"
+          "If you think you could have an impact even though you don't meet 100% of the "
+          "requirements, we encourage you to apply.\n"
+          "We are committed to diversity and equal opportunity regardless of gender or background.")
+    kept = " ".join(_texts(extract_requirements(jd))).lower()
+    assert "3 years of experience" in kept and "excel" in kept   # real requirements survive
+    assert "we recognize that everyone" not in kept
+    assert "encourage you to apply" not in kept
+    assert "unique set of valuable skills" not in kept
+    assert "regardless of gender" not in kept
+
+
 def test_bulleted_line_is_never_a_header():
     # "Strong experience with ..." contains a header keyword but is a bullet -> stays an item.
     reqs = extract_requirements("Requirements:\n- Strong experience with Kotlin skills")
