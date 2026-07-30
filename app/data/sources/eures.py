@@ -67,6 +67,18 @@ def _to_posting(jv: dict) -> RawPosting | None:
         raw={"source": "eures", "languages": jv.get("availableLanguages")})
 
 
+def fetch_page(country: str, page: int, results_per_page: int = PAGE_SIZE) -> list[RawPosting]:
+    """One page of one country's EURES feed — the unit the concurrent drain fetches (resumable,
+    per-country cursor). Empty list = that country's feed is exhausted at this depth."""
+    body = {"resultsPerPage": results_per_page, "page": page, "sortSearch": "BEST_MATCH",
+            "keywords": [], "locationCodes": [country], "requestLanguage": "en", "sessionId": ""}
+    j = post_json(_SEARCH, body)
+    jvs = j.get("jvs") if isinstance(j, dict) else None
+    if not jvs:
+        return []
+    return [rp for jv in jvs if (rp := _to_posting(jv)) is not None]
+
+
 def fetch(countries=EURES_COUNTRIES, pages: int = DEFAULT_PAGES, results_per_page: int = PAGE_SIZE,
           sleep=time.sleep) -> list[RawPosting]:
     """Blanket pull: `pages` pages of vacancies per country. Dedups within the run."""

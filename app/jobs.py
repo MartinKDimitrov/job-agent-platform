@@ -50,14 +50,14 @@ if __name__ == "__main__":
         src = sys.argv[2] if len(sys.argv) > 2 else None
         sources = (src,) if src else ("careerjet", "jooble")
         print(aggregator_fallback.run_aggregator_fallback(SessionLocal, sources=sources))
-    elif mode in ("careerjet_drain", "jooble_drain"):
+    elif mode in ("careerjet_drain", "jooble_drain", "eures_drain"):
         # deep bulk-drain a keyword-less aggregator feed, resumable: <mode> [call_budget]
         from .application.usecases import aggregator_drain
         src = mode.split("_")[0]
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else None
         print(aggregator_drain.run_drain(src, SessionLocal, call_budget=budget))
-    elif mode in ("careerjet_fast", "jooble_fast"):
-        # concurrent bulk-drain (AGG_CONCURRENCY=8): <mode> [call_budget]
+    elif mode in ("careerjet_fast", "jooble_fast", "eures_fast"):
+        # concurrent bulk-drain (AGG_CONCURRENCY=8; eures capped at 4): <mode> [call_budget]
         from .application.usecases import aggregator_drain
         src = mode.split("_")[0]
         budget = int(sys.argv[2]) if len(sys.argv) > 2 else None

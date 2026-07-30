@@ -18,7 +18,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from ...data.models import AggregatorDrain
-from ...data.sources import careerjet, jooble
+from ...data.sources import careerjet, jooble, eures
 from .search import persist_postings
 
 CALL_DELAY = 0.4
@@ -43,8 +43,17 @@ _SOURCES = {
         "fetch": lambda loc, page: jooble.fetch(search_terms=None, location=loc,
                                                 start_page=page, pages=1),
     },
+    # EURES: the official EU portal (anonymous, no key). Slice = country; an empty page retires it.
+    # Profiled 2026-07-30: ~42 jobs/page, ~900ms, scales to K=4 (plateaus after), 0 rate limits.
+    "eures": {
+        "slices": list(eures.EURES_COUNTRIES),
+        "configured": lambda: True,
+        "fetch": lambda loc, page: eures.fetch_page(loc, page),
+    },
 }
-DEFAULT_BUDGET = {"careerjet": 4000, "jooble": 300}
+DEFAULT_BUDGET = {"careerjet": 4000, "jooble": 300, "eures": 2000}
+# EURES server caps useful parallelism ~4 (K=8 gives no more throughput); keep its waves at 4.
+_CONCURRENCY_OVERRIDE = {"eures": 4}
 
 
 def ensure_slices(db, source: str) -> None:
@@ -101,6 +110,8 @@ def run_drain_concurrent(source: str, session_factory, *, call_budget: int | Non
     sequential path; Jooble stays bounded by ``call_budget`` (free-tier 500-total cap)."""
     cfg = _SOURCES[source]
     call_budget = DEFAULT_BUDGET[source] if call_budget is None else call_budget
+    if concurrency == DEFAULT_CONCURRENCY:            # honour a per-source cap unless caller overrode
+        concurrency = _CONCURRENCY_OVERRIDE.get(source, concurrency)
     if not cfg["configured"]():
         return {"source": source, "calls": 0, "added": 0, "note": "api key not set"}
     with session_factory() as db:
