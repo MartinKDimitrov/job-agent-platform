@@ -167,7 +167,25 @@ def _descend(db: Session, esco: Esco, code: str, parent: str | None, vertical: s
     for child in esco.links(node, "narrowerConcept"):
         _descend(db, esco, _isco_from_uri(child["uri"]), code, vertical, seen_groups, occ_uris)
     for occ in esco.links(node, "narrowerOccupation"):
-        occ_uris.setdefault(occ["uri"], code)
+        _descend_occ(esco, occ["uri"], code, occ_uris)
+
+
+def _descend_occ(esco: Esco, uri: str, isco_code: str, occ_uris: dict) -> None:
+    """Recurse an occupation's narrowerOccupation subtree. ESCO nests specialised roles under a
+    broader one (e.g. 'software developer' -> 'mobile app developer'); the ISCO-group walk alone
+    only reaches the ~1700 top occupations that hang directly off a group, missing the ~1200 deeper
+    specialisations. Fetch each occupation once here to read its children (it's fetched again in the
+    upsert phase for labels/skills — the call budget covers it)."""
+    if uri in occ_uris:
+        return
+    occ_uris[uri] = isco_code
+    if len(occ_uris) % 200 == 0:
+        print(f"  traversed {len(occ_uris)} occupations...", flush=True)
+    node = esco.get("/resource/occupation", uri=uri, language="en")
+    if not node:
+        return
+    for child in esco.links(node, "narrowerOccupation"):
+        _descend_occ(esco, child["uri"], isco_code, occ_uris)
 
 
 def run(session_factory=SessionLocal, verticals: tuple[str, ...] | None = None,
