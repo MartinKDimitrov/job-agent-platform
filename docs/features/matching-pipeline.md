@@ -88,9 +88,15 @@ pages show titles/counts only — descriptions and apply links stay behind regis
 ## Consolidated improvement plan (owner discussions, 2026-07-23/24)
 
 **Phase 0 ✅ — the bottleneck first**: a hand-labeled EVAL SET (30-50 profile→posting pairs,
-NDCG/P@K harness). Five open decisions hang on it: E5 mode, recall threshold, near-dup
-threshold, blend weights, ★5 cap. Also: the profile's embed input becomes role+skills+
-experience (mirror of the posting's title+requirements; languages/CEFR are filter data).
+NDCG/P@K harness, `app.tools.eval_matching`). Five open decisions hang on it: E5 mode, recall
+threshold, near-dup threshold, blend weights, ★5 cap. Also: the profile's embed input becomes
+role+skills+experience (mirror of the posting's title+requirements; languages/CEFR are filter data).
+- **Silver-label eval at scale** (`app.tools.eval_silver`): the hand set is too small (3 profiles)
+  to separate close calls. This harness grades EVERY long-description live posting against a
+  12-profile panel via `role_family` (overlap=2 / soft=1 / else=0) — coarse but scales to ~38k
+  postings, reporting NDCG@10 / P@5 / MAP / Recall@20. Use for RELATIVE A/B (`--variants`,
+  `--compare-models`) under identical labels, not as an absolute bar. It's what measured
+  e5-base = no gain over e5-small at ~4x cost; production is `asym_clean` on e5-small.
 
 **Phase 1 ✅ (partial: mode A/B, truncation, coverage noise; weight-drift pending annotation completion)** (measure, don't guess): E5 symmetric vs passage:/query: A/B on
 the eval set; token-length/truncation stats; annotation weight drift (re-annotate 10-20
