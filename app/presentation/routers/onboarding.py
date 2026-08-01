@@ -420,6 +420,10 @@ def _ob_style() -> str:
       font-size:14px;color:var(--ink)}
     #ob .occ:hover{background:var(--gray-soft)}
     #ob .occ .oa{color:var(--muted);flex-shrink:0}
+    #ob .occ .ocw{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+    #ob .occ .oofc{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #ob .occ .olvl{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;
+      background:var(--green-soft);color:var(--navy);white-space:nowrap}
     #ob .no-match{padding:22px;text-align:center;color:var(--muted);border:1px solid var(--line);
       border-radius:12px;background:var(--card)}
     #ob .bulk-years{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0 14px;
@@ -581,9 +585,20 @@ def _ob_script(lang: str) -> str:
   var f_occ=qs('#f_occ');
   function occRow(o){
     var b=document.createElement('button'); b.type='button'; b.className='occ';
+    var w=document.createElement('span'); w.className='ocw';
     var l=document.createElement('span'); l.className='ol'; l.textContent=o.label; l.title=o.label;
+    w.appendChild(l);
+    // official Bulgarian NKPD title (shown only when it differs from the ESCO label)
+    if(o.official && o.official.toLowerCase()!==o.label.toLowerCase()){
+      var of=document.createElement('span'); of.className='oofc';
+      of.textContent='НКПД: '+o.official; of.title='НКПД: '+o.official; w.appendChild(of);
+    }
+    b.appendChild(w);
+    if(o.level){ var lv=document.createElement('span'); lv.className='olvl';
+      lv.textContent='ниво '+o.level; lv.title='Минимално квалификационно ниво по НКПД-2011';
+      b.appendChild(lv); }
     var a=document.createElement('span'); a.className='oa'; a.textContent='→';
-    b.appendChild(l); b.appendChild(a); b.onclick=function(){pickOcc(o);}; return b;
+    b.appendChild(a); b.onclick=function(){pickOcc(o);}; return b;
   }
   function occList(list){var ul=document.createElement('div'); ul.className='occ-list';
     list.forEach(function(o){ul.appendChild(occRow(o));}); return ul;}

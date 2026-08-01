@@ -57,10 +57,28 @@ def leaf_groups(db: Session, vertical: str, lang: str = "bg") -> list[dict]:
     return out
 
 
+def _primary_nkpd(o: Occupation) -> dict | None:
+    """The best official NKPD position for an occupation: the exact ('Точно') match if any, else
+    the first. Carries the min qualification level (0-9) the BG onboarding shows."""
+    items = o.nkpd or []
+    if not items:
+        return None
+    return next((x for x in items if x.get("rel") == "Точно"), items[0])
+
+
 def occupations(db: Session, isco_code: str, lang: str = "bg") -> list[dict]:
-    """Occupations that hang off a leaf ISCO group, labelled in `lang`."""
-    rows = db.execute(select(Occupation).where(Occupation.isco_code == isco_code)).scalars()
-    out = [{"id": o.id, "esco_uri": o.esco_uri, "label": _label(o, lang)} for o in rows]
+    """Occupations that hang off a leaf ISCO group, labelled in `lang`. For Bulgarian, each also
+    carries its official NKPD-2011 qualification level + title (BG-market overlay; ESCO stays the
+    label backbone for every language)."""
+    out = []
+    for o in db.execute(select(Occupation).where(Occupation.isco_code == isco_code)).scalars():
+        d = {"id": o.id, "esco_uri": o.esco_uri, "label": _label(o, lang)}
+        if lang == "bg":
+            pn = _primary_nkpd(o)
+            if pn:
+                d["level"] = pn.get("level") or ""
+                d["official"] = pn.get("title") or ""
+        out.append(d)
     out.sort(key=lambda o: o["label"].lower())
     return out
 

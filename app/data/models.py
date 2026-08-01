@@ -297,6 +297,10 @@ class Occupation(Base):
     isco_code: Mapped[str] = mapped_column(String(8), index=True)   # the leaf group it belongs to
     labels: Mapped[dict] = mapped_column(JSON, default=dict)        # {lang: label}
     vertical: Mapped[str] = mapped_column(String(64), default="", index=True)
+    # Official Bulgarian NKPD-2011 positions mapped to this ESCO occupation (BG market overlay —
+    # ESCO stays the multilingual backbone): [{code, title, level, rel}]. level = 5th digit of the
+    # 8-digit NKPD code = min education/qualification level. Populated by app.tools.import_nkpd.
+    nkpd: Mapped[list] = mapped_column(JSON, default=list)
     skills: Mapped[list["OccupationSkill"]] = relationship(
         back_populates="occupation", cascade="all, delete-orphan")
 
