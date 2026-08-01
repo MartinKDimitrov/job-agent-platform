@@ -371,7 +371,10 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
     stats = RunStats()
     err = ""
     try:
-        res = search_db(db, p, stats=stats)
+        # verify=False: the LLM coverage check (up to verify_top_n rate-limited calls) is fired
+        # OFF the request path below, so a profile with many fresh matches (an ML Engineer) gets
+        # its results in ~5s instead of ~23s — the verified split lands on the next page load.
+        res = search_db(db, p, stats=stats, verify=False)
     except Exception as e:  # noqa: BLE001 — degrade gracefully, still record the run
         err = str(e)
         res = {"pool": 0, "filtered": 0, "matched": 0}
@@ -380,6 +383,10 @@ def profile_search(pid: int, request: Request, db: Session = Depends(get_db)):
         record_run(db, "search_now", stats, started, ok=not err, error=err)
     except Exception:  # noqa: BLE001 — metrics are best-effort, never a 500 for the user
         db.rollback()
+    if not err:
+        from ...application.usecases.verify_coverage import verify_top_matches_async
+        from ...data.db import SessionLocal
+        verify_top_matches_async(SessionLocal, p.id)
     return redirect(f"/profiles/{p.id}?pool={res['pool']}"
                     f"&filtered={res['filtered']}&found={res['matched']}")
 

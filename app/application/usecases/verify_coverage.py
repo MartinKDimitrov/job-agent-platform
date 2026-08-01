@@ -15,6 +15,7 @@ base score, so the two paths cannot drift.
 from __future__ import annotations
 
 import logging
+import threading
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,7 +23,7 @@ from sqlalchemy.orm import Session
 from ...core.config import settings
 from ...data.keystore import get_config
 from ...data.llm import LLMError, get_provider
-from ...data.models import Match, Posting
+from ...data.models import Match, Posting, Profile
 from ...domain.prompts.verify_v1 import build_verify_prompt, parse_verify_response
 from ...domain.scoring import blend, coverage_ratio, semantic_pct
 
@@ -92,6 +93,24 @@ def verify_match(db: Session, profile, match: Match, post: Posting, llm) -> bool
     match.covered, match.missing = covered, missing
     match.llm_verified = True
     return True
+
+
+def verify_top_matches_async(session_factory, profile_id: int) -> None:
+    """Fire-and-forget the LLM verification OFF the request path (daemon thread, own session).
+    A user search with many fresh matches returns immediately; the verified covered/missing
+    split lands a few seconds later (visible on the next page load). Best-effort — a provider
+    outage or rate limit just leaves the matches keyword-scored until the next search."""
+    def _run():
+        try:
+            with session_factory() as db:
+                p = db.get(Profile, profile_id)
+                if p is not None:
+                    verify_top_matches(db, p)
+        except Exception:  # noqa: BLE001 — verification is best-effort, never crash the worker
+            log.warning("async coverage verification failed for profile %s", profile_id,
+                        exc_info=True)
+
+    threading.Thread(target=_run, name=f"verify-{profile_id}", daemon=True).start()
 
 
 def verify_top_matches(db: Session, profile, top_n: int | None = None) -> dict:

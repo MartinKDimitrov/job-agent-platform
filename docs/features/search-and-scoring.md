@@ -51,7 +51,11 @@ salary fit, language/CEFR, seniority, **role-family**, location, **qualification
 **LLM coverage verification** (verify-v1): top matches above the threshold get a budgeted
 (`VERIFY_TOP_N`), cached-forever, best-effort LLM re-labeling of hits ('api' ≠ GraphQL,
 'A2' ≠ fluent English); scores recompute through the SAME blend; "✦ AI-checked" chip.
-Provider chain: user BYOK → platform free lane → silent no-op.
+Provider chain: user BYOK → platform free lane → silent no-op. From the user's search it runs
+**off the request path** (`verify_top_matches_async`, daemon thread + own session): the feed
+returns immediately and the verified split lands on the next page load — a profile with many
+fresh matches was otherwise paying up to `VERIFY_TOP_N` rate-limited LLM calls inline (~18s).
+Batch callers (digest) still verify synchronously.
 
 **UI (one-page app, EN/BG):** profile tabs + threshold tuner + Search now; match cards with
 score ring, covered / not-in-your-profile / considered-an-advantage panels, source badge,

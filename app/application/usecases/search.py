@@ -587,7 +587,7 @@ def retire_stale_postings(db: Session, max_age_days: int | None = None) -> int:
     return res.rowcount or 0
 
 
-def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dict:
+def search_db(db: Session, profile, limit: int | None = None, stats=None, verify: bool = True) -> dict:
     """The READ side: score the profile against the postings ALREADY in our index — no network,
     so Search now answers in well under a second. Vectors come precomputed from the rows.
 
@@ -714,15 +714,18 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         # usable for the caller (record_run etc.).
         db.rollback()
         log.info("concurrent search for profile %s — matches saved by the other run", profile.id)
-    # LLM double-check of the covered/missing split for the matches the user will actually
-    # see (budgeted, cached per match, silently skipped without any provider).
-    from .verify_coverage import verify_top_matches
-    ver = verify_top_matches(db, profile)
+    # LLM double-check of the covered/missing split for the matches the user will actually see
+    # (budgeted, cached per match, silently skipped without any provider). `verify=False` skips
+    # it here so the caller can run it OFF the request path — the user's search fires it in a
+    # background thread instead of paying up to `verify_top_n` (rate-limited) LLM calls inline.
+    verified = 0
+    if verify:
+        from .verify_coverage import verify_top_matches
+        verified = verify_top_matches(db, profile)["verified"]
     if stats is not None:
-        stats.add(filtered=filtered, scored=scored, matched=matched,
-                  llm_verified=ver["verified"])
+        stats.add(filtered=filtered, scored=scored, matched=matched, llm_verified=verified)
     return {"pool": pool, "filtered": filtered, "scored": scored, "matched": matched,
-            "llm_verified": ver["verified"]}
+            "llm_verified": verified}
 
 
 def run_search(db: Session, profile, boards=None, limit: int | None = None,
