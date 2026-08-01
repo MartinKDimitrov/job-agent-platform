@@ -57,7 +57,10 @@ _NOISE = ("equal opportunity", "eeo", "we are an equal", "apply now", "how to ap
           # closing / culture / employment-detail lines that are not skill requirements
           "if this feels like", "love to connect", "we'd love to hear", "we would love to hear",
           "full-time role", "full time role", "flexible hours", "no engagement tests",
-          "time tracking", "official employment", "startup vibe", "no time tracking")
+          "time tracking", "official employment", "startup vibe", "no time tracking",
+          # application-instruction closers (observed footers on dev.bg/zaplata postings)
+          "send us your cv", "send your cv", "interested in the opportunity", "изпрати ни",
+          "изпратете ни", "изпрати своето cv")
 
 _BULLET = re.compile(r"^\s*(?:[-*•·▪●○◦→–—]|\d+[.)])\s+")
 # A header line is short-ish and label-like: no sentence punctuation, optional trailing colon
@@ -88,8 +91,31 @@ _BENEFIT_RE = re.compile(
     r"remote (?:work )?budget|home[- ]office (?:budget|setup)|equipment budget|"
     r"opportunity to work (?:with|at|on)|healthy and safe workplace|prohibits harassment|"
     r"work[- ]life balance|paid (?:sick|parental|maternity|paternity)|"
+    # perk lines that routinely land in the must-bucket with no section header (a Dreamix
+    # 'What we offer' block bulleted straight after the requirements):
+    r"massages?|warm and supportive|supportive work environment|unlimited home[- ]office|"
+    r"summer office|winter office|company[- ]wide events?|knowledge[- ]sharing sessions?|"
+    r"academic teaching|speaking engagements?|professional development|relax and unwind|"
+    r"reach your full potential|certifications? and training|"
     r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
     r"карта за транспорт|бонус за|пенси\w*|релокац\w*|обяд\w*)\b", re.I)
+
+# Application / data-privacy footer boilerplate — a consent-and-processing block that closes most
+# EU/BG postings (dev.bg, zaplata). It is keyed to the CONSENT/PROCESSING phrasing, NOT the bare
+# words "gdpr"/"privacy" — those are legitimate REQUIREMENTS on some roles ("Familiarity with the
+# EU AI Act, GDPR and responsible-AI practices" must survive). Dropped wherever it appears.
+_LEGAL_RE = re.compile(
+    r"by applying (?:for|to) this\b|you voluntarily (?:agree|submit)|voluntarily agree and submit|"
+    r"(?:personal data|personal information) (?:that )?you provide|"
+    r"process(?:es|ing)? (?:your |of your )?personal (?:data|information)|"
+    r"your personal (?:data|information) (?:will|shall|may) be|"
+    r"for the purpose[s]? of (?:the )?(?:selection|recruitment|hiring)|"
+    r"in accordance with (?:the )?(?:gdpr|applicable data)|applicable data[- ]protection|"
+    r"data protection (?:law|legislation|regulation)|(?:a )?european job applicant|"
+    r"see the privacy (?:notice|policy)|collects and processes personal|"
+    r"transferred to (?:other )?data controllers|"
+    r"recruitment licen[cs]e|licen[cs]e (?:no\.?|number|№|issued)|"
+    r"^[\w .,&'-]{2,42}\b(?:ltd|gmbh|ood|eood|inc|llc|ад|еоод|оод)\.?$", re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...")
 # plus what-the-company-gives-you sentences ("You will have the opportunity for fully remote...").
 _MARKETING_RE = re.compile(
@@ -119,7 +145,8 @@ _COMPANY_BOAST_RE = re.compile(
     r"professional experts|people worldwide|worldwide impacted|impacted by our|"
     r"we believe we|we['’]?ve got the numbers|billion (?:people|users|customers)|"
     r"millions? of (?:people|users|customers)|trusted by|founded in \d{4}|our mission is|"
-    r"years? in business|we serve|we['’]?ve grown|our clients|proud to", re.I)
+    r"years? in business|we serve|we['’]?ve grown|our clients|proud to|"
+    r"culture is what|what makes us (?:different|special)|we (?:strongly )?believe in", re.I)
 
 # DEI / "apply anyway" encouragement closers. They contain qualification words ("skills",
 # "requirements") so the marketing filter and the req-signal override let them through as musts —
@@ -197,6 +224,8 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
     if _MONEY_RE.search(cleaned):
         return False
     if _BENEFIT_RE.search(cleaned):
+        return False
+    if _LEGAL_RE.search(cleaned):           # application-consent / data-privacy footer boilerplate
         return False
     if _COMPANY_BOAST_RE.search(cleaned):   # employer self-praise, even if it says "N years…"
         return False
