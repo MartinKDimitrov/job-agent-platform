@@ -410,3 +410,34 @@ def test_what_to_expect_section_is_responsibilities_not_requirements():
     assert not any("supportive environment" in t for t in gaps)         # not a gap requirement
     assert not any("work closely" in t for t in gaps)
     assert any("kotlin" in t for t in gaps)                             # real requirement stays
+
+
+def test_multilingual_legal_terms_and_soft_are_not_gaps():
+    """Postings arrive in any source language. The consent footer, the terms of employment and
+    the personal-quality lines must never become gap requirements — even when they are plain
+    bullets with no recognisable section header (which is when the drop-headers can't help)."""
+    cases = [
+        # (text, the substring of the ONE real requirement)
+        ("Anforderungen:\n- Erfahrung mit Python\n"
+         "- Mit Ihrer Bewerbung stimmen Sie der Verarbeitung Ihrer personenbezogenen Daten zu.\n"
+         "- 40 Wochenstunden, unbefristeter Arbeitsvertrag\n"
+         "- Zuverlaessigkeit und Verantwortungsbewusstsein", "python"),
+        ("Profil recherche :\n- Experience en Python\n"
+         "- En postulant, vous acceptez le traitement de vos donnees personnelles.\n"
+         "- 35 heures par semaine, contrat a duree indeterminee\n"
+         "- Rigueur et sens des responsabilites", "python"),
+        ("Requisitos:\n- Experiencia con Python\n"
+         "- Al inscribirte aceptas el tratamiento de tus datos personales.\n"
+         "- Trabajo en equipo y proactividad", "python"),
+        ("Wymagania:\n- Doswiadczenie z Python\n"
+         "- 40 godzin tygodniowo, umowa o prace na czas nieokreslony\n"
+         "- Komunikatywnosc i samodzielnosc", "python"),
+        ("Requisiti:\n- Esperienza con Python\n"
+         "- Affidabilita e senso di responsabilita\n"
+         "- Capacita di lavorare in team", "python"),
+    ]
+    for text, real in cases:
+        gaps = [r["text"].lower() for r in extract_requirements(text)
+                if r["kind"] in ("must", "nice")]
+        assert any(real in g for g in gaps), f"lost the real requirement in: {text[:30]}"
+        assert len(gaps) == 1, f"boilerplate leaked into gaps: {gaps}"

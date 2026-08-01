@@ -159,7 +159,25 @@ _LEGAL_RE = re.compile(
     r"ще се свърже[мн]? (?:само )?с|благодарим (?:ви|на всички)|"
     r"изпратете (?:ни )?(?:вашата |своята )?(?:автобиограф|cv|молба)|"
     r"кандидатствай(?:те)? (?:чрез|през|на)|предоставените от вас данни|"
-    r"личните ви данни|обработване на лични данни", re.I)
+    r"личните ви данни|обработване на лични данни|"
+    # Same consent/selection footer across the source languages. Formulaic and unambiguous —
+    # unlike marketing prose, these phrases are never a skill requirement, so enumerating them
+    # is safe (the multilingual DROP headers only help when the section IS headed).
+    r"mit ihrer bewerbung|personenbezogene[nr]? daten|verarbeitung ihrer|datenschutzerkl|"
+    r"dsgvo|nur ausgew(?:ä|ae)hlte|ausgew(?:ä|ae)hlte (?:kandidaten|bewerber)|"       # de
+    r"en postulant|donn(?:é|e)es personnelles|traitement de vos donn|rgpd|"
+    r"seuls les candidats|politique de confidentialit|"                               # fr
+    r"al (?:inscribirte|aplicar|postular)|datos personales|tratamiento de (?:tus|sus) datos|"
+    r"candidatos (?:seleccionados|preseleccionados)|protecci(?:ó|o)n de datos|"       # es
+    r"candidandoti|dati personali|trattamento dei dati|candidati selezionati|"
+    r"informativa (?:sulla )?privacy|"                                                # it
+    r"door te solliciteren|persoonsgegevens|verwerking van je|geselecteerde kandidaten|"  # nl
+    r"aplikuj(?:ąc|ac)|dane osobowe|przetwarzanie danych|rodo|wybrani kandydaci|"     # pl
+    r"prelucrarea datelor|datele (?:dvs\.? )?personale|candida(?:ț|t)ii selecta(?:ț|t)i|"  # ro
+    r"osobnih podataka|obradu podataka|odabrani kandidati|"                           # hr
+    r"προσωπικ(?:ώ|ω)ν δεδομ(?:έ|ε)νων|επεξεργασ(?:ί|ι)α δεδομ(?:έ|ε)νων|"            # el
+    r"персональных данных|обработку данных|отобранные кандидаты|"                     # ru
+    r"персональних даних|обробку даних|в(?:і|i)д(?:і|i)бран(?:і|i) кандидати", re.I)  # uk
 
 # Terms of EMPLOYMENT (hours, contract type, start date, shift pattern) — they answer "what is the
 # job", not "what must the candidate have", so they are never gaps. Observed leaking from EURES
@@ -172,7 +190,19 @@ _TERMS_RE = re.compile(
     r"schedule (?:&|and) location|\bmonday to friday\b|"
     r"работно време|работни часа|на смени|извънреден труд|"
     r"(?:постоянна|целогодишна) заетост|трудов договор|срочен договор|"
-    r"начало на работа|от понеделник до петък", re.I)
+    r"начало на работа|от понеделник до петък|"
+    # Employment terms in the source languages (hours / contract type / start date).
+    r"wochenstunden|stunden pro woche|arbeitsvertrag|unbefristet|befristet|arbeitsbeginn|"
+    r"vollzeit|teilzeit|schichtarbeit|"                                               # de
+    r"heures par semaine|contrat (?:à|a) dur(?:é|e)e|\bcdi\b|\bcdd\b|temps (?:plein|partiel)|"
+    r"prise de poste|"                                                                # fr
+    r"horas (?:semanales|a la semana)|contrato (?:indefinido|temporal|de trabajo)|"
+    r"jornada (?:completa|parcial)|media jornada|incorporaci(?:ó|o)n inmediata|"      # es
+    r"ore settimanali|contratto a tempo (?:indeterminato|determinato)|tempo pieno|"   # it
+    r"uur per week|arbeidsovereenkomst|vast contract|fulltime|parttime|startdatum|"   # nl
+    r"godzin tygodniowo|umowa (?:o prac|zlecenie)|pe(?:ł|l)ny etat|rozpocz(?:ę|e)cie pracy|"  # pl
+    r"ore pe s(?:ă|a)pt(?:ă|a)m(?:â|a)n(?:ă|a)|contract pe perioad|norm(?:ă|a) (?:î|i)ntreag",  # ro
+    re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...")
 # plus what-the-company-gives-you sentences ("You will have the opportunity for fully remote...").
 _MARKETING_RE = re.compile(
@@ -243,7 +273,22 @@ _SOFT_RE = re.compile(
     r"комуникативн\w*|екипен играч|работа в екип|лична мотивация|адаптивн\w*|"
     r"отговорност|прецизност|решителност|организираност|аналитично мислене|"
     r"внимание към детайл\w*|инициативност|лоялност|дискретност|"
-    r"желание за (?:работа|учене|развитие)|позитивн\w*|усмихнат\w*)\b", re.I)
+    r"желание за (?:работа|учене|развитие)|позитивн\w*|усмихнат\w*|"
+    # Personal qualities in the source languages. These only RECLASSIFY must/nice -> soft
+    # (kept for context, zero weight, hidden from the gaps panel) — never dropped.
+    r"teamf(?:ä|ae)higkeit|zuverl(?:ä|ae)ssigkeit|verantwortungsbewusstsein|"
+    r"kommunikationsst(?:ä|ae)rke|eigeninitiative|belastbarkeit|lernbereitschaft|"
+    r"sorgfalt|flexibilit(?:ä|ae)t|"                                                  # de
+    r"esprit d['’]?(?:é|e)quipe|rigueur|sens des responsabilit\w*|autonomie|"
+    r"bon relationnel|capacit(?:é|e) d['’]?adaptation|dynamisme|"                     # fr
+    r"trabajo en equipo|proactividad|capacidad de adaptaci\w*|orientaci(?:ó|o)n al detalle|"  # es
+    r"lavor(?:o|are) in team|affidabilit\w*|senso di responsabilit\w*|"
+    r"capacit(?:à|a) di lavorare|precisione|flessibilit\w*|"                             # it
+    r"teamplayer|communicatieve vaardigheden|zelfstandig|nauwkeurig|"
+    r"verantwoordelijkheidsgevoel|"                                                   # nl
+    r"praca w zespole|odpowiedzialno(?:ś|s)(?:ć|c)|komunikatywno\w*|samodzielno\w*|"
+    r"dok(?:ł|l)adno(?:ś|s)(?:ć|c)|zaanga(?:ż|z)owanie|"                              # pl
+    r"lucru (?:î|i)n echip\w*|responsabilitate|aten(?:ț|t)ie la detalii)\b", re.I)       # ro
 
 # Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
 # use U+2019 in "What's in It for you:" / "What you'll do:", which silently missed every
