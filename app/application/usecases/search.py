@@ -204,7 +204,14 @@ _TOKEN_RE = re.compile(r"[a-z0-9\+\#\.]+")
 
 # Tool tokens too generic to signal title relevance — the "Git" skill was matching GitLab's
 # "Tenant Scale: Git" job title and similar accidents (api/rest/sdk appear in countless titles).
-_GENERIC_TOKENS = {"git", "api", "rest", "sdk", "app", "apps", "web", "code"}
+_GENERIC_TOKENS = {"git", "api", "rest", "sdk", "app", "apps", "web", "code",
+                   # role-suffix / seniority words: they appear across thousands of unrelated
+                   # titles, so on their own they aren't recall signal (an 'engineer' token alone
+                   # matched ~14k titles). The distinctive tokens (python, machine, welder…) stay.
+                   "engineer", "engineering", "developer", "dev", "manager", "management",
+                   "specialist", "analyst", "consultant", "lead", "senior", "junior", "intern",
+                   "associate", "officer", "coordinator", "administrator", "assistant",
+                   "director", "head", "principal", "staff", "professional"}
 
 
 def _profile_keywords(profile) -> set[str]:
@@ -610,12 +617,20 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
         db, profile.embedding, settings.recall_min_cosine)
     profile_recall_skills = extract_skills(profile.skills or "") - RECALL_GENERIC_SKILLS
     skill_ids = vector_cache.postings_sharing_skills(db, profile_recall_skills)
+    cap = settings.recall_max_candidates
     relevant_ids = list(token_ids | vector_ids | skill_ids)
-    if len(relevant_ids) > settings.recall_max_candidates:
-        # guard rail: keep the lexically/skill-matched, trim the loosest vector extras
-        core = token_ids | skill_ids
-        extras = [pid for pid in vector_ids if pid not in core]
-        relevant_ids = list(core) + extras[:max(0, settings.recall_max_candidates - len(core))]
+    if len(relevant_ids) > cap:
+        # guard rail: bound the scoring loop at `cap`. The PRECISE doors are the core — skill
+        # (shares a real canonical skill) + vector (semantic, already ANN-capped at `cap`) — and
+        # the LEXICAL token door fills whatever budget is left. A generic role token like
+        # 'engineer' otherwise floods recall (matched ~14k titles for an ML Engineer profile),
+        # and the old rule (token+skill = core, vector = expendable) left that flood UNcapped.
+        core = skill_ids | vector_ids
+        relevant_ids = list(core)[:cap]
+        if len(relevant_ids) < cap:
+            core_seen = set(relevant_ids)
+            relevant_ids += [pid for pid in token_ids
+                             if pid not in core_seen][:cap - len(relevant_ids)]
     existing_by_post = {m.posting_id: m for m in db.execute(
         select(Match).where(Match.profile_id == profile.id)).scalars()}
     scored = filtered = matched = 0
@@ -678,10 +693,15 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None) -> dic
     # one created under an older, laxer filter (e.g. a hybrid role before relocate/commute handling)
     # could outlive it. Re-check each such leftover against the CURRENT hard filters and drop the
     # ones that no longer qualify (or whose posting was retired).
-    for post_id, stale in existing_by_post.items():
-        if post_id in seen:
-            continue
-        zp = db.get(Posting, post_id)
+    leftovers = [(pid, stale) for pid, stale in existing_by_post.items() if pid not in seen]
+    # ONE query for all leftovers — a per-row db.get() here is a tunnel round-trip each, and a
+    # profile that accumulated many matches (an ML Engineer had 526) turned this sweep into ~490
+    # round-trips ≈ 80s. Postings gone from the table simply won't appear in the map → dropped.
+    zmap = {zp.id: zp for zp in db.execute(
+        select(Posting).where(Posting.id.in_([pid for pid, _ in leftovers]))).scalars()} \
+        if leftovers else {}
+    for post_id, stale in leftovers:
+        zp = zmap.get(post_id)
         if zp is None or not getattr(zp, "is_live", True) or not passes_hard_filters(
                 profile, zp.title, zp.location, zp.description)[0]:
             db.delete(stale)
