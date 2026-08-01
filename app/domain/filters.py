@@ -372,30 +372,61 @@ def seniority_factor(profile, title: str, *, underqualified: float = 0.6,
 
 # Formal education/qualification requirement, on the NKPD-2011 level scale (0-8). Highest tier
 # explicitly stated in a posting wins, so the list is ordered high -> low. BG + EN cues.
+# Education cues per NKPD level, in every language postings arrive in. Substring match on lowered
+# text, so each cue must be unambiguous ACROSS languages — the dangerous ones are deliberately
+# absent: bare "licence" (FR degree, but "driving licence" is everywhere in trades ads), bare
+# "grado" (ES degree, but Italian "in grado di" = "able to"), "mbo" (inside "combo"), "havo"
+# (inside "havoc"), bare "bac"/"sss"/"wo". Qualified phrases only.
 _EDU_LEVELS: tuple[tuple[int, tuple[str, ...]], ...] = (
     (8, ("phd", "ph.d", "doctoral", "doctorate", "докторска", "доктор на науки",
-         "образователна и научна степен")),
-    (7, ("master", "msc", "m.sc", "mba", "магистър", "магистърска")),
+         "образователна и научна степен",
+         "doktorgrad", "doktortitel", "doktorat", "doctorat", "dottorato", "doctorado",
+         "doctoraat", "διδακτορικό", "докторская", "докторський")),
+    (7, ("master", "msc", "m.sc", "mba", "магистър", "магистърска",
+         "magister", "mastère", "máster", "laurea magistrale", "studia magisterskie",
+         "masterat", "magistar", "μεταπτυχιακό", "магистр", "магістр")),
     (6, ("bachelor", "bsc", "b.sc", "university degree", "higher education", "university education",
-         "висше образование", "бакалавър", "университетско образование", "университетска степен")),
+         "висше образование", "бакалавър", "университетско образование", "университетска степен",
+         "hochschulabschluss", "hochschulstudium", "akademischer abschluss",
+         "diplôme universitaire", "études supérieures", "bac+",
+         "grado universitario", "licenciatura", "titulación universitaria", "estudios superiores",
+         "laurea", "titolo universitario", "universitair", "hbo-opleiding",
+         "licencjat", "wyższe wykształcenie", "wykształcenie wyższe", "studia wyższe",
+         "licență", "studii superioare", "visoka stručna sprema",
+         "πτυχίο", "ανώτατη εκπαίδευση", "высшее образование", "бакалавр", "вища освіта")),
     (5, ("professional qualification", "college degree", "проф. квалификация",
-         "професионална квалификация", "полувисше", "колеж")),
-    (3, ("secondary education", "high school diploma", "средно образование", "средно специално")),
-    (1, ("primary education", "основно образование")),
+         "професионална квалификация", "полувисше", "колеж",
+         "berufsausbildung", "ausbildung", "formation professionnelle", "brevet de technicien",
+         "formación profesional", "ciclo formativo", "qualifica professionale",
+         "diploma professionale", "mbo-niveau", "technikum", "szkoła policealna",
+         "școală postliceală", "calificare profesională", "среднее специальное")),
+    (3, ("secondary education", "high school diploma", "средно образование", "средно специално",
+         "средно/висше", "средно или висше", "средно и/или висше",
+         "abitur", "mittlere reife", "baccalauréat", "bachillerato",
+         "educación secundaria", "diploma di maturità", "scuola superiore",
+         "middelbare school", "średnie wykształcenie", "matura", "bacalaureat", "studii medii",
+         "απολυτήριο λυκείου", "srednja stručna sprema", "среднее образование",
+         "середня освіта")),
+    (1, ("primary education", "основно образование", "hauptschulabschluss", "école primaire",
+         "educación primaria", "podstawowe wykształcenie")),
 )
 
 
 def extract_qualification_level(text: str) -> int | None:
-    """The highest formal education level a posting explicitly requires (NKPD scale 0-8), or None
-    when it states none. Keyword-based (BG+EN); absence -> None so matching stays conservative."""
+    """The formal education level a posting requires to ENTER it (NKPD scale 0-8), or None when it
+    states none. Multilingual keyword match; absence -> None so matching stays conservative.
+
+    When several levels appear we take the LOWEST: "Bachelor's or Master's degree" admits a
+    bachelor, so its entry bar is 6, not 7 — reading the highest would penalise candidates the
+    posting would actually accept. The same rule makes a stray mention ("after your bachelor…" in
+    a PhD ad) err toward NOT penalising, which is the safe direction for a soft factor."""
     t = (text or "").lower()
-    for lvl, cues in _EDU_LEVELS:
-        if any(c in t for c in cues):
-            return lvl
-    return None
+    found = [lvl for lvl, cues in _EDU_LEVELS if any(c in t for c in cues)]
+    return min(found) if found else None
 
 
-def qualification_factor(profile, text: str, *, underqualified: float = 0.7, gap: int = 2) -> float:
+def qualification_factor(profile, text: str, *, underqualified: float = 0.7, gap: int = 2,
+                         need: int | None = None) -> float:
     """Soft down-weight when a posting demands a much higher formal qualification than the profile's
     occupation carries (its NKPD level, set at onboarding). Acts only when BOTH levels are known and
     the posting needs at least `gap` levels more — e.g. a basic-vocational profession (level 2) vs a
@@ -403,7 +434,8 @@ def qualification_factor(profile, text: str, *, underqualified: float = 0.7, gap
     pql = getattr(profile, "qualification_level", None)
     if pql is None:
         return 1.0
-    need = extract_qualification_level(text)
+    if need is None:                      # caller passes the COLLECTED level (Posting.education_level)
+        need = extract_qualification_level(text)   # fallback: not collected yet / ad-hoc callers
     if need is None:
         return 1.0
     return underqualified if (need - pql) >= gap else 1.0

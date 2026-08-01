@@ -109,6 +109,11 @@ class Posting(Base):
     salary_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
     salary_period: Mapped[str | None] = mapped_column(String(8), nullable=True)  # month/year
     salary_raw: Mapped[str | None] = mapped_column(String(64), nullable=True)    # as written
+    # Formal education the posting requires to ENTER it, on the NKPD 0-8 scale (domain/filters.
+    # extract_qualification_level, multilingual). Collected once at enrichment like salary above
+    # — searching re-scanned every candidate's full description on every run. NULL = none stated
+    # (or not yet collected); the qualification soft factor then simply doesn't act.
+    education_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
     # UNIQUE so concurrent writers (parallel Adzuna/Careerjet/Jooble) can't both insert the same
     # posting — the DB rejects the racing INSERT and ingest() catches it and touches instead.

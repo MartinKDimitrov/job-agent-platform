@@ -208,3 +208,45 @@ def test_qualification_factor_downweights_big_gap_only():
     assert qualification_factor(Q(2), "Concrete worker") == 1.0                # need unknown
     # unknown profile level -> never act
     assert qualification_factor(Q(None), "PhD required") == 1.0
+
+
+def test_education_level_is_multilingual():
+    # postings arrive in any source language — the education bar must be read in all of them
+    from app.domain.filters import extract_qualification_level as lvl
+    assert lvl("Hochschulabschluss in Informatik") == 6          # de
+    assert lvl("Abgeschlossene Berufsausbildung") == 5
+    assert lvl("Abitur oder vergleichbar") == 3
+    assert lvl("Diplôme universitaire en informatique") == 6     # fr
+    assert lvl("Licenciatura en Economía") == 6                  # es
+    assert lvl("Laurea in Ingegneria") == 6                      # it
+    assert lvl("Wykształcenie wyższe techniczne") == 6           # pl
+    assert lvl("Studii superioare in domeniu") == 6              # ro
+
+
+def test_education_level_avoids_cross_language_traps():
+    from app.domain.filters import extract_qualification_level as lvl
+    # "driving licence" must not read as the French "licence" degree (trades ads are full of it)
+    assert lvl("Full B driving licence desirable, not essential") is None
+    # Italian "in grado di" (= able to) must not read as the Spanish "grado" degree
+    assert lvl("Essere in grado di lavorare in team") is None
+    # "Hochschulabschluss" contains "schulabschluss" — must stay 6, not fall to a school level
+    assert lvl("Hochschulabschluss") == 6
+    assert lvl("Hauptschulabschluss erforderlich") == 1
+
+
+def test_education_level_takes_the_entry_bar_not_the_highest():
+    from app.domain.filters import extract_qualification_level as lvl
+    # "Bachelor's or Master's" admits a bachelor — reading 7 would penalise candidates the
+    # posting would accept
+    assert lvl("Bachelor's or Master's degree in Computer Science") == 6
+    assert lvl("Средно/Висше образование;") == 3
+
+
+def test_qualification_factor_uses_the_collected_level():
+    from app.domain.filters import qualification_factor
+
+    class Q:
+        qualification_level = 2
+    # `need` (Posting.education_level, collected at enrichment) wins over scanning the text
+    assert qualification_factor(Q(), "no education mentioned here", need=6) == 0.7
+    assert qualification_factor(Q(), "Изисква висше образование", need=3) == 1.0

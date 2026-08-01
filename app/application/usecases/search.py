@@ -71,7 +71,8 @@ def soft_factors(profile, post, expectation=None) -> dict:
                                     elsewhere=settings.location_elsewhere_factor),
         "qualification": qualification_factor(
             profile, f"{post.title or ''}\n{post.description or ''}",
-            underqualified=settings.qualification_underqualified_factor),
+            underqualified=settings.qualification_underqualified_factor,
+            need=getattr(post, "education_level", None)),
     }
 from ...domain.filters import (passes_hard_filters, seniority_factor, location_factor,
                                qualification_factor)
@@ -276,9 +277,13 @@ def _enrich_new_postings(db: Session) -> int:
     q = select(Posting).where(or_(Posting.embedding.is_(None),
                                   Posting.embedding_version != EMBED_VERSION,
                                   Posting.requirements.is_(None)))
+    from ...domain.filters import extract_qualification_level
     for post in db.execute(q).scalars():
         if post.requirements is None:
             post.requirements = extract_requirements(post.description or "")
+        if post.education_level is None:      # collected once, like the parsed salary
+            post.education_level = extract_qualification_level(
+                f"{post.title or ''}\n{post.description or ''}")
         if post.embedding is None or post.embedding_version != EMBED_VERSION:
             vec = _as_list(embed_passage(posting_embed_text(post.title, post.requirements)))
             if vec is not None:

@@ -196,3 +196,29 @@ function __toggleTheme(){{var d=document.documentElement,n=d.dataset.theme==='da
   window.addEventListener("pageshow", function () {{ overlay.classList.remove("show"); }});
 }})();
 </script></body></html>"""
+
+
+# Education the CANDIDATE states about themselves, on the NKPD 0-8 scale that postings are read
+# on (domain/filters.extract_qualification_level), so profile and posting are directly comparable.
+# Labels live here rather than in the translation catalogs for the same reason onboarding's
+# _LANGUAGES does: it's a value list shared by the onboarding wizard and the profile form, and
+# keeping the two in one place is what stops them drifting apart. "" = not stated, which leaves
+# the level implied by the chosen occupation in place.
+EDUCATION_LEVELS: list[tuple[str, str, str]] = [
+    ("", "Не искам да посочвам", "Prefer not to say"),
+    ("1", "Основно", "Primary"),
+    ("3", "Средно", "Secondary"),
+    ("5", "Професионална квалификация / колеж", "Vocational qualification / college"),
+    ("6", "Бакалавър / висше", "Bachelor's / university"),
+    ("7", "Магистър", "Master's"),
+    ("8", "Доктор", "Doctorate"),
+]
+
+
+def education_options(lang: str = "en", current: int | str | None = None) -> str:
+    """<option> markup for the education select, with `current` preselected."""
+    cur = "" if current is None else str(current)
+    return "".join(
+        f"<option value='{v}'{' selected' if v == cur else ''}>"
+        f"{escape(bg if lang == 'bg' else en)}</option>"
+        for v, bg, en in EDUCATION_LEVELS)

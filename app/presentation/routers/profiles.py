@@ -16,7 +16,7 @@ from ...domain.extraction import extract_requirements
 from ...application.usecases.search import search_db
 from ...application.run_stats import RunStats
 from ...data.metrics_repo import record_run
-from ..web import page, current_user, redirect, escape, icon
+from ..web import page, current_user, redirect, escape, icon, education_options
 from ..i18n import t, current_lang
 
 router = APIRouter()
@@ -62,6 +62,11 @@ def _profile_form(action: str, v: dict, heading: str, errors: list[str] | None =
       <div><label>{escape(t('form.languages', lang))}</label>
         <input name='languages' value="{escape(v.get('languages', 'Bulgarian, English'))}"></div>
       <div><label>{escape(t('form.english', lang))}</label><select name='english_level'>{cefr}</select></div>
+    </div>
+    <div class='row2'>
+      <div><label>{escape('Образование' if lang == 'bg' else 'Education')}</label>
+        <select name='education'>{education_options(lang, v.get('qualification_level'))}</select></div>
+      <div></div>
     </div>
     <div class='row2'>
       <div><label>{escape(t('form.location', lang))}</label>
@@ -238,7 +243,7 @@ def profile_create(request: Request, name: str = Form(""), target_roles: str = F
                    location_pref: str = Form(""), remote_pref: str = Form("remote"),
                    country: str = Form("Bulgaria"), relocate: str = Form(""),
                    salary_expectation: str = Form(""), min_match: str = Form("65"),
-                   db: Session = Depends(get_db)):
+                   education: str = Form(""), db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -248,7 +253,8 @@ def profile_create(request: Request, name: str = Form(""), target_roles: str = F
     v = dict(name=name, target_roles=target_roles, skills=skills, experience=experience,
              languages=languages, english_level=english_level, location_pref=location_pref,
              remote_pref=remote_pref, country=country, relocate=bool(relocate),
-             salary_expectation=salary_expectation, min_match=min_match)
+             salary_expectation=salary_expectation, min_match=min_match,
+             qualification_level=(int(education) if education.isdigit() else None))
     if errors:
         return page(_profile_form("/profiles", v, t("form.new_profile", lang), errors, lang), u,
                     lang=lang, switch_urls=SWITCH_URLS)
@@ -256,7 +262,8 @@ def profile_create(request: Request, name: str = Form(""), target_roles: str = F
                 experience=experience, languages=languages, english_level=english_level,
                 location_pref=location_pref, remote_pref=remote_pref,
                 country=(country or "Bulgaria").strip()[:64], relocate=bool(relocate),
-                salary_expectation=salary_expectation, min_match=mm)
+                salary_expectation=salary_expectation, min_match=mm,
+                qualification_level=int(education) if education.isdigit() else None)
     db.add(p); db.commit(); db.refresh(p)
     return redirect(f"/profiles/{p.id}")
 
@@ -274,7 +281,8 @@ def profile_edit_form(pid: int, request: Request, db: Session = Depends(get_db))
     v = dict(name=p.name, target_roles=p.target_roles, skills=p.skills, experience=p.experience,
              languages=p.languages, english_level=p.english_level, location_pref=p.location_pref,
              remote_pref=p.remote_pref, country=p.country, relocate=p.relocate,
-             salary_expectation=p.salary_expectation, min_match=p.min_match)
+             salary_expectation=p.salary_expectation, min_match=p.min_match,
+             qualification_level=p.qualification_level)
     delete_card = f"""<div class='card' style='border-color:var(--red-soft)'>
     <h3 style='color:var(--red)'>{escape(t('form.delete_head', lang))}</h3>
     <p class='small'>{escape(t('form.delete_note', lang))}</p>
@@ -292,7 +300,7 @@ def profile_update(pid: int, request: Request, name: str = Form(""), target_role
                    location_pref: str = Form(""), remote_pref: str = Form("remote"),
                    country: str = Form("Bulgaria"), relocate: str = Form(""),
                    salary_expectation: str = Form(""), min_match: str = Form("65"),
-                   db: Session = Depends(get_db)):
+                   education: str = Form(""), db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -315,6 +323,7 @@ def profile_update(pid: int, request: Request, name: str = Form(""), target_role
     p.location_pref, p.remote_pref = location_pref, remote_pref
     p.country, p.relocate = (country or "Bulgaria").strip()[:64], bool(relocate)
     p.salary_expectation, p.min_match = salary_expectation, mm
+    p.qualification_level = int(education) if education.isdigit() else None
     p.embedding = None  # profile text changed → drop any cached vector
     # the profile's matches were computed against the OLD skills/targets — clear them so the
     # feed doesn't keep showing stale matches (e.g. ML jobs after removing an ML skill);

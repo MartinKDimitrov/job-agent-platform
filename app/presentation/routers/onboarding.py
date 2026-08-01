@@ -14,7 +14,7 @@ from ...data.db import get_db
 from ...data.models import Profile, Occupation
 from ...data import taxonomy_repo as tx
 from ...domain.filters import _CITY_ALIASES
-from ..web import page, current_user, redirect, escape
+from ..web import page, current_user, redirect, escape, education_options
 from ..i18n import t, current_lang
 from ..i18n import SWITCH_URLS  # noqa: F401 — re-exported for auth.py's post-signup card
 
@@ -155,6 +155,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
                        ("any", _L(lang, "Без значение", "Any"))))
     cefr = "".join(f"<option{' selected' if lv == 'B2' else ''}>{lv}</option>"
                    for lv in ("A1", "A2", "B1", "B2", "C1", "C2"))
+    edu_opts = education_options(lang)
     S = _step_strings(lang)
     langs_json = json.dumps([{"v": v, "l": (bg if lang == "bg" else en)}
                              for v, bg, en in _LANGUAGES], ensure_ascii=False)
@@ -182,6 +183,7 @@ def onboarding_card(heading: str | None = None, sub: str | None = None,
           <div id='citylist' class='ac'></div></label>
         <label>{escape(S['work'])}<select name='remote_pref' class='cselect'>{remote_opts}</select></label>
         <label>{escape(S['english'])}<select name='english_level' class='cselect'>{cefr}</select></label>
+        <label>{escape(S['education'])}<select name='education' class='cselect'>{edu_opts}</select></label>
         <div class='wide lang-picker'>
           <label>{escape(S['langs'])}</label>
           <div class='lp-search-wrap'>
@@ -281,6 +283,7 @@ def _step_strings(lang: str) -> dict:
         "country": L("Държава", "Country"), "city": L("Град", "City"),
         "city_ph": L("започни да пишеш…", "start typing…"),
         "work": L("Начин на работа", "Work type"), "english": L("Английски", "English"),
+        "education": L("Образование", "Education"),
         "langs": L("Езици", "Languages"), "relocate": L("Готов/а съм да се преместя",
                                                         "Willing to relocate"),
         "search": L("или търси професия…", "or search occupations…"),
@@ -730,7 +733,8 @@ def onboarding_create(request: Request, occupation_id: str = Form(""),
                       country: str = Form("Bulgaria"), location_pref: str = Form(""),
                       remote_pref: str = Form("remote"), relocate: str = Form(""),
                       languages: str = Form("Bulgarian, English"),
-                      english_level: str = Form("B2"), db: Session = Depends(get_db)):
+                      english_level: str = Form("B2"), education: str = Form(""),
+                      db: Session = Depends(get_db)):
     u = current_user(request, db)
     if not u:
         return redirect("/login")
@@ -755,6 +759,10 @@ def onboarding_create(request: Request, occupation_id: str = Form(""),
     _nk = occ.nkpd or []
     _pn = next((x for x in _nk if x.get("rel") == "Точно"), _nk[0] if _nk else None)
     qlevel = int(_pn["level"]) if _pn and str(_pn.get("level", "")).isdigit() else None
+    # what the CANDIDATE states about their own education wins; the occupation-implied
+    # NKPD level is only the fallback for when they leave it unanswered.
+    if education.isdigit():
+        qlevel = int(education)
     p = Profile(
         user_id=u.id, name=(labels.get(lang) or en_label),
         target_roles=en_label,                           # matching/role_family are English-keyed
