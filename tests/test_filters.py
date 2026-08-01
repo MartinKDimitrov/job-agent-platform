@@ -183,3 +183,28 @@ def test_relocation_required_dropped_unless_willing():
 def test_passes_hard_filters_reports_geo_as_location():
     ok, reason = passes_hard_filters(P(), "Android Developer", "Remote - UK", "desc")
     assert ok is False and reason == "location"
+
+
+# ---- qualification (NKPD education level) ----
+def test_extract_qualification_level():
+    from app.domain.filters import extract_qualification_level
+    assert extract_qualification_level("PhD in physics required") == 8
+    assert extract_qualification_level("Изисква висше образование") == 6
+    assert extract_qualification_level("Master's degree or MBA") == 7
+    assert extract_qualification_level("Строителен работник, бетон") is None  # no education stated
+
+
+def test_qualification_factor_downweights_big_gap_only():
+    from app.domain.filters import qualification_factor
+
+    class Q:
+        def __init__(self, lvl):
+            self.qualification_level = lvl
+
+    # basic-vocational profile (level 2) vs a degree-required posting (gap >= 2) -> down-weighted
+    assert qualification_factor(Q(2), "Изисква висше образование") == 0.7
+    # small gap or no requirement -> untouched
+    assert qualification_factor(Q(2), "Nurse, secondary education") == 1.0     # gap 1
+    assert qualification_factor(Q(2), "Concrete worker") == 1.0                # need unknown
+    # unknown profile level -> never act
+    assert qualification_factor(Q(None), "PhD required") == 1.0

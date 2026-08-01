@@ -370,6 +370,45 @@ def seniority_factor(profile, title: str, *, underqualified: float = 0.6,
     return 1.0
 
 
+# Formal education/qualification requirement, on the NKPD-2011 level scale (0-8). Highest tier
+# explicitly stated in a posting wins, so the list is ordered high -> low. BG + EN cues.
+_EDU_LEVELS: tuple[tuple[int, tuple[str, ...]], ...] = (
+    (8, ("phd", "ph.d", "doctoral", "doctorate", "докторска", "доктор на науки",
+         "образователна и научна степен")),
+    (7, ("master", "msc", "m.sc", "mba", "магистър", "магистърска")),
+    (6, ("bachelor", "bsc", "b.sc", "university degree", "higher education", "university education",
+         "висше образование", "бакалавър", "университетско образование", "университетска степен")),
+    (5, ("professional qualification", "college degree", "проф. квалификация",
+         "професионална квалификация", "полувисше", "колеж")),
+    (3, ("secondary education", "high school diploma", "средно образование", "средно специално")),
+    (1, ("primary education", "основно образование")),
+)
+
+
+def extract_qualification_level(text: str) -> int | None:
+    """The highest formal education level a posting explicitly requires (NKPD scale 0-8), or None
+    when it states none. Keyword-based (BG+EN); absence -> None so matching stays conservative."""
+    t = (text or "").lower()
+    for lvl, cues in _EDU_LEVELS:
+        if any(c in t for c in cues):
+            return lvl
+    return None
+
+
+def qualification_factor(profile, text: str, *, underqualified: float = 0.7, gap: int = 2) -> float:
+    """Soft down-weight when a posting demands a much higher formal qualification than the profile's
+    occupation carries (its NKPD level, set at onboarding). Acts only when BOTH levels are known and
+    the posting needs at least `gap` levels more — e.g. a basic-vocational profession (level 2) vs a
+    role requiring a university degree (level 6). Unknown either side -> 1.0 (never act)."""
+    pql = getattr(profile, "qualification_level", None)
+    if pql is None:
+        return 1.0
+    need = extract_qualification_level(text)
+    if need is None:
+        return 1.0
+    return underqualified if (need - pql) >= gap else 1.0
+
+
 def passes_hard_filters(profile, title: str, location: str, description: str = "") -> tuple[bool, str]:
     """Return (passes, reason). reason is '' when it passes, else 'location' / 'seniority' / 'role'."""
     # 1. WORK-TYPE (hard): remote / hybrid / on-site compatibility, independent of where.

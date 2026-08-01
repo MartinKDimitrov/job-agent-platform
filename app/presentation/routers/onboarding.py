@@ -751,12 +751,16 @@ def onboarding_create(request: Request, occupation_id: str = Form(""),
             ordered.append(s)
     labels = occ.labels or {}
     en_label = labels.get("en") or next(iter(labels.values()), "")
+    # carry the occupation's official NKPD qualification level onto the profile (matching uses it)
+    _nk = occ.nkpd or []
+    _pn = next((x for x in _nk if x.get("rel") == "Точно"), _nk[0] if _nk else None)
+    qlevel = int(_pn["level"]) if _pn and str(_pn.get("level", "")).isdigit() else None
     p = Profile(
         user_id=u.id, name=(labels.get(lang) or en_label),
         target_roles=en_label,                           # matching/role_family are English-keyed
         skills=", ".join(ordered), languages=languages or "Bulgarian, English",
         english_level=english_level or "B2", country=country or "Bulgaria",
         location_pref=location_pref or "Sofia", remote_pref=remote_pref or "remote",
-        relocate=bool(relocate), min_match=65)
+        relocate=bool(relocate), min_match=65, qualification_level=qlevel)
     db.add(p); db.commit(); db.refresh(p)
     return redirect(f"/profiles/{p.id}")

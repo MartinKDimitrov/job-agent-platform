@@ -44,6 +44,9 @@ class Profile(Base):
     remote_pref: Mapped[str] = mapped_column(String(32), default="remote")  # remote/hybrid/onsite/any
     salary_expectation: Mapped[str] = mapped_column(String(64), default="")
     min_match: Mapped[int] = mapped_column(Integer, default=65)
+    # min education/qualification level (NKPD 0-8) of the chosen occupation — set at onboarding,
+    # used by matching to down-weight postings demanding a much higher formal qualification.
+    qualification_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
     embedding: Mapped[list | None] = mapped_column(EmbeddingType, nullable=True)  # E5 query vec
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

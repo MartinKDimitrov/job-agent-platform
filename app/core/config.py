@@ -106,6 +106,9 @@ class Settings(BaseSettings):
     # (shown only because they'll relocate) ranks BELOW their preferred-location roles — relocation
     # is a secondary option, not an equal one.
     location_elsewhere_factor: float = 0.8
+    # Qualification soft signal: a posting demanding a much higher formal education than the
+    # candidate's occupation carries (NKPD level gap >= 2) ranks below ones they're qualified for.
+    qualification_underqualified_factor: float = 0.7
     # Role-match floor: when the posting is the candidate's kind of role (target role-family in the
     # title), its score is at least this fraction of the semantic similarity — a thorough JD or a
     # truncated aggregator snippet can't sink an on-target role below what E5 sees.
