@@ -47,7 +47,37 @@ _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits",
                  "purpose & culture", "our culture", "time-off perks",
                  "за нас", "за компанията", "ползи", "защо да", "предлагаме", "нашата мисия",
                  "ние предлагаме", "ще получиш", "придобивки",
-                 "процес на интервю", "процес на подбор")
+                 "процес на интервю", "процес на подбор",
+                 # Multilingual drop-headers — the highest-leverage cross-language fix: an
+                 # unrecognised header leaves benefits/privacy content in the "must" bucket, so
+                 # recognising the OFFER / ABOUT / DATA-PROTECTION / HIRING-PROCESS section header
+                 # in the posting's own language skips the whole block whatever its lines say.
+                 "wir bieten", "das bieten wir", "unser angebot", "unsere benefits",
+                 "deine vorteile", "über uns", "unser unternehmen", "datenschutz",
+                 "bewerbungsprozess",                                             # de
+                 "nous offrons", "ce que nous offrons", "t'offrir", "vous offrir",
+                 "avantages", "à propos", "qui sommes-nous", "protection des données",
+                 "confidentialité", "process de recrutement", "processus de recrutement",
+                 "notre entreprise", "ce que nous proposons", "pourquoi nous rejoindre",
+                 "rejoindre l'aventure", "pourquoi nous",                          # fr
+                 "ofrecemos", "te ofrecemos", "beneficios", "protección de datos",
+                 "sobre nosotros", "quiénes somos", "nuestra oferta",
+                 "proceso de selección",                                          # es
+                 "offriamo", "ti offriamo", "cosa offriamo", "protezione dei dati",
+                 "chi siamo", "su di noi", "processo di selezione",               # it
+                 "wij bieden", "wat wij bieden", "arbeidsvoorwaarden", "ons aanbod",
+                 "gegevensbescherming", "over ons", "sollicitatieprocedure",      # nl
+                 "oferujemy", "co oferujemy", "benefity", "ochrona danych",
+                 "o nas", "o firmie", "proces rekrutacji",                        # pl
+                 "προσφέρουμε", "παροχές", "προστασία δεδομένων", "σχετικά με",    # el
+                 "nudimo", "što nudimo", "pogodnosti", "zaštita podataka",
+                 "o nama", "o tvrtki",                                            # hr
+                 "oferim", "ce oferim", "beneficii", "protecția datelor",
+                 "despre noi", "procesul de recrutare",                           # ro
+                 "мы предлагаем", "что мы предлагаем", "льготы", "защита данных",
+                 "о компании", "о нас",                                           # ru
+                 "ми пропонуємо", "що ми пропонуємо", "переваги", "захист даних",
+                 "про компанію", "про нас")                                       # uk
 
 # Stray boilerplate dropped even inside a kept section (real-world lines: trademark footers,
 # marketing stats, EEO statements).

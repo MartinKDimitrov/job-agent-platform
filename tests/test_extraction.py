@@ -364,3 +364,22 @@ def test_bare_bullet_list_without_header_still_works():
     # pasting just a bullet list (no "Requirements:" header) must keep working
     reqs = extract_requirements("- Kotlin and Jetpack Compose\n- CI/CD pipelines")
     assert len(reqs) == 2 and all(r["kind"] == "must" for r in reqs)
+
+
+def test_multilingual_drop_headers_skip_boilerplate():
+    # A posting in any of the source languages: the OFFER / DATA-PROTECTION section headers are
+    # recognised in the posting's own language, so benefits + privacy footers never leak into the
+    # requirements — while the bulleted requirements above them are still captured.
+    de = ("Anforderungen:\n- Mehrjaehrige Erfahrung mit Python\n- Kenntnisse in Machine Learning\n"
+          "Wir bieten:\n- 30 Tage Urlaub\n- Betriebliche Altersvorsorge\n"
+          "Datenschutz:\n- Mit Ihrer Bewerbung stimmen Sie der Verarbeitung Ihrer Daten zu.")
+    fr = ("Profil recherche :\n- 5 ans d'experience en Python\n- Maitrise du machine learning\n"
+          "Ce que nous offrons :\n- 25 jours de conges\n"
+          "Pourquoi nous rejoindre ?\n- Une equipe passionnee")
+    for text in (de, fr):
+        reqs = extract_requirements(text)
+        joined = " ".join(r["text"].lower() for r in reqs)
+        assert any("python" in r["text"].lower() for r in reqs)          # real reqs kept
+        assert "urlaub" not in joined and "conges" not in joined          # benefits skipped
+        assert "datenschutz" not in joined and "bewerbung" not in joined  # privacy skipped
+        assert "passionnee" not in joined                                 # culture skipped
