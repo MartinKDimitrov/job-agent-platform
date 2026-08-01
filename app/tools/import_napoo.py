@@ -19,16 +19,19 @@ from sqlalchemy import select
 from ..data.db import SessionLocal, engine, Base
 from ..data.models import NapooDirection
 
-_BULLET = ""
 _SECT = {"Знания": "knowledge", "Умения": "skills", "Компетентности": "competencies"}
 _NOISE = re.compile(r"източник|сиела|правно-информационни|държавен вестник", re.I)
-# The first ЕРУ (единици резултати от учене) of every ДОС are GENERAL (common to all professions):
-# health-and-safety, environment/sustainability, entrepreneurship/economics, communication, digital.
-# Skip умения under a general-titled ЕРУ so only the отраслова/специфична (field-specific) остават.
-_GENERAL_ERU = re.compile(
-    r"здравословни и безопасни|опазване на околната среда|устойчиво развитие|"
-    r"икономика|предприемачество|организация на труда|комуникац|информационни и комуникационни|"
-    r"дигитални компетентн|чуждоезиков", re.I)
+# A ДОС ends with the profession-SPECIFIC section, introduced by a header carrying "по професията"
+# (distinct from the intro's "общата, отрасловата и специфичната ... подготовка"). Everything from
+# that header on is specific; we emit it FIRST so a welder's list leads with МИГ/МАГ заваряване, not
+# the shared technical-drawing foundation. Umения before it (обща+отраслова) come after, with the
+# generic health-and-safety/entrepreneurship noise dropped.
+_SPECIFIC_MARK = re.compile(r"специфична\s+професионална\s+подготовка\s+по\s+професията", re.I)
+_GENERIC = re.compile(
+    r"безопасн|аварий|първа помощ|злополук|предприемач|икономическ|пазар|бизнес план|хигиенн|"
+    r"околната среда|отпадъц|комуникац|нормативни акт|устойчиви практики|въглеродния", re.I)
+# ДОС PDFs use different bullet glyphs for list items ( in some, ∙ in others).
+_BULLETS = re.compile("["+chr(0xf0b7)+chr(0x2219)+chr(0xb7)+chr(0x2022)+"]")
 
 # (direction name, ДОС PDF url) — the full СППОО-2024 archive (navet.government.bg/bg/dos-lp-2024-sg)
 _M = "https://www.navet.government.bg/bg/media/"
@@ -183,7 +186,7 @@ DIRECTIONS: list[tuple[str, str]] = [
 
 def _items(cell: str) -> list[str]:
     out = []
-    for part in (cell or "").split(_BULLET):
+    for part in _BULLETS.split(cell or ""):
         p = re.sub(r"\s+", " ", part.replace("\n", " ")).strip(" •-–\t.")
         if len(p) >= 6 and not _NOISE.search(p):
             out.append(p)
@@ -191,21 +194,23 @@ def _items(cell: str) -> list[str]:
 
 
 def parse_pdf(src) -> dict:
-    """src = path or bytes. Returns {skills, knowledge, competencies} of deduped atomic statements."""
-    got = {"skills": [], "knowledge": [], "competencies": []}
-    general = False   # are we inside a general (common-to-all) ЕРУ?
+    """src = path or bytes. Returns {skills, knowledge, competencies} — the profession-SPECIFIC
+    section first (everything from the 'специфична ... по професията' header on), then the preceding
+    обща+отраслова statements with the generic (safety/entrepreneurship/…) noise dropped."""
+    spec = {"skills": [], "knowledge": [], "competencies": []}
+    pre = {"skills": [], "knowledge": [], "competencies": []}
     with pdfplumber.open(src) as pdf:
-        for page in pdf.pages:
+        pages = pdf.pages
+        # the header appears twice — once in the structure description, once right before the specific
+        # tables — so the SECTION starts at the LAST occurrence, not the first.
+        marks = [i for i, p in enumerate(pages) if _SPECIFIC_MARK.search(p.extract_text() or "")]
+        spec_start = marks[-1] if marks else len(pages)
+        for i, page in enumerate(pages):
+            bucket = spec if i >= spec_start else pre
             for table in page.extract_tables() or []:
                 for row in table:
-                    if not row or len(row) < 2 or not row[0]:
-                        continue
-                    label = row[0].strip()
-                    if label.startswith("ЕРУ"):                    # a new learning-outcome unit
-                        general = bool(_GENERAL_ERU.search(f"{label} {row[1] or ''}"))
-                        continue
-                    if not general and (key := _SECT.get(label)):
-                        got[key] += _items(row[1] or "")
+                    if row and len(row) >= 2 and row[0] and (key := _SECT.get(row[0].strip())):
+                        bucket[key] += _items(row[1] or "")
 
     def uniq(xs):
         seen, r = set(), []
@@ -213,7 +218,8 @@ def parse_pdf(src) -> dict:
             if x.lower() not in seen:
                 seen.add(x.lower()); r.append(x)
         return r
-    return {k: uniq(v) for k, v in got.items()}
+    keep = lambda xs: [x for x in xs if not _GENERIC.search(x.lower())]   # drop generic from pre
+    return {k: uniq(spec[k] + keep(pre[k])) for k in ("skills", "knowledge", "competencies")}
 
 
 import hashlib
