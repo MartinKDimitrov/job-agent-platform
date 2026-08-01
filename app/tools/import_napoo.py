@@ -22,6 +22,13 @@ from ..data.models import NapooDirection
 _BULLET = ""
 _SECT = {"Знания": "knowledge", "Умения": "skills", "Компетентности": "competencies"}
 _NOISE = re.compile(r"източник|сиела|правно-информационни|държавен вестник", re.I)
+# The first ЕРУ (единици резултати от учене) of every ДОС are GENERAL (common to all professions):
+# health-and-safety, environment/sustainability, entrepreneurship/economics, communication, digital.
+# Skip умения under a general-titled ЕРУ so only the отраслова/специфична (field-specific) остават.
+_GENERAL_ERU = re.compile(
+    r"здравословни и безопасни|опазване на околната среда|устойчиво развитие|"
+    r"икономика|предприемачество|организация на труда|комуникац|информационни и комуникационни|"
+    r"дигитални компетентн|чуждоезиков", re.I)
 
 # (direction name, ДОС PDF url) — the full СППОО-2024 archive (navet.government.bg/bg/dos-lp-2024-sg)
 _M = "https://www.navet.government.bg/bg/media/"
@@ -186,11 +193,18 @@ def _items(cell: str) -> list[str]:
 def parse_pdf(src) -> dict:
     """src = path or bytes. Returns {skills, knowledge, competencies} of deduped atomic statements."""
     got = {"skills": [], "knowledge": [], "competencies": []}
+    general = False   # are we inside a general (common-to-all) ЕРУ?
     with pdfplumber.open(src) as pdf:
         for page in pdf.pages:
             for table in page.extract_tables() or []:
                 for row in table:
-                    if row and len(row) >= 2 and row[0] and (key := _SECT.get(row[0].strip())):
+                    if not row or len(row) < 2 or not row[0]:
+                        continue
+                    label = row[0].strip()
+                    if label.startswith("ЕРУ"):                    # a new learning-outcome unit
+                        general = bool(_GENERAL_ERU.search(f"{label} {row[1] or ''}"))
+                        continue
+                    if not general and (key := _SECT.get(label)):
                         got[key] += _items(row[1] or "")
 
     def uniq(xs):
@@ -202,29 +216,45 @@ def parse_pdf(src) -> dict:
     return {k: uniq(v) for k, v in got.items()}
 
 
+import hashlib
+import os
+from ..domain.napoo import direction_vertical
+
+CACHE = "/Users/mdimitrov/.claude/drain-guardian/napoo-pdf"
+
+
+def _pdf_bytes(url: str):
+    """Download once, cache on disk so re-parses (parser tweaks) don't re-fetch."""
+    os.makedirs(CACHE, exist_ok=True)
+    path = os.path.join(CACHE, hashlib.md5(url.encode()).hexdigest() + ".pdf")
+    if not os.path.exists(path) or os.path.getsize(path) < 1000:
+        with open(path, "wb") as fh:
+            fh.write(httpx.get(url, timeout=90, follow_redirects=True).content)
+    return path
+
+
 def run(session_factory=SessionLocal, only: str | None = None, log=print) -> dict:
     Base.metadata.create_all(bind=engine)   # creates napoo_directions if missing
     targets = [(n, u) for n, u in DIRECTIONS if not only or only.lower() in n.lower()]
     done = failed = skills = 0
     with session_factory() as db:
-        have = {u for (u,) in db.execute(select(NapooDirection.url)).all()}
+        existing = {d.url: d for d in db.execute(select(NapooDirection)).scalars()}
         for name, url in targets:
-            if url in have:
-                continue
             try:
-                data = io.BytesIO(httpx.get(url, timeout=90, follow_redirects=True).content)
-                res = parse_pdf(data)
+                res = parse_pdf(_pdf_bytes(url))
             except Exception as e:  # noqa: BLE001 — one bad PDF mustn't stop the batch
                 failed += 1
                 log(f"  FAIL {name}: {type(e).__name__}")
                 continue
-            db.merge(NapooDirection(name=name, url=url, skills=res["skills"],
-                                    knowledge=res["knowledge"]))
+            row = existing.get(url) or NapooDirection(name=name, url=url)
+            row.name, row.vertical = name, direction_vertical(name)
+            row.skills, row.knowledge = res["skills"], res["knowledge"]
+            db.add(row)
             db.commit()
             done += 1
             skills += len(res["skills"])
-            log(f"  ok {name}: {len(res['skills'])} умения, {len(res['knowledge'])} знания")
-    return {"directions_parsed": done, "failed": failed, "total_skills": skills}
+            log(f"  ok {name} [{row.vertical}]: {len(res['skills'])} умения")
+    return {"directions_reparsed": done, "failed": failed, "total_skills": skills}
 
 
 if __name__ == "__main__":

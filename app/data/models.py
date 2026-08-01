@@ -47,6 +47,8 @@ class Profile(Base):
     # min education/qualification level (NKPD 0-8) of the chosen occupation — set at onboarding,
     # used by matching to down-weight postings demanding a much higher formal qualification.
     qualification_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # the chosen occupation's vertical — links the profile to its НАПОО field competencies (display/CV)
+    vertical: Mapped[str] = mapped_column(String(64), default="")
     embedding: Mapped[list | None] = mapped_column(EmbeddingType, nullable=True)  # E5 query vec
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -316,6 +318,7 @@ class NapooDirection(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), index=True)     # e.g. "Строителство и архитектура"
     code: Mapped[str] = mapped_column(String(16), default="")      # ISCED-F direction code if known
+    vertical: Mapped[str] = mapped_column(String(64), default="", index=True)  # maps to Occupation.vertical
     url: Mapped[str] = mapped_column(String(512), unique=True)
     skills: Mapped[list] = mapped_column(JSON, default=list)       # умения (atomic BG statements)
     knowledge: Mapped[list] = mapped_column(JSON, default=list)    # знания

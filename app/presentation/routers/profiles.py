@@ -578,8 +578,25 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
       <label>{escape(t('app.description', lang))}</label><textarea name='description' rows='6'></textarea>
       <p style='margin-top:12px'><button class='btn'>{escape(t('app.score_it', lang))}</button></p></form></details>"""
 
+    # Official Bulgarian ПОО competencies for the profile's field (НАПОО) — a BG-only display/CV aid.
+    napoo_panel = ""
+    if lang == "bg" and getattr(p, "vertical", ""):
+        from ...data.taxonomy_repo import napoo_skills_for_vertical
+        nsk = napoo_skills_for_vertical(db, p.vertical, 30)
+        if nsk:
+            chips = "".join(
+                "<span style='display:inline-block;font-size:12.5px;padding:3px 9px;margin:2px;"
+                f"border-radius:8px;background:var(--green-soft);color:var(--navy)'>{escape(s)}</span>"
+                for s in nsk)
+            napoo_panel = (
+                f"<details class='card'><summary class='small' style='cursor:pointer'>"
+                f"🇧🇬 Официални компетенции за професията (НАПОО) · {len(nsk)}</summary>"
+                "<p class='small' style='margin:8px 0'>Официални български умения от държавните "
+                "образователни стандарти за твоята професионална сфера — ползвай ги за CV-то.</p>"
+                f"<div style='line-height:2'>{chips}</div></details>")
+
     act = get_activity(db, u.id)
-    return page(banner + strip + feed + scaffold, u,
+    return page(banner + strip + napoo_panel + feed + scaffold, u,
                 title=f"{p.name} — Job Agent", lang=lang, switch_urls=SWITCH_URLS,
                 paused=bool(act.found_job) if act else False)
 

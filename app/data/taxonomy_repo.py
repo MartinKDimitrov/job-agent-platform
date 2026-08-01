@@ -2,10 +2,39 @@
 vertical -> ISCO group (subcategory) -> occupation -> its essential/optional skills, plus a
 free-text occupation search for the picker. Language-aware: labels come back in the caller's UI
 language (bg/en), falling back to the other when a translation is missing."""
+from collections import Counter
+
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
-from .models import OccupationGroup, Occupation, OccupationSkill, TaxonomySkill
+from .models import OccupationGroup, Occupation, OccupationSkill, TaxonomySkill, NapooDirection
+
+
+import re as _re
+# The first learning-outcome units of EVERY ДОС are generic (health-and-safety, entrepreneurship,
+# communication, environment) — reworded per document, so exact-frequency won't catch them. Filter
+# by topic keyword so what remains is the FIELD-specific competency.
+_NAPOO_GENERIC = _re.compile(
+    r"безопасн|аварий|първа помощ|злополук|предприемач|икономическ|пазарн|бизнес план|"
+    r"околната среда|отпадъц|комуникац|нормативни акт|трудовоправн|застраховане срещу|"
+    r"чужд език|дигитал(ни|на) компетентн", _re.I)
+
+
+def napoo_skills_for_vertical(db: Session, vertical: str, limit: int = 40) -> list[str]:
+    """Official Bulgarian ПОО competencies (НАПОО умения) for a profile's field — the FIELD-specific
+    ones, dropping the generic safety/entrepreneurship/communication units that open every ДОС.
+    Descriptive statements for display/CV; not matchable tags."""
+    if not vertical:
+        return []
+    dirs = [d for d in db.execute(
+        select(NapooDirection).where(NapooDirection.vertical == vertical)).scalars()]
+    seen, out = set(), []
+    for d in dirs:
+        for s in d.skills or []:
+            k = s.strip(); kl = k.lower()
+            if len(k) >= 6 and kl not in seen and not _NAPOO_GENERIC.search(kl):
+                seen.add(kl); out.append(k)
+    return out[:limit]
 
 
 def _label(row, lang: str) -> str:
