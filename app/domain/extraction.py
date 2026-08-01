@@ -49,6 +49,10 @@ _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits",
                  "за нас", "за компанията", "ползи", "защо да", "предлагаме", "нашата мисия",
                  "ние предлагаме", "ще получиш", "придобивки",
                  "процес на интервю", "процес на подбор",
+                 # "Компанията предлага:" / "Фирмата предлага:" — the -ме forms above only cover
+                 # "предлагаМЕ", so the 3rd-person offer header slipped and leaked the benefits.
+                 "предлага", "какво получаваш", "условия на труд", "социален пакет",
+                 "нашето предложение", "бонуси",
                  # Multilingual drop-headers — the highest-leverage cross-language fix: an
                  # unrecognised header leaves benefits/privacy content in the "must" bucket, so
                  # recognising the OFFER / ABOUT / DATA-PROTECTION / HIRING-PROCESS section header
@@ -146,7 +150,29 @@ _LEGAL_RE = re.compile(
     r"see the privacy (?:notice|policy)|collects and processes personal|"
     r"transferred to (?:other )?data controllers|"
     r"recruitment licen[cs]e|licen[cs]e (?:no\.?|number|№|issued)|"
-    r"^[\w .,&'-]{2,42}\b(?:ltd|gmbh|ood|eood|inc|llc|ад|еоод|оод)\.?$", re.I)
+    r"^[\w .,&'-]{2,42}\b(?:ltd|gmbh|ood|eood|inc|llc|ад|еоод|оод)\.?$|"
+    # Bulgarian application/consent footer — every zaplata.bg / recruitment-agency posting ends
+    # with it (ЗЗЛД = the BG data-protection act, НАЗ licence, "only approved candidates").
+    r"ззлд|защитени по смисъла|лиценз (?:от|№|no)|национална агенция по заетостта|"
+    r"за целите на (?:подбор|настоящия подбор|селекция)|"
+    r"(?:само )?(?:предварително )?одобрени(?:те)? кандидати|"
+    r"ще се свърже[мн]? (?:само )?с|благодарим (?:ви|на всички)|"
+    r"изпратете (?:ни )?(?:вашата |своята )?(?:автобиограф|cv|молба)|"
+    r"кандидатствай(?:те)? (?:чрез|през|на)|предоставените от вас данни|"
+    r"личните ви данни|обработване на лични данни", re.I)
+
+# Terms of EMPLOYMENT (hours, contract type, start date, shift pattern) — they answer "what is the
+# job", not "what must the candidate have", so they are never gaps. Observed leaking from EURES
+# (Finnish/Irish postings list them as plain bullets with no section header) and BG agency ads.
+_TERMS_RE = re.compile(
+    r"\b\d{1,2}\s*(?:hours?|hrs?)\s*(?:per|a|/)\s*week|\bworking hours?\b|\bwork(?:ing)? time\b|"
+    r"\bovertime\b|\bshift work\b|\bfull[- ]time\b|\bpart[- ]time\b|"
+    r"permanent (?:employment )?contract|fixed[- ]term contract|employment (?:begins|starts)|"
+    r"start date|starting date|immediate start|\basap\b|"
+    r"schedule (?:&|and) location|\bmonday to friday\b|"
+    r"работно време|работни часа|на смени|извънреден труд|"
+    r"(?:постоянна|целогодишна) заетост|трудов договор|срочен договор|"
+    r"начало на работа|от понеделник до петък", re.I)
 # Company self-narrative ("We're on a mission...", "Our customers...", "GitLab is the/a/where...")
 # plus what-the-company-gives-you sentences ("You will have the opportunity for fully remote...").
 _MARKETING_RE = re.compile(
@@ -204,7 +230,20 @@ _SOFT_RE = re.compile(
     r"ability to (?:independently\s+)?(?:learn|integrate|adapt|collaborate|work|write clean)|"
     r"focus on results|clean code|build(?:ing)? a team|emotionally balanced|"
     r"supportive(?:,| team)|strong analytical thinking|"
-    r"комуникативн\w*|екипен играч|работа в екип|лична мотивация|адаптивн\w*)\b", re.I)
+    r"responsibilit\w* and reliabilit\w*|organi[sz]ational skills|"
+    # ATTITUDE FRAMES: "you care deeply about reliability", "you take pride in clean code" —
+    # what makes these unscoreable is the frame, not the noun inside it. There is nothing in a
+    # profile to weigh "cares about X" against, so they're soft whatever X is. (A checkable
+    # phrasing of the same noun — "experience building reliable systems" — stays a requirement.)
+    r"(?:you )?care[sd]? (?:deeply )?about|take[s]? pride in|you enjoy|you thrive|"
+    r"comfortable (?:with|working)|excited (?:by|about)|motivated by|"
+    r"analytical (?:thinking|mind)|detail[- ]oriented|willingness to (?:learn|travel|work)|"
+    # Bulgarian personal-quality lines ("Персонални качества:" blocks on zaplata.bg) — they are
+    # character traits, never a skill anyone lists in a profile, so scoring them as gaps is noise.
+    r"комуникативн\w*|екипен играч|работа в екип|лична мотивация|адаптивн\w*|"
+    r"отговорност|прецизност|решителност|организираност|аналитично мислене|"
+    r"внимание към детайл\w*|инициативност|лоялност|дискретност|"
+    r"желание за (?:работа|учене|развитие)|позитивн\w*|усмихнат\w*)\b", re.I)
 
 # Typographic quotes/dashes -> ASCII before ANY matching. Real postings (Yettel via dev.bg)
 # use U+2019 in "What's in It for you:" / "What you'll do:", which silently missed every
@@ -257,6 +296,8 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
     if _BENEFIT_RE.search(cleaned):
         return False
     if _LEGAL_RE.search(cleaned):           # application-consent / data-privacy footer boilerplate
+        return False
+    if _TERMS_RE.search(cleaned):           # terms of employment — describes the job, not the person
         return False
     if _COMPANY_BOAST_RE.search(cleaned):   # employer self-praise, even if it says "N years…"
         return False

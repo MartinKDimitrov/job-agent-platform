@@ -351,7 +351,11 @@ def test_ellipsis_must_header_recognised():
     assert any("kubernetes and aws in production" in t for t in musts)
     assert any("go or similar" in t for t in musts)
     assert any("kubernetes clusters" in t for t in resp)     # duties stay resp
-    assert len(musts) == 3
+    # "You care deeply about reliability and observability" is an ATTITUDE, not a checkable
+    # requirement — there is nothing in a profile to weigh it against, so it must not be a gap.
+    soft = [r["text"].lower() for r in reqs if r["kind"] == "soft"]
+    assert any("care deeply about reliability" in t for t in soft)
+    assert len(musts) == 2
 
 
 def test_we_are_looking_for_with_signal_survives():
