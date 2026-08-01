@@ -74,6 +74,40 @@ FAMILIES: dict[str, tuple[str, ...]] = {
                      "market research", "public relations", "pr officer", "pr specialist",
                      "community manager", "creative director", "media buyer", "fundraising",
                      "public affairs", "communications specialist"),
+    # --- non-tech verticals (ESCO): needed so the ~2900-profession taxonomy gets a family on both
+    # sides — without these a construction/trades/etc. profile names NO family, the conflict is
+    # 'none', and raw semantic similarity false-matches it to unrelated IT roles (concrete finisher
+    # -> DevOps at 90%). Cross-vertical stays a HARD drop (not in _ADJACENT). ---
+    "construction": ("concrete finisher", "bricklayer", "brickmason", "stonemason", "mason",
+                     "plasterer", "roofer", "scaffolder", "steel fixer", "reinforcing iron",
+                     "carpenter", "joiner", "glazier", "tiler", "floor layer", "insulation worker",
+                     "construction worker", "construction labourer", "building construction",
+                     "paver", "road worker", "formwork", "concrete"),
+    "trades":       ("welder", "machinist", "cnc operator", "toolmaker", "metalworker",
+                     "sheet metal", "fabricator", "blacksmith", "foundry", "assembler",
+                     "production operator", "machine operator", "millwright", "locksmith",
+                     "upholsterer", "cabinetmaker", "seamstress", "tailor", "shoemaker",
+                     "manufacturing operative", "fitter and turner"),
+    "transport":    ("truck driver", "lorry driver", "bus driver", "delivery driver", "taxi driver",
+                     "courier", "forklift", "warehouse operative", "warehouse worker", "logistics",
+                     "freight", "dispatcher", "crane operator", "heavy equipment operator",
+                     "train driver", "chauffeur", "delivery rider"),
+    "agriculture":  ("farmer", "farm worker", "agronomist", "gardener", "landscaper",
+                     "horticulturist", "forester", "fisherman", "beekeeper", "winemaker",
+                     "livestock", "crop grower", "agricultural"),
+    "education":    ("teacher", "lecturer", "professor", "tutor", "educator", "teaching assistant",
+                     "kindergarten teacher", "school principal", "special needs teacher",
+                     "early years", "headteacher"),
+    "legal":        ("lawyer", "attorney", "solicitor", "barrister", "paralegal", "notary",
+                     "legal counsel", "legal advisor", "legal adviser", "legal assistant",
+                     "prosecutor", "magistrate"),
+    "admin":        ("administrative assistant", "office clerk", "secretary", "receptionist",
+                     "data entry", "office administrator", "personal assistant", "office manager",
+                     "filing clerk", "typist", "records clerk"),
+    "hospitality":  ("chef", "cook", "waiter", "waitress", "bartender", "barista",
+                     "kitchen assistant", "housekeeper", "hotel receptionist", "concierge",
+                     "hairdresser", "barber", "beautician", "cleaner", "cleaning", "butcher",
+                     "baker", "pastry", "sommelier", "dishwasher"),
 }
 
 _FAMILY_RES: dict[str, re.Pattern] = {

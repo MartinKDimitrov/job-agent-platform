@@ -135,7 +135,8 @@ def test_zombie_match_swept_when_posting_fails_current_filter():
 
 def test_valid_out_of_recall_match_is_kept():
     with SessionLocal() as db:
-        zp = _post(db, "Data Entry Clerk", "zomb2", company="Foo")
+        # neutral title (no role-family) so this isolates the recall-gap behaviour, not role-family
+        zp = _post(db, "Operations Specialist", "zomb2", company="Foo")
         zp.location = "Remote"                            # still passes the remote filter
         db.commit()
         p = _make_profile_row(db, target_roles="Backend", skills="Python")
