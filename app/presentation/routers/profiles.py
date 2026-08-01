@@ -580,9 +580,9 @@ def render_app(db: Session, u, active: Profile, profiles: list[Profile],
 
     # Official Bulgarian ПОО competencies for the profile's field (НАПОО) — a BG-only display/CV aid.
     napoo_panel = ""
-    if lang == "bg" and getattr(p, "vertical", ""):
-        from ...data.taxonomy_repo import napoo_skills_for_vertical
-        nsk = napoo_skills_for_vertical(db, p.vertical, 30)
+    if lang == "bg" and (getattr(p, "napoo_direction", "") or getattr(p, "vertical", "")):
+        from ...data.taxonomy_repo import napoo_skills_for_profile
+        nsk = napoo_skills_for_profile(db, p, 30)
         if nsk:
             chips = "".join(
                 "<span style='display:inline-block;font-size:12.5px;padding:3px 9px;margin:2px;"

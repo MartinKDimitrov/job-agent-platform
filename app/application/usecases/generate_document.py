@@ -76,9 +76,9 @@ def generate_document(db: Session, user, profile_id: int, posting_id: int,
     # for Bulgarian documents, feed the official ПОО competencies for the profession as reference
     # vocabulary (never new skills) so the wording is authentic — see build_cv_prompt._napoo_block
     napoo = []
-    if lang == "bg" and getattr(profile, "vertical", ""):
-        from ...data.taxonomy_repo import napoo_skills_for_vertical
-        napoo = napoo_skills_for_vertical(db, profile.vertical, 25)
+    if lang == "bg" and (getattr(profile, "napoo_direction", "") or getattr(profile, "vertical", "")):
+        from ...data.taxonomy_repo import napoo_skills_for_profile
+        napoo = napoo_skills_for_profile(db, profile, 25)
     system, prompt = build(profile, posting, covered, missing, lang=lang, napoo=napoo)
     try:
         content = provider.generate(system, prompt, api_key=cfg["api_key"], model=cfg["model"])

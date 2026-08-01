@@ -762,6 +762,6 @@ def onboarding_create(request: Request, occupation_id: str = Form(""),
         english_level=english_level or "B2", country=country or "Bulgaria",
         location_pref=location_pref or "Sofia", remote_pref=remote_pref or "remote",
         relocate=bool(relocate), min_match=65, qualification_level=qlevel,
-        vertical=occ.vertical or "")
+        vertical=occ.vertical or "", napoo_direction=occ.napoo_direction or "")
     db.add(p); db.commit(); db.refresh(p)
     return redirect(f"/profiles/{p.id}")

@@ -47,8 +47,10 @@ class Profile(Base):
     # min education/qualification level (NKPD 0-8) of the chosen occupation — set at onboarding,
     # used by matching to down-weight postings demanding a much higher formal qualification.
     qualification_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # the chosen occupation's vertical — links the profile to its НАПОО field competencies (display/CV)
+    # the chosen occupation's vertical + its best-matching НАПОО direction — link the profile to its
+    # official ПОО competencies (per-profession first, vertical-wide fallback) for display/CV
     vertical: Mapped[str] = mapped_column(String(64), default="")
+    napoo_direction: Mapped[str] = mapped_column(String(255), default="")
     embedding: Mapped[list | None] = mapped_column(EmbeddingType, nullable=True)  # E5 query vec
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -306,6 +308,7 @@ class Occupation(Base):
     # ESCO stays the multilingual backbone): [{code, title, level, rel}]. level = 5th digit of the
     # 8-digit NKPD code = min education/qualification level. Populated by app.tools.import_nkpd.
     nkpd: Mapped[list] = mapped_column(JSON, default=list)
+    napoo_direction: Mapped[str] = mapped_column(String(255), default="")  # best-matching НАПОО direction (by name)
     skills: Mapped[list["OccupationSkill"]] = relationship(
         back_populates="occupation", cascade="all, delete-orphan")
 

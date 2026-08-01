@@ -37,6 +37,30 @@ def napoo_skills_for_vertical(db: Session, vertical: str, limit: int = 40) -> li
     return out[:limit]
 
 
+def _clean(skills, limit):
+    seen, out = set(), []
+    for s in skills or []:
+        k = s.strip(); kl = k.lower()
+        if len(k) >= 6 and kl not in seen and not _NAPOO_GENERIC.search(kl):
+            seen.add(kl); out.append(k)
+    return out[:limit]
+
+
+def napoo_skills_for_direction(db: Session, name: str, limit: int = 40) -> list[str]:
+    """The specific НАПОО direction's field competencies (generic units filtered)."""
+    if not name:
+        return []
+    d = db.execute(select(NapooDirection).where(NapooDirection.name == name)).scalars().first()
+    return _clean(d.skills if d else [], limit)
+
+
+def napoo_skills_for_profile(db: Session, profile, limit: int = 40) -> list[str]:
+    """Official ПОО competencies for a profile — the specific profession's direction first (matched
+    by name at onboarding), falling back to the vertical-wide competencies when there's no direction."""
+    d = napoo_skills_for_direction(db, getattr(profile, "napoo_direction", "") or "", limit)
+    return d or napoo_skills_for_vertical(db, getattr(profile, "vertical", "") or "", limit)
+
+
 def _label(row, lang: str) -> str:
     """The row's label in `lang`; ru/uk (not in ESCO) and any gap fall back to en, then any label."""
     labels = row.labels or {}

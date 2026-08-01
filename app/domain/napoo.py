@@ -45,3 +45,36 @@ def direction_vertical(name: str) -> str:
         if any(c in t for c in cues):
             return vert
     return ""
+
+
+import re as _re
+
+_STOP = {"и", "на", "за", "от", "с", "в", "по", "при", "или", "към", "до", "техник", "оператор",
+         "монтьор", "работник", "специалист", "младши", "старши", "главен", "помощник"}
+
+
+def _roots(text: str) -> set[str]:
+    """5-char stems of the meaningful words — crude Bulgarian stemming so 'заварчик' ~ 'заваряване',
+    'счетоводител' ~ 'счетоводство' still overlap despite different inflections/suffixes."""
+    toks = _re.findall(r"[а-яa-zё]{4,}", (text or "").lower())
+    return {t[:5] for t in toks if t not in _STOP}
+
+
+def best_direction(terms, vertical: str, directions) -> str:
+    """The NAPOO direction (name) that best matches a specific occupation by name — many directions
+    ARE named like professions (Здравен асистент, Фризьорство, Заваряване). Scored by shared word
+    roots; the occupation's own vertical is a tiebreaker, NOT a filter (our ESCO vertical and the
+    direction's don't always agree — a welder is 'crafts' but 'Заваряване' maps to 'engineering').
+    Returns "" when nothing overlaps (caller falls back to the vertical-wide competencies)."""
+    occ = set()
+    for t in terms:
+        occ |= _roots(t)
+    if not occ:
+        return ""
+    best, best_key = "", (0, 0)
+    for name, dvert in directions:
+        score = len(occ & _roots(name))
+        key = (score, 1 if dvert == vertical else 0)     # more roots wins; same-vertical breaks ties
+        if score >= 1 and key > best_key:
+            best, best_key = name, key
+    return best
