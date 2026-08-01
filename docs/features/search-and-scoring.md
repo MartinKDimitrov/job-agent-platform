@@ -11,6 +11,17 @@ end-to-end walkthrough lives in **matching-pipeline.md**.
 - takedown: registry-board postings unseen for 48h retire; window sources (dev.bg…) get a
   budgeted 404 URL probe instead; re-seen postings resurrect unless past the age rule.
 
+**Hybrid recall** (`application/vector_cache.py`): a posting is a candidate through ANY of
+three doors — exact title tokens, **semantic** (E5 cosine ≥ `recall_min_cosine`), or a shared
+canonical skill — then trimmed to `recall_max_candidates`. The semantic door runs **server-side
+on Postgres via pgvector's HNSW index** (`embedding <=> q`, `ef_search` raised to the cap), so a
+search never pulls the ~387k×384 vector matrix over the tunnel — that measured ~90s + ~600MB RAM,
+now ~0.16s indexed (≈98% ANN recall at the boundary, immaterial for a trimmed candidate door).
+SQLite (tests) has no pgvector, so it falls back to an in-process numpy matrix. The skill door's
+per-posting canonical-skill sets stay cached in RAM (rebuilt after each ingest, warmed off the
+request path at startup); the E5 model is likewise warmed at startup so the first search pays
+neither the ~80s model cold-load nor the vector reload.
+
 **Read side per profile** (`search_db`): exact-token title prefilter (generic tokens
 excluded) → hard filters, with retroactive deletion of matches that a NEWER filter rejects:
 - seniority (management vs IC, junior vs senior);

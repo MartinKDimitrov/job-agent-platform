@@ -80,6 +80,10 @@ def start_background_ingester(session_factory, every_hours: int | None = None,
                         log.info("background ingest starting (every %sh)", every_hours)
                         res = run_ingest(db)
                         log.info("background ingest done: %s", res)
+                        # run_ingest invalidated the recall cache — rebuild it here, off the
+                        # request path, so the next user search doesn't pay the ~90s reload.
+                        from .. import vector_cache
+                        vector_cache.warm(db)
             except Exception as e:  # noqa: BLE001 — the thread must survive any source failure
                 log.warning("background ingest failed: %s", e)
             time.sleep(poll_seconds)
