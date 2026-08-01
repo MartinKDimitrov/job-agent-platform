@@ -308,6 +308,19 @@ class Occupation(Base):
         back_populates="occupation", cascade="all, delete-orphan")
 
 
+class NapooDirection(Base):
+    """Official Bulgarian vocational-education (ПОО) skills, per professional direction, parsed from
+    the НАПОО ДОС (state educational standards). A BG display/CV overlay — the descriptive
+    знания/умения/компетентности a profession's curriculum covers. Populated by app.tools.import_napoo."""
+    __tablename__ = "napoo_directions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), index=True)     # e.g. "Строителство и архитектура"
+    code: Mapped[str] = mapped_column(String(16), default="")      # ISCED-F direction code if known
+    url: Mapped[str] = mapped_column(String(512), unique=True)
+    skills: Mapped[list] = mapped_column(JSON, default=list)       # умения (atomic BG statements)
+    knowledge: Mapped[list] = mapped_column(JSON, default=list)    # знания
+
+
 class TaxonomySkill(Base):
     __tablename__ = "taxonomy_skills"
     id: Mapped[int] = mapped_column(primary_key=True)
