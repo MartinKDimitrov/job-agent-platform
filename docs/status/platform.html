@@ -86,8 +86,8 @@
   </header>
 
   <div class="stats">
-    <div class="stat"><div class="v">425 187</div><div class="l"><b>387 095</b> live обяви в индекса</div><div class="d">▲ +420 400 от старта на пивота</div></div>
-    <div class="stat"><div class="v">117 162</div><div class="l">различни <b>работодатели</b></div></div>
+    <div class="stat"><div class="v">425 516</div><div class="l"><b>387 487</b> live обяви в индекса</div><div class="d">▲ +420 700 от старта на пивота</div></div>
+    <div class="stat"><div class="v">117 299</div><div class="l">различни <b>работодатели</b></div></div>
     <div class="stat"><div class="v">8</div><div class="l">живи <b>агрегатора</b></div><div class="d">+EURES (офиц. ЕС портал)</div></div>
     <div class="stat"><div class="v">27</div><div class="l">адаптера (14 ATS + 13 борси)</div></div>
     <div class="stat"><div class="v">610</div><div class="l">теста ✓</div><div class="d">всичко зелено</div></div>
@@ -95,25 +95,25 @@
 
   <!-- ADZUNA BULK PULL -->
   <section>
-    <div class="shead"><h2>Adzuna bulk pull — всички професии</h2><span class="n">resumable · източен</span></div>
+    <div class="shead"><h2>Колекция — bulk източен, дневен recency</h2><span class="n">✓ drained · daily</span></div>
     <div class="card">
       <div class="adz">
         <div class="hd">
-          <div class="big">≈425 000 <span>/ ~4,68 млн в каталога</span></div>
-          <span class="pill">✓ до depth cap</span>
+          <div class="big">≈425 000 <span>обяви · bulk backlog изчерпан</span></div>
+          <span class="pill">✓ recency режим</span>
         </div>
         <div class="track"><span class="fill" style="width:100%"></span></div>
       </div>
-      <p class="foot">30 категории × 10 държави = <b>300 „резена", 300 източени (всички)</b> · +Zaplata.bg +Rabota.bg +dev.bg (дълбок). Курсор след всяка
-        страница (~50 обяви) — проверимо по всяко време, продължава точно откъдето е спряло.
-        Adzuna сервира пълни страници произволно надълбоко → пълното източване е нощна работа,
-        ограничена от квотата. Отделна дъска следи прогреса на резен.</p>
+      <p class="foot"><b>Adzuna 300/300 · Careerjet 8/8 · EURES 17/17</b> — всичко дълбоко източено
+        (~425k). Понеже bulk-ът е изчерпан, постоянните drain-ове са спрени; свежест идва от
+        <b>дневен recency</b> (adzuna_recent — date-sorted, само нови обяви, спира при първата
+        вече-видяна). Всичко self-healing през launchd (тунел + recency агент).</p>
     </div>
   </section>
 
   <!-- ESCO ТАКСОНОМИЯ -->
   <section>
-    <div class="shead"><h2>Професии + компетенции (ESCO) + НКПД overlay</h2><span class="n">таксономия · пълна</span></div>
+    <div class="shead"><h2>Професии + компетенции · ESCO + НКПД + НАПОО (BG)</h2><span class="n">таксономия · пълна</span></div>
     <div class="card">
       <div class="adz">
         <div class="hd">
@@ -129,6 +129,12 @@
         <b>български длъжности</b> (вкл. Главен/Старши/Младши) + <b>квалификационно ниво (0–8)</b> от
         МТСП таблицата НКПД↔ESCO — легално, без scrape. Onboarding-ът показва badge „ниво N"; матчингът
         сваля обяви, изискващи по-високо образование от професията на кандидата (разлика ≥2 нива).</p>
+      <p class="foot"><b>НАПОО ДОС (за CV/display):</b> официалните български знания/умения/компетенции
+        от държавните образователни стандарти — <b>144 направления</b>, <b>10 265</b> field-специфични
+        умения (ЕРУ-aware парсер, без генеричните units). <b>1 837</b> професии (63%) закачени към
+        <b>конкретното си направление</b> по име (заварчик→„Заваряване"), останалите на вертикал-fallback.
+        Показват се на BG профила + подават се в CV промпта като официална терминология. Публични
+        МТСП/НАПОО източници, нула scrape.</p>
     </div>
   </section>
 

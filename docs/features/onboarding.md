@@ -21,6 +21,15 @@ official NKPD title when it differs from the ESCO label. ESCO stays the backbone
 Bulgarian. Loaded by `app.tools.import_nkpd`. The chosen level is stored on the profile
 (`Profile.qualification_level`) and used by matching — see [search-and-scoring](search-and-scoring.md).
 
+**НАПОО ДОС competencies (BG display/CV overlay).** The official vocational-education state
+standards (`NapooDirection`, 144 professional directions, ~10k field-specific знания/умения/
+компетенции — an ЕРУ-aware parse of the ДОС PDFs that skips the generic safety/entrepreneurship
+units). Each occupation is name-matched to its specific direction (63%; e.g. заварчик→"Заваряване",
+the rest fall back to the vertical-wide set), stored as `Occupation.napoo_direction` → copied to
+`Profile.napoo_direction` at onboarding. The BG profile page shows an "Официални компетенции (НАПОО)"
+panel and BG CV/cover-letter prompts get them as reference vocabulary (never as claimed skills).
+Descriptive, so display/CV only — not matching. Loaded by `app.tools.import_napoo`.
+
 **Modules**
 - `data/taxonomy_repo.py` — the read queries the picker drills through (verticals → groups →
   occupations → skills); `occupations()` surfaces the NKPD level + official title for `bg`.

@@ -54,6 +54,12 @@ sequential `adzuna_drain` / `careerjet_drain` / `jooble_drain`. Profiled 2026-07
 Boards render per source (`adzuna_board`, `aggregator_board <src>`, `eures_board`) and publish as
 Claude Artifacts. Owner rule: no demo data — only real pulls.
 
+**Operational mode (2026-08).** The bulk backlog is fully drained (Adzuna 300/300, Careerjet 8/8,
+EURES 17/17; ~425k postings). The always-on drain agents were stopped — a drained slice adds
+nothing — and freshness now comes from a **daily recency pass** (`adzuna_recent`: date-sorted, stops
+at the first already-seen posting). Two launchd agents remain: the SSH tunnel and the recency job.
+Re-drain by hand (`adzuna_fast` etc.) only when new sources/quota open up.
+
 **Shared HTTP** (`data/sources/http.py`): browser-like headers, JSON GET/POST, `url_status`,
 and a **per-host 429 backoff cache** (Retry-After honoured, 15 min default, but per-host overrides
 where wrong — `api.adzuna.com`→60s, since its 429 is a transient rolling-rate throttle a 15-min
