@@ -4,26 +4,37 @@ The heavy generative LLM is NOT used here — scoring is embeddings + keyword ov
 which is near-zero cost and runs locally. See LLM_COST_STRATEGY.md.
 """
 import re
+import threading
 from functools import lru_cache
 
 from ..core.config import settings
 from .skills import canon_skill, extract_skills, experience_multiplier
 
 _model = None
+_model_lock = threading.Lock()
 
 
 def _get_model():
     """Lazy-load the E5 model. Returns None if sentence-transformers/model unavailable,
-    in which case we fall back to keyword scoring."""
+    in which case we fall back to keyword scoring. The lock stops a startup warm-up and a
+    first user search from loading the (~80s) model twice concurrently."""
     global _model
     if _model is not None:
-        return _model
-    try:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer(settings.e5_model)
-    except Exception:
-        _model = False  # mark as unavailable
+        return _model or None
+    with _model_lock:
+        if _model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                _model = SentenceTransformer(settings.e5_model)
+            except Exception:
+                _model = False  # mark as unavailable
     return _model or None
+
+
+def warm_model() -> None:
+    """Eagerly load the E5 model (call at startup, off the request path) so the first user
+    search doesn't pay the ~80s cold load. Safe to call more than once — it's a no-op once loaded."""
+    _get_model()
 
 
 def _tokens(text: str) -> set[str]:

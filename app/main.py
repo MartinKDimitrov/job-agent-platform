@@ -33,6 +33,11 @@ def _startup():
     from .data.db import SessionLocal
     from .application.usecases.ingest_job import start_background_ingester
     start_background_ingester(SessionLocal)
+    # Warm the E5 embedding model off the request path so the first user search doesn't pay
+    # the ~80s cold load (measured). Daemon thread → server start isn't blocked while it loads.
+    import threading
+    from .domain.scoring import warm_model
+    threading.Thread(target=warm_model, name="e5-warmup", daemon=True).start()
 
 
 app.include_router(auth.router)
