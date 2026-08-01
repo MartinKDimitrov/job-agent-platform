@@ -383,3 +383,26 @@ def test_multilingual_drop_headers_skip_boilerplate():
         assert "urlaub" not in joined and "conges" not in joined          # benefits skipped
         assert "datenschutz" not in joined and "bewerbung" not in joined  # privacy skipped
         assert "passionnee" not in joined                                 # culture skipped
+
+
+def test_what_to_expect_section_is_responsibilities_not_requirements():
+    # "What to expect:" heads the duties block; those lines must NOT show up as gap requirements
+    # (real dev.bg posting: Accedia Junior Mobile Developer put duties in the must bucket).
+    jd = ("What are we looking for?\n"
+          "We are looking for a mobile developer who is eager to learn.\n"
+          "What to expect:\n"
+          "Work in a supportive environment for international clients.\n"
+          "Work closely with developers of various seniority and analyze requirements.\n"
+          "Actively communicate tasks and open questions with your team.\n"
+          "Requirements\n"
+          "At least 1 year of experience with Kotlin and/or Swift.\n"
+          "Good understanding of mobile UI design.\n"
+          "Fluency in English.")
+    reqs = extract_requirements(jd)
+    resp = [r["text"].lower() for r in reqs if r["kind"] == "resp"]
+    gaps = [r["text"].lower() for r in reqs if r["kind"] in ("must", "nice")]
+    assert any("work closely with developers" in t for t in resp)      # duty -> resp
+    assert any("actively communicate" in t for t in resp)
+    assert not any("supportive environment" in t for t in gaps)         # not a gap requirement
+    assert not any("work closely" in t for t in gaps)
+    assert any("kotlin" in t for t in gaps)                             # real requirement stays

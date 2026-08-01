@@ -25,8 +25,9 @@ _NICE_HEADERS = ("nice to have", "nice-to-have", "bonus", "would be a plus", "a 
 _RESP_HEADERS = ("responsibilit", "what you'll do", "what you will do", "the role",
                  "role description", "duties", "day to day", "day-to-day",
                  "the impact you", "your impact", "you'll be", "you will be",
-                 "daily routine",
-                 "отговорности", "какво ще правиш", "задължения")
+                 "daily routine", "what to expect", "your day", "a typical day",
+                 "what awaits you", "your tasks", "your mission",
+                 "отговорности", "какво ще правиш", "задължения", "какво те очаква")
 _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what you'll need",
                  "what you need", "what you'll bring", "what you bring", "your background",
                  "who you are", "we're looking for", "we are looking for",
