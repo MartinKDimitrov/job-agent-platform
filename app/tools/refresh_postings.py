@@ -44,8 +44,12 @@ def _as_list(v):
     return None if v is None else (v.tolist() if hasattr(v, "tolist") else list(v))
 
 
+def _flush_print(*a):
+    print(*a, flush=True)   # progress must reach a redirected log while the pass runs
+
+
 def run(min_len: int = 800, limit: int | None = None, verify_vectors: bool = False,
-        log=print) -> dict:
+        log=_flush_print) -> dict:
     q = select(Posting.id).where(Posting.is_live.is_(True))
     if min_len:
         q = q.where(func.length(Posting.description) > min_len)
