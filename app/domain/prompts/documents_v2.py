@@ -78,12 +78,25 @@ def _system(lang: str, cefr: str) -> str:
     )
 
 
-def build_cv_prompt(profile, posting, covered=None, missing=None, lang: str = "en") -> tuple[str, str]:
+def _napoo_block(napoo) -> str:
+    """Official Bulgarian ПОО competencies for the profession — REFERENCE vocabulary, never new
+    skills: it lets the model phrase the candidate's real skills in authentic official terms."""
+    if not napoo:
+        return ""
+    return ("\n\nOFFICIAL COMPETENCIES FOR THIS PROFESSION (НАПОО — reference vocabulary ONLY: use "
+            "this official Bulgarian phrasing to describe the candidate's ACTUAL skills more "
+            "professionally; NEVER claim a competency the candidate does not already have):\n- "
+            + "\n- ".join(napoo[:25]))
+
+
+def build_cv_prompt(profile, posting, covered=None, missing=None, lang: str = "en",
+                    napoo=None) -> tuple[str, str]:
     """Return (system, user) for a one-page CV tailored to the posting."""
     system = _system(lang, profile.english_level or "B2")
     user = (
         "CANDIDATE PROFILE:\n" + _profile_block(profile) +
         "\n\nTARGET JOB:\n" + _job_block(posting, covered, missing) +
+        _napoo_block(napoo) +
         "\n\nTASK: Write a one-page CV tailored to this job. Lead with what the job requires "
         "and the candidate actually has. Sections (include only those with data): Professional "
         "Summary (3-4 lines), Key Skills (grouped, most relevant first), Experience, Languages. "
@@ -95,12 +108,13 @@ def build_cv_prompt(profile, posting, covered=None, missing=None, lang: str = "e
 
 
 def build_cover_letter_prompt(profile, posting, covered=None, missing=None,
-                              lang: str = "en") -> tuple[str, str]:
+                              lang: str = "en", napoo=None) -> tuple[str, str]:
     """Return (system, user) for a short cover letter (200-250 words)."""
     system = _system(lang, profile.english_level or "B2")
     user = (
         "CANDIDATE PROFILE:\n" + _profile_block(profile) +
         "\n\nTARGET JOB:\n" + _job_block(posting, covered, missing) +
+        _napoo_block(napoo) +
         "\n\nTASK: Write a cover letter of 200-250 words addressed to the hiring team. "
         "Open with genuine interest in this specific role, connect 2-3 of the candidate's "
         "strongest matching skills (only ones present in their profile) to the job's must-have "

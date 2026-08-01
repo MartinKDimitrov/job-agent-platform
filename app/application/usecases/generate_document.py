@@ -73,7 +73,13 @@ def generate_document(db: Session, user, profile_id: int, posting_id: int,
     missing = match.missing if match else None
 
     build = build_cv_prompt if kind == "cv" else build_cover_letter_prompt
-    system, prompt = build(profile, posting, covered, missing, lang=lang)
+    # for Bulgarian documents, feed the official ПОО competencies for the profession as reference
+    # vocabulary (never new skills) so the wording is authentic — see build_cv_prompt._napoo_block
+    napoo = []
+    if lang == "bg" and getattr(profile, "vertical", ""):
+        from ...data.taxonomy_repo import napoo_skills_for_vertical
+        napoo = napoo_skills_for_vertical(db, profile.vertical, 25)
+    system, prompt = build(profile, posting, covered, missing, lang=lang, napoo=napoo)
     try:
         content = provider.generate(system, prompt, api_key=cfg["api_key"], model=cfg["model"])
     except LLMError as e:
