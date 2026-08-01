@@ -24,6 +24,19 @@ excluded) → hard filters, with retroactive deletion of matches that a NEWER fi
 = rescaled E5 cosine of the stored vectors; sem-only capped at 60%. Covered/missing stored
 per Match for the UI panels.
 
+**Soft factors** (`soft_factors` — one product multiplied onto the base score; also the single
+source for the "why this score" breakdown, so number and explanation never drift): freshness,
+salary fit, language/CEFR, seniority, **role-family**, location, **qualification**.
+- *role-family* (`domain.role_family`): a target-family vs posting-family conflict — HARD drop for
+  disjoint disciplines, SOFT down-weight for adjacent ones. Covers the tech families **and** the
+  non-tech ESCO verticals (construction, trades, transport, agriculture, education, legal, admin,
+  hospitality, finance, healthcare, sales, marketing) — so a concrete-finisher profile no longer
+  false-matches a DevOps role. Acts only when both sides name a concrete family.
+- *qualification* (`qualification_factor`): down-weights a posting demanding a much higher formal
+  education (NKPD level gap ≥ 2) than the candidate's occupation carries — the profile's level comes
+  from the NKPD overlay ([onboarding](onboarding.md)), the posting's from an education-keyword scan.
+  Conservative: unknown either side → no effect.
+
 **LLM coverage verification** (verify-v1): top matches above the threshold get a budgeted
 (`VERIFY_TOP_N`), cached-forever, best-effort LLM re-labeling of hits ('api' ≠ GraphQL,
 'A2' ≠ fluent English); scores recompute through the SAME blend; "✦ AI-checked" chip.

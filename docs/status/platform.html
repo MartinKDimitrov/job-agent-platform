@@ -86,25 +86,25 @@
   </header>
 
   <div class="stats">
-    <div class="stat"><div class="v">353 983</div><div class="l"><b>318 272</b> live обяви в индекса</div><div class="d">▲ +349 200 от старта на пивота</div></div>
-    <div class="stat"><div class="v">103 083</div><div class="l">различни <b>работодатели</b></div></div>
+    <div class="stat"><div class="v">425 187</div><div class="l"><b>387 095</b> live обяви в индекса</div><div class="d">▲ +420 400 от старта на пивота</div></div>
+    <div class="stat"><div class="v">117 162</div><div class="l">различни <b>работодатели</b></div></div>
     <div class="stat"><div class="v">8</div><div class="l">живи <b>агрегатора</b></div><div class="d">+EURES (офиц. ЕС портал)</div></div>
     <div class="stat"><div class="v">27</div><div class="l">адаптера (14 ATS + 13 борси)</div></div>
-    <div class="stat"><div class="v">608</div><div class="l">теста ✓</div><div class="d">всичко зелено</div></div>
+    <div class="stat"><div class="v">610</div><div class="l">теста ✓</div><div class="d">всичко зелено</div></div>
   </div>
 
   <!-- ADZUNA BULK PULL -->
   <section>
-    <div class="shead"><h2>Adzuna bulk pull — всички професии</h2><span class="n">resumable · тече</span></div>
+    <div class="shead"><h2>Adzuna bulk pull — всички професии</h2><span class="n">resumable · източен</span></div>
     <div class="card">
       <div class="adz">
         <div class="hd">
-          <div class="big">≈354 000 <span>/ ~4,68 млн в каталога</span></div>
-          <span class="pill now">● тегли сега</span>
+          <div class="big">≈425 000 <span>/ ~4,68 млн в каталога</span></div>
+          <span class="pill">✓ до depth cap</span>
         </div>
-        <div class="track"><span class="fill" style="width:5%"></span></div>
+        <div class="track"><span class="fill" style="width:100%"></span></div>
       </div>
-      <p class="foot">30 категории × 10 държави = <b>300 „резена", 236 източени</b> · +Zaplata.bg +Rabota.bg +dev.bg (дълбок). Курсор след всяка
+      <p class="foot">30 категории × 10 държави = <b>300 „резена", 300 източени (всички)</b> · +Zaplata.bg +Rabota.bg +dev.bg (дълбок). Курсор след всяка
         страница (~50 обяви) — проверимо по всяко време, продължава точно откъдето е спряло.
         Adzuna сервира пълни страници произволно надълбоко → пълното източване е нощна работа,
         ограничена от квотата. Отделна дъска следи прогреса на резен.</p>
@@ -113,19 +113,22 @@
 
   <!-- ESCO ТАКСОНОМИЯ -->
   <section>
-    <div class="shead"><h2>Професии + компетенции (ESCO)</h2><span class="n">таксономия · доизтегля се</span></div>
+    <div class="shead"><h2>Професии + компетенции (ESCO) + НКПД overlay</h2><span class="n">таксономия · пълна</span></div>
     <div class="card">
       <div class="adz">
         <div class="hd">
-          <div class="big">1 699 <span>професии → ~3 000 (пълна ESCO)</span></div>
-          <span class="pill now">● доизтегля се</span>
+          <div class="big">2 909 <span>професии · ESCO гръбнак + официален български НКПД</span></div>
+          <span class="pill">✓ заредена</span>
         </div>
-        <div class="track"><span class="fill" style="width:57%"></span></div>
+        <div class="track"><span class="fill" style="width:100%"></span></div>
       </div>
-      <p class="foot"><b>11 551 компетенции</b> · <b>66 215</b> връзки професия↔умение (31 481 essential) ·
+      <p class="foot"><b>12 549 компетенции</b> · <b>112 550</b> връзки професия↔умение ·
         средно <b>39 умения/професия</b> · <b>16 вертикала</b>, 619 ISCO групи. Захранва onboarding-а:
-        избираш професия → предлагаме типичните ѝ умения с essential/optional разделение. Многоезично
-        (BG/EN + EU езици). Import-ът е idempotent — доизтегля само липсващите ~1 300 професии.</p>
+        избираш професия → типичните ѝ умения с essential/optional разделение. Многоезично (BG/EN + EU).</p>
+      <p class="foot"><b>Български overlay (НКПД-2011):</b> 2 879 професии (98%) получиха официалните
+        <b>български длъжности</b> (вкл. Главен/Старши/Младши) + <b>квалификационно ниво (0–8)</b> от
+        МТСП таблицата НКПД↔ESCO — легално, без scrape. Onboarding-ът показва badge „ниво N"; матчингът
+        сваля обяви, изискващи по-високо образование от професията на кандидата (разлика ≥2 нива).</p>
     </div>
   </section>
 
@@ -229,7 +232,7 @@
       </div>
       <div class="phase">
         <div><span class="pill now">● тук сме</span></div>
-        <div><h4>Източване на Adzuna + качество на съвпадението</h4><p>Drain-ът тегли каталога на порции (≈203 000 / ~4,68 млн, 179/300 резена, resumable, quota-aware, 503-aware backoff). Успоредно: role-family филтър, relocation/on-site обработка, разбит скор — прецизност на съвпадението.</p></div>
+        <div><h4>Източване на Adzuna + качество на съвпадението</h4><p>Adzuna източен (300/300 резена, ≈425 000 общо), паралелни drain-ове (Careerjet/EURES/Jooble) — всичко self-healing през launchd. Матчинг: role-family (вкл. не-тех вертикали — бетонджия вече не матва DevOps), квалификационно ниво (НКПД), relocation/on-site, разбит скор.</p></div>
       </div>
       <div class="phase">
         <div><span class="pill next">⏳ следва</span></div>
