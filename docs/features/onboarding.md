@@ -22,11 +22,14 @@ Bulgarian. Loaded by `app.tools.import_nkpd`. The chosen level is stored on the 
 (`Profile.qualification_level`) and used by matching — see [search-and-scoring](search-and-scoring.md).
 
 **НАПОО ДОС competencies (BG display/CV overlay).** The official vocational-education state
-standards (`NapooDirection`, 144 professional directions, ~10k field-specific знания/умения/
-компетенции — an ЕРУ-aware parse of the ДОС PDFs that skips the generic safety/entrepreneurship
-units). Each occupation is name-matched to its specific direction (63%; e.g. заварчик→"Заваряване",
-the rest fall back to the vertical-wide set), stored as `Occupation.napoo_direction` → copied to
-`Profile.napoo_direction` at onboarding. The BG profile page shows an "Официални компетенции (НАПОО)"
+standards (`NapooDirection`, 144 professional directions, ~15.8k field-specific знания/умения/
+компетенции). The ДОС PDF parse is **specific-first**: the profession-SPECIFIC section (found at the
+*last* "специфична … по професията" header — the first is only the structure description) is emitted
+before the shared обща+отраслова foundation, and the generic safety/entrepreneurship units are
+dropped from that foundation — so a welder's list leads with МИГ/МАГ заваряване, not the common
+technical-drawing base. Each occupation is name-matched to its specific direction (63%; e.g.
+заварчик→"Технологии и системи за заваряване", the rest fall back to the vertical-wide set), stored
+as `Occupation.napoo_direction` → copied to `Profile.napoo_direction` at onboarding. The BG profile page shows an "Официални компетенции (НАПОО)"
 panel and BG CV/cover-letter prompts get them as reference vocabulary (never as claimed skills).
 Descriptive, so display/CV only — not matching. Loaded by `app.tools.import_napoo`.
 
