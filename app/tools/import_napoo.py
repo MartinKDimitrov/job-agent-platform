@@ -218,9 +218,35 @@ def parse_pdf(src) -> dict:
 
 import hashlib
 import os
-from ..domain.napoo import direction_vertical
+from sqlalchemy import text
+from ..domain.napoo import direction_vertical, best_direction
+from ..data.models import Occupation
 
 CACHE = "/Users/mdimitrov/.claude/drain-guardian/napoo-pdf"
+
+
+def match_occupations(session_factory=SessionLocal, log=print) -> dict:
+    """Attach each occupation to its best-matching ДОС direction (by NAME — matched on the ESCO
+    Bulgarian label only, which is the clean signal; NKPD title variants inject noise). Reproducible:
+    re-run after (re)parsing directions. Occupations with no name match fall back to the vertical."""
+    for tbl in ("occupations", "profiles"):
+        try:
+            with engine.begin() as c:
+                c.execute(text(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS napoo_direction VARCHAR(255)"))
+        except Exception:  # noqa: BLE001 — SQLite/create_all already has it
+            pass
+    with session_factory() as db:
+        dirs = [(d.name, d.vertical) for d in db.execute(select(NapooDirection)).scalars()]
+        occs = db.execute(select(Occupation)).scalars().all()
+        matched = 0
+        for i, o in enumerate(occs, 1):
+            o.napoo_direction = best_direction([(o.labels or {}).get("bg", "")], o.vertical, dirs)
+            matched += bool(o.napoo_direction)
+            if i % 500 == 0:
+                db.commit()
+        db.commit()
+    log(f"occupations matched to a direction: {matched}/{len(occs)}")
+    return {"occupations_matched": matched, "total": len(occs)}
 
 
 def _pdf_bytes(url: str):
@@ -254,7 +280,8 @@ def run(session_factory=SessionLocal, only: str | None = None, log=print) -> dic
             done += 1
             skills += len(res["skills"])
             log(f"  ok {name} [{row.vertical}]: {len(res['skills'])} умения")
-    return {"directions_reparsed": done, "failed": failed, "total_skills": skills}
+    m = match_occupations(session_factory, log=log)   # per-profession direction match (reproducible)
+    return {"directions_reparsed": done, "failed": failed, "total_skills": skills, **m}
 
 
 if __name__ == "__main__":
