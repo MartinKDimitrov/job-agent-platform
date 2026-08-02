@@ -18,8 +18,12 @@ traversal recurses occupation→sub-occupation nesting to reach the full set, no
 joined from the MLSP NKPD↔ESCO correspondence table by Bulgarian label (98% coverage). For `lang=bg`
 the occupation picker shows a **"ниво N" badge** (min education/qualification level, 0–8) and the
 official NKPD title when it differs from the ESCO label. ESCO stays the backbone; NKPD only enriches
-Bulgarian. Loaded by `app.tools.import_nkpd`. The chosen level is stored on the profile
-(`Profile.qualification_level`) and used by matching — see [search-and-scoring](search-and-scoring.md).
+Bulgarian. Loaded by `app.tools.import_nkpd`. The chosen occupation's level seeds the profile
+(`Profile.qualification_level`), but the candidate STATES their own education in step 1 (and can
+change it on the profile form) — their answer wins, since the occupation only implies a typical
+level. Options are the NKPD 0-8 scale postings are read on, so profile and posting compare directly
+(`presentation/web.EDUCATION_LEVELS`, shared by both forms). Used by matching — see
+[search-and-scoring](search-and-scoring.md).
 
 **НАПОО ДОС competencies (BG display/CV overlay).** The official vocational-education state
 standards (`NapooDirection`, 144 professional directions, ~15.8k field-specific знания/умения/

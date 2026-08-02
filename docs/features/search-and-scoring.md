@@ -44,9 +44,15 @@ salary fit, language/CEFR, seniority, **role-family**, location, **qualification
   hospitality, finance, healthcare, sales, marketing) — so a concrete-finisher profile no longer
   false-matches a DevOps role. Acts only when both sides name a concrete family.
 - *qualification* (`qualification_factor`): down-weights a posting demanding a much higher formal
-  education (NKPD level gap ≥ 2) than the candidate's occupation carries — the profile's level comes
-  from the NKPD overlay ([onboarding](onboarding.md)), the posting's from an education-keyword scan.
-  Conservative: unknown either side → no effect.
+  education (NKPD level gap ≥ 2) than the candidate has. The profile's level is what the CANDIDATE
+  states in onboarding / profile edit, falling back to the level their occupation implies via the
+  NKPD overlay ([onboarding](onboarding.md)). The posting's is `Posting.education_level`, collected
+  once at enrichment (`extract_qualification_level`, multilingual) instead of re-scanning every
+  candidate's description on every search. Conservative: unknown either side → no effect, and when
+  several levels appear the ENTRY bar wins ("Bachelor's or Master's" = 6), since over-reading the
+  bar penalises candidates the posting would accept. Cues match on word boundaries and "master"
+  must be degree-shaped — a 400k backfill showed bare substrings reading German "abSChluss" as a
+  BSc and "Master Technician"/"master data"/k8s "masters" as a Master's degree.
 
 **LLM coverage verification** (verify-v1): top matches above the threshold get a budgeted
 (`VERIFY_TOP_N`), cached-forever, best-effort LLM re-labeling of hits ('api' ≠ GraphQL,
