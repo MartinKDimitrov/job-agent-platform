@@ -101,10 +101,16 @@ def _candidates(db, prof, id_titles, limit: int):
     token_ids = {pid for pid, title, loc in id_titles
                  if keywords and keywords & set(_TOKEN_RE.findall((title or "").lower()))
                  and passes_hard_filters(prof, title or "", loc or "", "")[0]}
+    geo = vector_cache.geo_narrowing(prof)
     vector_ids = vector_cache.similar_posting_ids(db, prof.embedding,
-                                                  settings.recall_min_cosine, limit=limit)
+                                                  settings.recall_min_cosine, limit=limit,
+                                                  extra_filter=geo)
     skill_ids = vector_cache.postings_sharing_skills(
         db, extract_skills(prof.skills or "") - RECALL_GENERIC_SKILLS)
+    if geo is not None and skill_ids:
+        loc_by_id = {pid: loc for pid, _t, loc in id_titles if pid in skill_ids}
+        skill_ids = {pid for pid in skill_ids
+                     if passes_hard_filters(prof, "", loc_by_id.get(pid) or "", "")[0]}
     core = skill_ids | vector_ids
     ids = list(core)[:limit]
     if len(ids) < limit:

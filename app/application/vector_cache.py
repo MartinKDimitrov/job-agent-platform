@@ -73,7 +73,8 @@ def warm(db: Session) -> None:
     _ensure(db)
 
 
-def similar_posting_ids(db: Session, profile_vec, min_cosine: float, limit: int | None = None) -> set[int]:
+def similar_posting_ids(db: Session, profile_vec, min_cosine: float, limit: int | None = None,
+                        extra_filter=None) -> set[int]:
     """Live posting ids whose stored vector is within `min_cosine` of the profile's.
 
     Postgres: an HNSW ANN query — `ORDER BY embedding <=> q LIMIT cap`, kept to those within
@@ -92,10 +93,17 @@ def similar_posting_ids(db: Session, profile_vec, min_cosine: float, limit: int 
     cap = limit or settings.recall_max_candidates
     max_dist = 1.0 - min_cosine
     dist = Posting.embedding.cosine_distance(profile_vec)
-    db.execute(text("SET LOCAL hnsw.ef_search = :ef"), {"ef": max(cap, 100)})
-    rows = db.execute(select(Posting.id, dist.label("d"))
-                      .where(Posting.is_live.is_(True), Posting.embedding.isnot(None))
-                      .order_by(dist).limit(cap)).all()
+    q = (select(Posting.id, dist.label("d"))
+         .where(Posting.is_live.is_(True), Posting.embedding.isnot(None)))
+    if extra_filter is not None:
+        # same reason as in ranked_candidates: HNSW post-filters, so a narrowed query needs an
+        # exact scan or it comes back empty / full of ineligible rows
+        q = q.where(extra_filter)
+        db.execute(text("SET LOCAL enable_indexscan = off"))
+        db.execute(text("SET LOCAL enable_indexonlyscan = off"))
+    else:
+        db.execute(text("SET LOCAL hnsw.ef_search = :ef"), {"ef": min(1000, max(cap, 100))})
+    rows = db.execute(q.order_by(dist).limit(cap)).all()
     return {pid for pid, d in rows if d is not None and d <= max_dist}
 
 

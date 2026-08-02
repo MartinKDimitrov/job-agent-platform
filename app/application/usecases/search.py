@@ -630,10 +630,20 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
                  and passes_hard_filters(profile, title or "", loc or "", "")[0]}
     from ...domain.skills import RECALL_GENERIC_SKILLS, extract_skills
     from .. import vector_cache
+    geo = vector_cache.geo_narrowing(profile)
     vector_ids = vector_cache.similar_posting_ids(
-        db, profile.embedding, settings.recall_min_cosine)
+        db, profile.embedding, settings.recall_min_cosine, extra_filter=geo)
     profile_recall_skills = extract_skills(profile.skills or "") - RECALL_GENERIC_SKILLS
     skill_ids = vector_cache.postings_sharing_skills(db, profile_recall_skills)
+    # Every door must be geo-screened before it spends candidate budget. The skill and vector
+    # doors weren't, so 400 slots filled with postings abroad (a cook in Bansko got Polish
+    # "Kucharz" ads) and NOTHING survived the location filter a moment later — the profile came
+    # back empty even though its own market had matches.
+    if geo is not None and skill_ids:
+        loc_by_id = dict((pid, loc) for pid, _t, loc in
+                         ((r[0], r[1], r[2]) for r in id_titles) if pid in skill_ids)
+        skill_ids = {pid for pid in skill_ids
+                     if passes_hard_filters(profile, "", loc_by_id.get(pid) or "", "")[0]}
     cap = settings.recall_max_candidates
     # Budget the candidate slots by CONFIDENCE, then top up. The precise doors go first — skill
     # (shares a real canonical skill) and the thresholded vector door — then the lexical title
