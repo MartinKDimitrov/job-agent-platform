@@ -21,7 +21,7 @@ import re
 # only runs on non-bulleted lines anyway.
 _NICE_HEADERS = ("nice to have", "nice-to-have", "bonus", "would be a plus", "a plus",
                  "preferred", "desirable", "advantage",
-                 "предимство", "ще бъде предимство", "бонус")
+                 "helpful", "good to have", "предимство", "ще бъде предимство", "бонус")
 _RESP_HEADERS = ("responsibilit", "what you'll do", "what you will do", "the role",
                  "role description", "duties", "day to day", "day-to-day",
                  "the impact you", "your impact", "you'll be", "you will be",
@@ -35,11 +35,18 @@ _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what
                  "the ideal candidate", "the perfect candidate", "if you have",
                  "love to hear from you", "you should apply", "great fit", "about you",
                  "skills", "изисквания", "необходими", "какво очакваме",
-                 "търсим", "умения")
+                 "търсим", "умения",
+                 # sub-headers INSIDE a requirements block: unrecognised, they became gap items
+                 # themselves ("Required Experience", "Tools & Systems" showed as missing skills)
+                 "required experience", "required qualification", "your experience",
+                 "tools & systems", "tools and systems", "tech stack", "technical stack",
+                 "experience required", "qualifications required")
 # Whole sections that never contain a requirement — switch into "drop" and skip until the
 # next recognised header.
 _DROP_HEADERS = ("about us", "about the", "about our", "who we are", "benefits", "perks",
                  "what we offer", "we offer", "our offer", "offer you", "the company offers",
+                 # agencies write the offer in the third person: "In Return, They Offer:"
+                 "in return", "they offer", "on offer", "we can offer", "you will receive",
                  "why join",
                  "why work", "our mission", "diversity", "compensation", "salary", "join us",
                  "our team", "interview process", "hiring process", "application process",
@@ -132,6 +139,10 @@ _BENEFIT_RE = re.compile(
     r"summer office|winter office|company[- ]wide events?|knowledge[- ]sharing sessions?|"
     r"academic teaching|speaking engagements?|professional development|relax and unwind|"
     r"reach your full potential|certifications? and training|"
+    r"days? vacation|vacation days?|annual salary review|share incentivi[sz]ation|"
+    r"equipment reimbursement|career enhancement|workshops?, conferences|hackat|"
+    r"remote[- ]first policy|global mission|confidentiality of all applications|"
+    r"flexible work hours|tech deep dive|"
     r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
     r"карта за транспорт|бонус за|пенси\w*|релокац\w*|обяд\w*)\b", re.I)
 
@@ -295,6 +306,13 @@ _SOFT_RE = re.compile(
 # apostrophe-bearing header above and dumped the whole benefits section into the must bucket.
 _TYPOGRAPHY = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"', " ": " "})
 
+# Sentence split for over-long prose. NOT after a common abbreviation: splitting on every
+# "." turned "tools (e.g. Claude Code, Codex) across CI" into the fragments "…tools (e.g." and
+# "Claude Code, Codex) across CI" in the gaps panel. Semicolons only break a part that is STILL
+# too long afterwards (they separate list items, not sentences).
+_SENT_SPLIT = re.compile(r"(?<!\be\.g)(?<!\bi\.e)(?<!\betc)(?<!\bvs)(?<!\bInc)(?<!\bLtd)\.\s+")
+_SEMI_SPLIT = re.compile(r";\s+")
+
 _MIN_LEN = 8      # shorter than this is a fragment, not a requirement
 _MAX_LEN = 180    # longer than this is prose; we try to split it into sentences
 _DROP = "drop"
@@ -315,6 +333,20 @@ def _match_header(line: str) -> str | None:
     return None
 
 
+_INLINE_LABEL = re.compile(r"^([^:]{3,22}):\s+(?=\S)")
+
+
+def _inline_label(cleaned: str, current: str) -> tuple[str, str]:
+    """A section label can arrive INLINE rather than on its own line — "Nice to have: our cloud
+    platform; data versioning…". Without this the whole line scores as a must and inflates the
+    gaps panel. Only NICE is honoured: promoting a line to must/resp from a prefix is riskier
+    (a sentence can open with any word before a colon) and buys nothing."""
+    m = _INLINE_LABEL.match(cleaned)
+    if m and _match_header(m.group(1)) == "nice":
+        return "nice", cleaned[m.end():]
+    return current, cleaned
+
+
 def _is_noise(line: str) -> bool:
     low = line.lower()
     return any(n in low for n in _NOISE)
@@ -327,7 +359,7 @@ def _clean(line: str) -> str:
     return re.sub(r"\s+", " ", line).strip()
 
 
-def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
+def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool, labelled: bool = False) -> bool:
     """Line-level boilerplate defence, tuned on real JDs (GitLab/Monzo/Stripe):
     - salary/currency lines are never requirements;
     - company self-narrative ("We're on a mission...", "X is the platform for...") is dropped
@@ -348,7 +380,9 @@ def _keep(cleaned: str, *, seen_header: bool, is_bullet: bool) -> bool:
         return False
     if _ENCOURAGEMENT_RE.search(cleaned):   # DEI / "apply even if you don't meet everything"
         return False
-    if _MARKETING_RE.match(cleaned) and not _STRONG_SIGNAL_RE.search(cleaned):
+    # `labelled`: the line came in under an explicit requirement label ("Nice to have: Our cloud
+    # platform…"), so the company-narrative filter must not eat it for opening with "Our".
+    if not labelled and _MARKETING_RE.match(cleaned) and not _STRONG_SIGNAL_RE.search(cleaned):
         return False
     if not seen_header and not is_bullet and not _REQ_SIGNAL_RE.search(cleaned):
         return False
@@ -365,11 +399,11 @@ def extract_requirements(text: str, cap: int = 40) -> list[dict]:
     out: list[dict] = []
     seen: set[str] = set()
 
-    def add(phrase: str, kind: str, is_bullet: bool) -> None:
+    def add(phrase: str, kind: str, is_bullet: bool, labelled: bool = False) -> None:
         phrase = phrase.strip()
         if not (_MIN_LEN <= len(phrase) <= _MAX_LEN):
             return
-        if not _keep(phrase, seen_header=seen_header, is_bullet=is_bullet):
+        if not _keep(phrase, seen_header=seen_header, is_bullet=is_bullet, labelled=labelled):
             return
         key = phrase.lower()
         if key in seen:
@@ -406,14 +440,18 @@ def extract_requirements(text: str, cap: int = 40) -> list[dict]:
         if current == _DROP or _is_noise(line):
             continue
         cleaned = _clean(line)
+        current_line, cleaned = _inline_label(cleaned, current)
         if len(cleaned) > _MAX_LEN:
             # Prose paragraph: keep sentence-sized pieces rather than the whole block.
-            for part in re.split(r"(?<=[.;])\s+", cleaned):
-                add(part, current, is_bullet)
+            for sentence in _SENT_SPLIT.split(cleaned):
+                parts = ([sentence] if len(sentence) <= _MAX_LEN
+                         else _SEMI_SPLIT.split(sentence))
+                for part in parts:
+                    add(part, current_line, is_bullet, labelled=current_line != current)
                 if len(out) >= cap:
                     break
         else:
-            add(cleaned, current, is_bullet)
+            add(cleaned, current_line, is_bullet, labelled=current_line != current)
         if len(out) >= cap:
             break
     return out[:cap]

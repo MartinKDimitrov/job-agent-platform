@@ -682,7 +682,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
                                      freshness=soft, skill_years=skill_years,
                                      role_match=role_match,
                                      role_match_floor=settings.role_match_sem_floor,
-                                     gate_cap=settings.must_gate_cap or None)
+                                     gate_cap=settings.must_gate_cap or None,
+                                     education_level=profile.qualification_level)
         existing = existing_by_post.get(post.id)
         if existing:
             existing.score, existing.covered, existing.missing = sc, covered, missing

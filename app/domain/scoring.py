@@ -174,6 +174,21 @@ def requirement_hit(r: dict, profile_text: str, profile_tokens: set[str] | None 
     return bool(rtok and rtok & (toks - _GENERIC_REQ_TOKENS))
 
 
+def education_hit(r: dict, candidate_level: int | None) -> bool:
+    """Does the candidate's STATED education meet this requirement's degree demand?
+
+    The keyword path can't see this: the profile stores education as a NUMBER
+    (Profile.qualification_level, NKPD 0-8) while the requirement states it in prose, so
+    "Bachelor's or Master's degree in Computer Science" sat in the gaps panel of a candidate
+    who had ticked university education (owner report). Reaching the bar covers it — a Master's
+    holder is not missing a bachelor's requirement."""
+    if candidate_level is None:
+        return False
+    from .filters import extract_qualification_level
+    need = extract_qualification_level(r.get("text", ""))
+    return need is not None and candidate_level >= need
+
+
 def _covering_skills(r: dict, p_skills: set[str]) -> set[str]:
     """Which of the profile's canonical skills cover this requirement (empty when it's covered
     only by raw tokens, not a nameable skill) — used to weight coverage by that skill's years."""
@@ -200,7 +215,7 @@ def score(profile_text: str, posting_text: str, requirements=None,
           profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT,
           freshness: float = 1.0, gate_cap: float | None = None,
           skill_years: dict | None = None, role_match: bool = False,
-          role_match_floor: float = 0.9):
+          role_match_floor: float = 0.9, education_level: int | None = None):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -216,7 +231,8 @@ def score(profile_text: str, posting_text: str, requirements=None,
     covered, missing = [], []
     must_cov = must_tot = nice_cov = nice_tot = 0.0
     for r in reqs:
-        hit = requirement_hit(r, profile_text, p_tok, p_skills)
+        hit = (requirement_hit(r, profile_text, p_tok, p_skills)
+               or education_hit(r, education_level))
         w = req_weight(r)
         if w > 0:                       # responsibilities/soft (w=0) are not scored as gaps
             exp = 1.0

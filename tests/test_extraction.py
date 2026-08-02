@@ -441,3 +441,36 @@ def test_multilingual_legal_terms_and_soft_are_not_gaps():
                 if r["kind"] in ("must", "nice")]
         assert any(real in g for g in gaps), f"lost the real requirement in: {text[:30]}"
         assert len(gaps) == 1, f"boilerplate leaked into gaps: {gaps}"
+
+
+def test_third_person_offer_header_and_inline_labels():
+    """Real dev.bg agency posting (Cadabra): the perks sat under 'In Return, They Offer:' —
+    unrecognised, so the whole block scored as requirements. Plus sub-headers inside a
+    requirements block became gap items, and an inline 'Nice to have:' scored as a must."""
+    jd = ("Requirements:\n"
+          "7+ years of hands-on development experience.\n"
+          "Required Experience\n"
+          "3+ years with Python.\n"
+          "Nice to have: Our cloud platform (GCP, Vertex AI); data versioning (DVC).\n"
+          "In Return, They Offer:\n"
+          "30 days vacation + 5 additional days for learning and development.\n"
+          "Share incentivization plan.\n"
+          "Career Enhancement plan.\n"
+          "Workshops, Conferences, Hackatons, Tech Deep Dives (internal & external).\n")
+    reqs = extract_requirements(jd)
+    joined = " ".join(r["text"].lower() for r in reqs)
+    for perk in ("vacation", "incentivization", "career enhancement", "hackaton"):
+        assert perk not in joined, f"perk leaked: {perk}"
+    assert "required experience" not in joined          # a sub-header, not a requirement
+    musts = [r["text"].lower() for r in reqs if r["kind"] == "must"]
+    nices = [r["text"].lower() for r in reqs if r["kind"] == "nice"]
+    assert any("python" in t for t in musts)
+    assert any("gcp" in t for t in nices)               # inline label -> nice, and it survives
+
+
+def test_sentences_are_not_split_on_abbreviations():
+    long_line = ("Requirements:\n"
+                 "Practical experience using AI-assisted development tools (e.g. Claude Code, "
+                 "Codex) across coding, CI, and testing is expected of every engineer here.\n")
+    texts = [r["text"] for r in extract_requirements(long_line)]
+    assert any("e.g. Claude Code, Codex" in t for t in texts), texts
