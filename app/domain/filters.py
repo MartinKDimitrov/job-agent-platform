@@ -382,12 +382,18 @@ _EDU_LEVELS: tuple[tuple[int, tuple[str, ...]], ...] = (
          "образователна и научна степен",
          "doktorgrad", "doktortitel", "doktorat", "doctorat", "dottorato", "doctorado",
          "doctoraat", "διδακτορικό", "докторская", "докторський")),
-    (7, ("master", "msc", "m.sc", "mba", "магистър", "магистърска",
+    # "master" must be DEGREE-shaped: bare "master" reads a trade's "Master Technician",
+    # "master data", "Mastertrainer:in" and "masterplanning" as a Master's degree — measured 9%
+    # false positives on level 7, and each one wrongly penalises a less-schooled candidate.
+    (7, ("master's", "masters ", "master degree", "master of ", "master in ", "master or ",
+         "master/", "masterabschluss", "masterstudium", "master-abschluss", "master en ",
+         "msc", "m.sc", "mba", "магистър", "магистърска",
          "magister", "mastère", "máster", "laurea magistrale", "studia magisterskie",
          "masterat", "magistar", "μεταπτυχιακό", "магистр", "магістр")),
     (6, ("bachelor", "bsc", "b.sc", "university degree", "higher education", "university education",
          "висше образование", "бакалавър", "университетско образование", "университетска степен",
          "hochschulabschluss", "hochschulstudium", "akademischer abschluss",
+         "abgeschlossenes studium", "studienabschluss",
          "diplôme universitaire", "études supérieures", "bac+",
          "grado universitario", "licenciatura", "titulación universitaria", "estudios superiores",
          "laurea", "titolo universitario", "universitair", "hbo-opleiding",
@@ -396,7 +402,7 @@ _EDU_LEVELS: tuple[tuple[int, tuple[str, ...]], ...] = (
          "πτυχίο", "ανώτατη εκπαίδευση", "высшее образование", "бакалавр", "вища освіта")),
     (5, ("professional qualification", "college degree", "проф. квалификация",
          "професионална квалификация", "полувисше", "колеж",
-         "berufsausbildung", "ausbildung", "formation professionnelle", "brevet de technicien",
+         "berufsausbildung", "ausbildung", "berufsabschluss", "formation professionnelle", "brevet de technicien",
          "formación profesional", "ciclo formativo", "qualifica professionale",
          "diploma professionale", "mbo-niveau", "technikum", "szkoła policealna",
          "școală postliceală", "calificare profesională", "среднее специальное")),
@@ -412,6 +418,15 @@ _EDU_LEVELS: tuple[tuple[int, tuple[str, ...]], ...] = (
 )
 
 
+# Cues are matched on WORD BOUNDARIES, not as bare substrings: "bsc" sits inside the German
+# "abSChluss" (Hochschul-/Studien-/Berufs-/Masterabschluss), which silently read every German
+# posting mentioning a qualification as a bachelor's requirement. Short acronyms (bsc/msc/mba/
+# phd) make substring matching untenable, so every cue gets \b...\b.
+_EDU_RES: tuple[tuple[int, "re.Pattern"], ...] = tuple(
+    (lvl, re.compile(r"\b(?:" + "|".join(re.escape(c) for c in cues) + r")", re.I))
+    for lvl, cues in _EDU_LEVELS)
+
+
 def extract_qualification_level(text: str) -> int | None:
     """The formal education level a posting requires to ENTER it (NKPD scale 0-8), or None when it
     states none. Multilingual keyword match; absence -> None so matching stays conservative.
@@ -420,8 +435,8 @@ def extract_qualification_level(text: str) -> int | None:
     bachelor, so its entry bar is 6, not 7 — reading the highest would penalise candidates the
     posting would actually accept. The same rule makes a stray mention ("after your bachelor…" in
     a PhD ad) err toward NOT penalising, which is the safe direction for a soft factor."""
-    t = (text or "").lower()
-    found = [lvl for lvl, cues in _EDU_LEVELS if any(c in t for c in cues)]
+    t = text or ""
+    found = [lvl for lvl, rx in _EDU_RES if rx.search(t)]
     return min(found) if found else None
 
 
