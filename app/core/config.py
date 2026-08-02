@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     # care and hospitality titles sit at 0.76-0.85 against their own postings in every language,
     # so the confident bar alone recalled entire professions nothing; this admits them into the
     # slots the confident doors left empty, while still keeping the plainly unrelated out.
+    # A posting whose requirements the extractor couldn't find is scored on similarity ALONE and
+    # can never claim as much as one with real evidence — but it IS shown. 91% of the live index
+    # (the short aggregator ads: "Заварчик — заваряване и рязане на метални конструкции") has no
+    # extractable must/nice, and excluding it hid entire professions and whole markets.
+    semantic_only_cap: float = 0.75
+    show_postings_without_requirements: bool = True
     recall_rank_floor: float = 0.70
     # How much deeper the rank door looks before geo-screening — the nearest postings to a
     # non-remote profile are often all in another country.

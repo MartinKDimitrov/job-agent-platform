@@ -35,7 +35,7 @@ from ..data.models import Posting
 from ..domain.filters import extract_qualification_level, passes_hard_filters
 from ..domain.role_family import conflict, families
 from ..domain.scoring import embed_query, score, warm_model
-from .release_profiles import PROFILES
+from .release_profiles import EXTRA, PROFILES
 
 # Lines that must never be shown to a candidate as a missing requirement. Multilingual on purpose:
 # a posting's boilerplate is in the posting's language, not the user's.
@@ -54,14 +54,27 @@ _BOILERPLATE = re.compile(
 class _P:
     """An in-memory profile — never added to a session, so the check writes nothing."""
 
-    def __init__(self, key, roles, skills, country, city, remote, education, languages):
+    def __init__(self, key, roles, skills, country, city, remote, education, languages,
+                 relocate=False, min_match=50, salary_expectation="", experience="",
+                 english_level="B2"):
         self.id, self.key = 0, key
         self.name, self.target_roles, self.skills = key, roles, skills
-        self.experience = ""
+        self.experience = experience
         self.country, self.location_pref, self.remote_pref = country, city, remote
         self.qualification_level, self.languages = education, languages
-        self.english_level, self.relocate, self.min_match = "B2", False, 50
-        self.salary_expectation, self.embedding = "", None
+        self.english_level, self.relocate, self.min_match = english_level, relocate, min_match
+        self.salary_expectation, self.embedding = salary_expectation, None
+
+    @classmethod
+    def from_spec(cls, spec):
+        """Positional tuple (batch 1) or keyword dict (batch 2, which varies the parameters the
+        defaults above were hiding: relocation, threshold, salary, experience, English level)."""
+        if isinstance(spec, dict):
+            d = dict(spec)
+            return cls(d.pop("key"), d.pop("target_roles"), d.pop("skills"), d.pop("country"),
+                       d.pop("city"), d.pop("remote_pref"), d.pop("education"),
+                       d.pop("languages"), **d)
+        return cls(*spec)
 
     def as_text(self) -> str:
         return f"{self.target_roles} · {self.skills}"
@@ -125,7 +138,8 @@ def check_profile(db, prof, id_titles, top: int = 10) -> dict:
                                      post.requirements, profile_vec=prof.embedding,
                                      posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
-                                     education_level=prof.qualification_level)
+                                     education_level=prof.qualification_level,
+                                     sem_only_cap=settings.semantic_only_cap)
         scored.append((sc, post, missing))
     scored.sort(key=lambda x: -x[0])
     head = scored[:top]
@@ -154,9 +168,15 @@ def check_profile(db, prof, id_titles, top: int = 10) -> dict:
             "problems": problems}
 
 
-def run(only: str | None = None, top: int = 10, log=print) -> dict:
+def _flush_print(*a):
+    print(*a, flush=True)
+
+
+def run(only: str | None = None, top: int = 10, log=_flush_print) -> dict:
     warm_model()
-    profiles = [_P(*row) for row in PROFILES if not only or only in row[0]]
+    specs = list(PROFILES) + list(EXTRA)
+    profiles = [_P.from_spec(sp) for sp in specs
+                if not only or only in (sp["key"] if isinstance(sp, dict) else sp[0])]
     log(f"release check — {len(profiles)} profiles\n")
     failed = 0
     with SessionLocal() as db:

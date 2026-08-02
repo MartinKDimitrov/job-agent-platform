@@ -15,7 +15,10 @@ Coverage is the point, so the set spans:
 """
 from __future__ import annotations
 
-# (key, target_roles, skills, country, city, remote_pref, education, languages)
+# The first 50 are positional: (key, target_roles, skills, country, city, remote_pref,
+# education, languages) — everything else takes the defaults in `release_check._P`.
+# EXTRA (below) adds the parameters those defaults were hiding: relocation, work-type "any",
+# the match threshold, a salary expectation, free-text experience and English level.
 PROFILES: list[tuple] = [
     # ---- IT (the families are fine-grained here, so several near-neighbours) ----
     ("backend_bg", "Backend Developer", "Python, Django, PostgreSQL, Docker, REST API",
@@ -127,4 +130,195 @@ PROFILES: list[tuple] = [
      "Bulgaria", "Sofia", "hybrid", None, "Bulgarian, English"),
 ]
 
-assert len(PROFILES) == 50, f"the release set is meant to be 50 profiles, found {len(PROFILES)}"
+_BASE_COUNT = 50
+assert len(PROFILES) == _BASE_COUNT, f"the base set is 50 profiles, found {len(PROFILES)}"
+
+
+# ---------------------------------------------------------------------------------------------
+# Batch 2 — the parameters the first 50 never varied, plus the profile SHAPES that break rules
+# rather than professions. Every entry here is keyword-form, so each row states exactly which
+# knob it is there to turn:
+#
+#   relocate=True        the geo filter's other branch — the first 50 were all "stay put", so
+#                        the entire willing-to-move path went untested;
+#   remote_pref="any"    skips work_type_ok altogether;
+#   min_match            the feed threshold (20 shows almost everything, 85 almost nothing);
+#   salary_expectation   turns on the salary soft factor, which is otherwise never exercised;
+#   experience           free text feeds both the embedding and the seniority read;
+#   english_level        drives the language factor for the non-English markets.
+#
+# Shapes worth their own row: a career changer (skills of one trade, target another), a bare
+# profile with no skills at all, an over-stuffed one, a two-domain target, and roles whose title
+# is a false friend for the family cues ("Scrum Master", "Master Technician", "Chef de Projet").
+EXTRA: list[dict] = [
+    # ---- relocation: the untested branch ----
+    dict(key="welder_relocate", target_roles="Welder", skills="MIG MAG welding, TIG, fabrication",
+         country="Bulgaria", city="Plovdiv", remote_pref="onsite", education=3,
+         languages="Bulgarian, English", relocate=True),
+    dict(key="nurse_relocate_de", target_roles="Nurse", skills="patient care, geriatric care",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=6,
+         languages="Bulgarian, German", relocate=True, english_level="A2"),
+    dict(key="driver_relocate_eu", target_roles="Truck Driver", skills="C+E, ADR, tachograph",
+         country="Bulgaria", city="Ruse", remote_pref="onsite", education=3,
+         languages="Bulgarian", relocate=True, english_level="A1"),
+    dict(key="cook_relocate_at", target_roles="Cook", skills="kitchen, HACCP, prep",
+         country="Bulgaria", city="Varna", remote_pref="onsite", education=5,
+         languages="Bulgarian, German", relocate=True),
+    dict(key="dev_relocate_ch", target_roles="Backend Developer", skills="Java, Spring, Kafka",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=7,
+         languages="Bulgarian, English", relocate=True, salary_expectation="7000 EUR"),
+    # ---- work type "any" + thresholds ----
+    dict(key="anywhere_qa", target_roles="QA Engineer", skills="Selenium, pytest, API testing",
+         country="Bulgaria", city="Sofia", remote_pref="any", education=6,
+         languages="Bulgarian, English", min_match=20),
+    dict(key="picky_architect", target_roles="Software Architect",
+         skills="microservices, DDD, Kubernetes, event sourcing", country="Bulgaria", city="Sofia",
+         remote_pref="remote", education=7, languages="Bulgarian, English", min_match=85,
+         experience="12 years building distributed systems"),
+    dict(key="lenient_junior", target_roles="Junior Data Analyst", skills="SQL, Excel",
+         country="Bulgaria", city="Plovdiv", remote_pref="any", education=6,
+         languages="Bulgarian, English", min_match=20),
+    # ---- salary expectation drives the salary factor ----
+    dict(key="salary_high_ml", target_roles="Machine Learning Engineer",
+         skills="Python, PyTorch, LLM, MLOps", country="Germany", city="Berlin",
+         remote_pref="remote", education=7, languages="German, English",
+         salary_expectation="120000 EUR", experience="9 years, production ML"),
+    dict(key="salary_low_admin", target_roles="Office Administrator", skills="MS Office, filing",
+         country="Bulgaria", city="Burgas", remote_pref="onsite", education=3,
+         languages="Bulgarian", salary_expectation="1200 BGN"),
+    dict(key="salary_hourly_trade", target_roles="Electrician", skills="wiring, fault finding",
+         country="Ireland", city="Dublin", remote_pref="onsite", education=5,
+         languages="English", salary_expectation="25 EUR"),
+    # ---- seniority across the whole ladder ----
+    dict(key="apprentice_baker", target_roles="Apprentice Baker", skills="baking, dough, hygiene",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=1,
+         languages="Bulgarian"),
+    dict(key="intern_marketing", target_roles="Marketing Intern", skills="social media, Canva",
+         country="Bulgaria", city="Sofia", remote_pref="hybrid", education=6,
+         languages="Bulgarian, English"),
+    dict(key="lead_frontend", target_roles="Lead Frontend Developer",
+         skills="React, TypeScript, design systems, mentoring", country="Poland", city="Warsaw",
+         remote_pref="remote", education=6, languages="Polish, English",
+         experience="11 years, led a team of 6"),
+    dict(key="head_of_finance", target_roles="Head of Finance",
+         skills="IFRS, controlling, budgeting, team leadership", country="Bulgaria", city="Sofia",
+         remote_pref="hybrid", education=7, languages="Bulgarian, English",
+         experience="15 years, CFO office"),
+    dict(key="cto_startup", target_roles="CTO", skills="architecture, hiring, cloud, strategy",
+         country="Bulgaria", city="Sofia", remote_pref="hybrid", education=7,
+         languages="Bulgarian, English", experience="18 years, two exits"),
+    # ---- education edges ----
+    dict(key="phd_researcher", target_roles="Research Scientist",
+         skills="NLP, transformers, publications, PyTorch", country="Netherlands",
+         city="Amsterdam", remote_pref="hybrid", education=8, languages="Dutch, English",
+         experience="PhD in computational linguistics"),
+    dict(key="no_education_stated", target_roles="Warehouse Worker", skills="picking, forklift",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=None,
+         languages="Bulgarian"),
+    dict(key="primary_only_cleaner", target_roles="Cleaner", skills="cleaning, disinfection",
+         country="Bulgaria", city="Pleven", remote_pref="onsite", education=1,
+         languages="Bulgarian"),
+    # ---- profile SHAPES ----
+    dict(key="career_changer", target_roles="Junior Web Developer",
+         skills="HTML, CSS, JavaScript, self-taught", country="Bulgaria", city="Varna",
+         remote_pref="remote", education=3, languages="Bulgarian, English",
+         experience="8 years as a chef, retraining into IT"),
+    dict(key="bare_profile", target_roles="Sales Representative", skills="",
+         country="Bulgaria", city="Sofia", remote_pref="hybrid", education=None,
+         languages="Bulgarian"),
+    dict(key="overstuffed_profile", target_roles="Full Stack Developer",
+         skills=("JavaScript, TypeScript, React, Vue, Angular, Node.js, Python, Django, Flask, "
+                 "PostgreSQL, MySQL, MongoDB, Redis, Docker, Kubernetes, AWS, GCP, Terraform, "
+                 "Git, CI/CD, GraphQL, REST, Kafka, RabbitMQ, Elasticsearch"),
+         country="Bulgaria", city="Sofia", remote_pref="remote", education=6,
+         languages="Bulgarian, English"),
+    dict(key="two_domains", target_roles="Data Analyst, Accountant",
+         skills="SQL, Excel, IFRS, Power BI, reconciliation", country="Bulgaria", city="Sofia",
+         remote_pref="hybrid", education=6, languages="Bulgarian, English"),
+    dict(key="bilingual_support", target_roles="Customer Support Specialist",
+         skills="Zendesk, CRM, troubleshooting", country="Bulgaria", city="Sofia",
+         remote_pref="remote", education=5, languages="Bulgarian, German, English"),
+    # ---- titles that are false friends for the family cues ----
+    dict(key="scrum_master", target_roles="Scrum Master", skills="Agile, facilitation, Jira",
+         country="Bulgaria", city="Sofia", remote_pref="remote", education=6,
+         languages="Bulgarian, English"),
+    dict(key="master_technician", target_roles="Master Technician",
+         skills="vehicle diagnostics, engine repair", country="Ireland", city="Dublin",
+         remote_pref="onsite", education=5, languages="English"),
+    dict(key="chef_de_projet", target_roles="Chef de Projet", skills="planning, budgets, Agile",
+         country="France", city="Paris", remote_pref="hybrid", education=7,
+         languages="French, English"),
+    dict(key="head_chef", target_roles="Head Chef", skills="menu design, kitchen management",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=5,
+         languages="Bulgarian"),
+    dict(key="security_guard", target_roles="Security Guard", skills="surveillance, access control",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=3,
+         languages="Bulgarian"),
+    # ---- more markets, in their own languages ----
+    dict(key="verkaeufer_at", target_roles="Shop Assistant", skills="Kassensystem, Beratung",
+         country="Austria", city="Vienna", remote_pref="onsite", education=3, languages="German"),
+    dict(key="magazijn_be", target_roles="Warehouse Worker", skills="heftruck, orderpicking",
+         country="Belgium", city="Brussels", remote_pref="onsite", education=3,
+         languages="Dutch, French"),
+    dict(key="pflege_ch", target_roles="Healthcare Assistant", skills="Pflege, Betreuung",
+         country="Switzerland", city="Zurich", remote_pref="onsite", education=5,
+         languages="German"),
+    dict(key="tomrer_dk", target_roles="Carpenter", skills="tømrer, konstruktion",
+         country="Denmark", city="Copenhagen", remote_pref="onsite", education=5,
+         languages="Danish, English"),
+    dict(key="sjukskoterska_se", target_roles="Nurse", skills="omvårdnad, patientvård",
+         country="Sweden", city="Stockholm", remote_pref="onsite", education=6,
+         languages="Swedish, English"),
+    dict(key="programador_pt", target_roles="Backend Developer", skills="PHP, Laravel, MySQL",
+         country="Portugal", city="Lisbon", remote_pref="remote", education=6,
+         languages="Portuguese, English"),
+    dict(key="ucetni_cz", target_roles="Accountant", skills="účetnictví, DPH, Excel",
+         country="Czechia", city="Prague", remote_pref="hybrid", education=6,
+         languages="Czech, English"),
+    dict(key="ertekesito_hu", target_roles="Sales Representative", skills="B2B, CRM, tárgyalás",
+         country="Hungary", city="Budapest", remote_pref="hybrid", education=6,
+         languages="Hungarian, English"),
+    dict(key="kuhar_hr", target_roles="Cook", skills="kuhinja, HACCP", country="Croatia",
+         city="Zagreb", remote_pref="onsite", education=5, languages="Croatian"),
+    dict(key="care_uk", target_roles="Care Assistant", skills="personal care, dementia care",
+         country="United Kingdom", city="London", remote_pref="onsite", education=3,
+         languages="English"),
+    # ---- professions the first 50 missed entirely ----
+    dict(key="veterinarian_bg", target_roles="Veterinarian",
+         skills="animal health, surgery, diagnostics", country="Bulgaria", city="Sofia",
+         remote_pref="onsite", education=7, languages="Bulgarian, English"),
+    dict(key="architect_bg", target_roles="Architect", skills="AutoCAD, Revit, urban planning",
+         country="Bulgaria", city="Sofia", remote_pref="hybrid", education=7,
+         languages="Bulgarian, English"),
+    dict(key="journalist_bg", target_roles="Journalist", skills="reporting, editing, interviews",
+         country="Bulgaria", city="Sofia", remote_pref="hybrid", education=6,
+         languages="Bulgarian, English"),
+    dict(key="social_worker_bg", target_roles="Social Worker",
+         skills="casework, family support, documentation", country="Bulgaria", city="Plovdiv",
+         remote_pref="onsite", education=6, languages="Bulgarian"),
+    dict(key="translator_bg", target_roles="Translator", skills="translation, proofreading, CAT",
+         country="Bulgaria", city="Sofia", remote_pref="remote", education=7,
+         languages="Bulgarian, English, German"),
+    dict(key="fitness_trainer_bg", target_roles="Fitness Trainer",
+         skills="personal training, nutrition, group classes", country="Bulgaria", city="Sofia",
+         remote_pref="onsite", education=5, languages="Bulgarian, English"),
+    dict(key="baker_bg", target_roles="Baker", skills="bread, pastry, dough, ovens",
+         country="Bulgaria", city="Sofia", remote_pref="onsite", education=3,
+         languages="Bulgarian"),
+    dict(key="tailor_bg", target_roles="Tailor", skills="sewing, patterns, alterations",
+         country="Bulgaria", city="Plovdiv", remote_pref="onsite", education=3,
+         languages="Bulgarian"),
+    dict(key="miner_bg", target_roles="Miner", skills="underground work, drilling, safety",
+         country="Bulgaria", city="Pernik", remote_pref="onsite", education=3,
+         languages="Bulgarian"),
+    dict(key="call_center_bg", target_roles="Call Center Agent",
+         skills="inbound calls, CRM, customer care", country="Bulgaria", city="Sofia",
+         remote_pref="remote", education=3, languages="Bulgarian, English"),
+    dict(key="expat_remote_c2", target_roles="Technical Writer",
+         skills="documentation, API docs, Markdown, DITA", country="Bulgaria", city="Sofia",
+         remote_pref="remote", education=7, languages="English, Bulgarian",
+         english_level="C2", relocate=True, min_match=40,
+         experience="7 years documenting developer platforms"),
+]
+
+assert len(EXTRA) == 50, f"the second batch is 50 profiles, found {len(EXTRA)}"

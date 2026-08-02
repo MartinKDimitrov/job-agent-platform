@@ -691,15 +691,18 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
             continue
         if post.requirements is None:
             post.requirements = extract_requirements(post.description or "")
-        # Owner rule: without a single must/nice requirement we'd be scoring blind (pure
-        # similarity, capped 60%) — such postings never enter the feed, and matches created
-        # before this rule (or before an extractor fix) get cleaned up like stale filters.
+        # A posting with no extractable must/nice used to be dropped outright ("we'd be scoring
+        # blind"). Measured on the live index that is 91% of it: the short aggregator ads state
+        # DUTIES, not requirements ("Заварчик — заваряване и рязане на метални конструкции"), so
+        # the rule was hiding whole professions and the entire Bulgarian market. They are shown
+        # now, scored on similarity alone and capped below anything with real evidence.
         if not any(r.get("kind") in ("must", "nice") for r in post.requirements or []):
-            filtered += 1
-            stale = existing_by_post.pop(post.id, None)
-            if stale is not None:
-                db.delete(stale)
-            continue
+            if not settings.show_postings_without_requirements:
+                filtered += 1
+                stale = existing_by_post.pop(post.id, None)
+                if stale is not None:
+                    db.delete(stale)
+                continue
         # freshness, salary, language, seniority and role-family are soft multipliers on the base
         # score — passed as one product (score() applies it after the blend, inside the gate cap)
         _f = soft_factors(profile, post, expectation)
@@ -714,7 +717,8 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
                                      role_match=role_match,
                                      role_match_floor=settings.role_match_sem_floor,
                                      gate_cap=settings.must_gate_cap or None,
-                                     education_level=profile.qualification_level)
+                                     education_level=profile.qualification_level,
+                                     sem_only_cap=settings.semantic_only_cap)
         existing = existing_by_post.get(post.id)
         if existing:
             existing.score, existing.covered, existing.missing = sc, covered, missing

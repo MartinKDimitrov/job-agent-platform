@@ -215,7 +215,8 @@ def score(profile_text: str, posting_text: str, requirements=None,
           profile_vec=None, posting_vec=None, sem_weight: float = DEFAULT_SEM_WEIGHT,
           freshness: float = 1.0, gate_cap: float | None = None,
           skill_years: dict | None = None, role_match: bool = False,
-          role_match_floor: float = 0.9, education_level: int | None = None):
+          role_match_floor: float = 0.9, education_level: int | None = None,
+          sem_only_cap: float = 0.60):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -267,7 +268,7 @@ def score(profile_text: str, posting_text: str, requirements=None,
     pe = profile_vec if profile_vec is not None else embed_query(profile_text)
     se = posting_vec if posting_vec is not None else embed_passage(posting_text)
     sem_pct = semantic_pct(pe, se)
-    base = blend(sem_pct, kw_ratio, sem_weight)
+    base = blend(sem_pct, kw_ratio, sem_weight, sem_only_cap)
     # Role-match floor: when the posting IS the candidate's kind of role (e.g. a Senior Android
     # Engineer for an Android profile), that title is strong evidence on its own. A thorough JD
     # listing 25 requirements a 9-skill profile can't all name — or a truncated aggregator snippet
@@ -292,7 +293,7 @@ def semantic_pct(profile_vec, posting_vec) -> float | None:
 
 
 def blend(sem_pct: float | None, kw_ratio: float | None,
-          sem_weight: float = DEFAULT_SEM_WEIGHT) -> float:
+          sem_weight: float = DEFAULT_SEM_WEIGHT, sem_only_cap: float = 0.60) -> float:
     """The one scoring formula — also used by the LLM verification pass when it recomputes
     a score from corrected coverage, so the two can never drift apart. `sem_weight` comes
     from config at the call sites (domain stays dependency-free). Without requirement
@@ -300,7 +301,7 @@ def blend(sem_pct: float | None, kw_ratio: float | None,
     if sem_pct is None:
         return kw_ratio if kw_ratio is not None else 0.0
     if kw_ratio is None:
-        return min(sem_pct, 0.60)
+        return sem_pct * sem_only_cap
     return sem_weight * sem_pct + (1 - sem_weight) * kw_ratio
 
 
