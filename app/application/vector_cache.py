@@ -110,15 +110,31 @@ def similar_posting_ids(db: Session, profile_vec, min_cosine: float, limit: int 
 # Location strings arrive as "BG", "София, BG", "Bulgaria", "Sofia, Bulgaria" — so a country is
 # matched by its name AND its ISO code. Only the markets we actually ingest need an entry; an
 # unknown country simply skips the narrowing.
-_COUNTRY_SQL: dict[str, tuple[str, ...]] = {
-    "bulgaria": ("%bulgaria%", "%българия%", "%bg%"), "germany": ("%germany%", "%deutschland%", "%de%"),
-    "france": ("%france%", "%fr%"), "spain": ("%spain%", "%españa%", "%es%"),
-    "italy": ("%italy%", "%italia%", "%it%"), "netherlands": ("%netherlands%", "%nl%"),
-    "poland": ("%poland%", "%polska%", "%pl%"), "romania": ("%romania%", "%ro%"),
-    "greece": ("%greece%", "%gr%"), "ireland": ("%ireland%", "%ie%"),
-    "austria": ("%austria%", "%at%"), "belgium": ("%belgium%", "%be%"),
-    "switzerland": ("%switzerland%", "%ch%"), "denmark": ("%denmark%", "%dk%"),
-    "united kingdom": ("%united kingdom%", "%uk%", "%gb%"),
+_COUNTRY_SQL: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    # (full-name ILIKE patterns, ISO codes matched as WORDS). A bare "%gr%" ILIKE caught
+    # "Grudziądz" and "%be%" caught "Wielsbeke" — substring matching on two-letter codes kept
+    # foreign rows in the narrowed set and the real market never surfaced.
+    "bulgaria": (("%bulgaria%", "%българия%"), ("BG",)),
+    "germany": (("%germany%", "%deutschland%"), ("DE",)),
+    "france": (("%france%",), ("FR",)),
+    "spain": (("%spain%", "%españa%"), ("ES",)),
+    "italy": (("%italy%", "%italia%"), ("IT",)),
+    "netherlands": (("%netherlands%", "%nederland%"), ("NL",)),
+    "poland": (("%poland%", "%polska%"), ("PL",)),
+    "romania": (("%romania%", "%românia%"), ("RO",)),
+    "greece": (("%greece%", "%ελλάδα%"), ("GR",)),
+    "ireland": (("%ireland%",), ("IE",)),
+    "austria": (("%austria%", "%österreich%"), ("AT",)),
+    "belgium": (("%belgium%", "%belgi%"), ("BE",)),
+    "switzerland": (("%switzerland%", "%schweiz%"), ("CH",)),
+    "denmark": (("%denmark%", "%danmark%"), ("DK",)),
+    "united kingdom": (("%united kingdom%",), ("UK", "GB")),
+    "croatia": (("%croatia%", "%hrvatska%"), ("HR",)),
+    "hungary": (("%hungary%", "%magyarorsz%"), ("HU",)),
+    "portugal": (("%portugal%",), ("PT",)),
+    "czechia": (("%czech%", "%česko%"), ("CZ",)),
+    "sweden": (("%sweden%", "%sverige%"), ("SE",)),
+    "finland": (("%finland%", "%suomi%"), ("FI",)),
 }
 
 
@@ -132,10 +148,12 @@ def geo_narrowing(profile):
     the nearest ELIGIBLE postings instead. Someone willing to relocate gets no narrowing."""
     if getattr(profile, "relocate", False):
         return None
-    pats = _COUNTRY_SQL.get((getattr(profile, "country", "") or "").strip().lower())
-    if not pats:
+    entry = _COUNTRY_SQL.get((getattr(profile, "country", "") or "").strip().lower())
+    if not entry:
         return None
-    conds = [Posting.location.ilike(p) for p in pats]
+    names, codes = entry
+    conds = [Posting.location.ilike(p) for p in names]
+    conds += [Posting.location.op("~*")(rf"(^|[\s,(/]){c}([\s,)/]|$)") for c in codes]
     conds += [Posting.location.is_(None), Posting.location == "",
               Posting.location.ilike("%remote%"), Posting.location.ilike("%anywhere%")]
     return or_(*conds)

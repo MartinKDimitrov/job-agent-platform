@@ -25,6 +25,9 @@ FAMILIES: dict[str, tuple[str, ...]] = {
                      # family-less and scores on bare semantic overlap for e.g. an Android profile.
                      # Deliberately phrase-anchored (…"developer"/"engineer"), never a bare
                      # language token: "java" alone would wrongly tag a "Java/Kotlin" Android role.
+                     "software architect", "solution architect", "solutions architect",
+                     "cloud architect", "enterprise architect", "data architect", "it architect",
+                     "софтуерен архитект",
                      "java developer", "java engineer", "java software engineer",
                      "spring boot", ".net developer", "c# developer", "php developer",
                      "ruby on rails", "golang developer", "go developer"),
@@ -45,7 +48,8 @@ FAMILIES: dict[str, tuple[str, ...]] = {
     "qa":           ("qa engineer", "qa automation", "quality assurance", "test engineer",
                      "sdet", "automation tester", "manual tester", "qa tester"),
     "security":     ("security engineer", "appsec", "infosec", "penetration test", "pentest",
-                     "cyber security", "cybersecurity"),
+                     "cyber security", "cybersecurity", "information security", "security analyst",
+                     "security operations", "application security"),
     "pm":           ("product manager", "product owner", "project manager", "program manager",
                      "delivery manager", "scrum master"),
     "design":       ("ux designer", "ui designer", "product designer", "ux/ui", "ui/ux",
@@ -95,7 +99,8 @@ FAMILIES: dict[str, tuple[str, ...]] = {
     "agriculture":  ("farmer", "farm worker", "agronomist", "gardener", "landscaper",
                      "horticulturist", "forester", "fisherman", "beekeeper", "winemaker",
                      "livestock", "crop grower", "agricultural"),
-    "education":    ("teacher", "lecturer", "professor", "tutor", "educator", "teaching assistant",
+    "education":    ("technical trainer", "product trainer", "corporate trainer",
+                     "teacher", "lecturer", "professor", "tutor", "educator", "teaching assistant",
                      "kindergarten teacher", "school principal", "special needs teacher",
                      "early years", "headteacher"),
     "legal":        ("lawyer", "attorney", "solicitor", "barrister", "paralegal", "notary",
@@ -104,6 +109,23 @@ FAMILIES: dict[str, tuple[str, ...]] = {
     "admin":        ("administrative assistant", "office clerk", "secretary", "receptionist",
                      "data entry", "office administrator", "personal assistant", "office manager",
                      "filing clerk", "typist", "records clerk"),
+    "protective":   ("security guard", "охранител", "wachmann", "wachdienst", "sicherheitsdienst",
+                     "agent de sécurité", "vigilante de seguridad", "guardia giurata",
+                     "pracownik ochrony", "bodyguard", "невъоръжена охрана", "въоръжена охрана",
+                     "физическа охрана"),
+    "media":        ("journalist", "журналист", "reporter", "кореспондент", "news editor",
+                     "редактор, вестник", "dziennikarz", "periodista", "giornalista"),
+    "translation":  ("translator", "interpreter", "преводач", "übersetzer", "dolmetscher",
+                     "traducteur", "interprète", "traductor", "intérprete", "traduttore",
+                     "tłumacz", "traducător"),
+    "veterinary":   ("veterinarian", "veterinary", "ветеринар", "tierarzt", "tierärzt", "vétérinaire",
+                     "veterinario", "veterinária", "weterynarz", "лекар, ветеринарна"),
+    "sport":        ("fitness", "фитнес", "personal trainer", "личен треньор", "треньор",
+                     "инструктор, спорт", "entraîneur", "entrenador personal", "trener personalny",
+                     "аеробика", "плувен инструктор"),
+    "architecture": ("архитект", "architect", "architekt", "architecte", "arquitecto",
+                     "architetto", "урбанист", "urban planner", "landscape architect",
+                     "ландшафтен архитект"),
     "hospitality":  ("chef", "cook", "waiter", "waitress", "bartender", "barista",
                      "kitchen assistant", "housekeeper", "hotel receptionist", "concierge",
                      "hairdresser", "barber", "beautician", "cleaner", "cleaning", "butcher",
@@ -159,6 +181,22 @@ from .role_family_i18n import I18N_CUES  # noqa: E402  (generated data, imported
 for _fam, _cues in I18N_CUES.items():
     FAMILIES[_fam] = FAMILIES[_fam] + tuple(_cues)
 
+# ESCO's vertical taxonomy files some occupations where our families would not: veterinarians sit
+# in the HEALTHCARE vertical (so "Veterinarian" carried healthcare and a midwife ad slipped past
+# the vet profile's guard), and sports/fitness workers sit in legal_culture — ISCO 342 — so
+# "trainer"/"фитнес" tokens became LEGAL cues and glued fitness profiles to corporate-trainer ads
+# through a phantom legal overlap. Strip the misfiled stems from the generated cues; the proper
+# families (veterinary, sport) carry them instead.
+_MISFILED = {
+    "legal": ("trainer", "trener", "треньор", "fitness", "фитнес", "sport", "спорт",
+              "coach", "entraîneur", "entrenador", "athlet", "атлет", "instructor",
+              "инструктор", "gymnast", "гимнаст"),
+    "healthcare": ("veterinar", "ветеринар", "tierarzt", "tierärzt", "weterynarz",
+                   "vétérin", "veterin", "животн"),
+}
+for _fam, _stems in _MISFILED.items():
+    FAMILIES[_fam] = tuple(c for c in FAMILIES[_fam] if not any(st in c for st in _stems))
+
 _FAMILY_RES: dict[str, re.Pattern] = {
     fam: re.compile(r"(?<![a-z0-9])(?:" + "|".join(re.escape(c) for c in cues) + r")(?![a-z0-9])",
                     re.I)
@@ -177,6 +215,9 @@ _ADJACENT: set[frozenset] = {frozenset(p) for p in (
     ("data_science", "ml"), ("data_science", "data_analyst"),
     ("android", "gamedev"), ("android", "embedded"), ("ios", "gamedev"), ("embedded", "gamedev"),
     ("sales", "marketing"),   # sales & marketing overlap heavily — related, not the same
+    ("architecture", "construction"),   # architects live on building sites — related, not same
+    ("veterinary", "agriculture"),      # livestock vets — related, not the same
+    ("media", "marketing"),             # journalism ↔ copywriting/content — related, not same
     # every other non-tech family (finance/healthcare/sales/marketing) is disjoint from the rest
     # and from all IT families -> a hard mismatch (an accountant profile won't see dev/nurse roles).
     # note: android and ios are deliberately NOT adjacent — a pure iOS role is a hard mismatch for

@@ -40,15 +40,24 @@ from .release_profiles import EXTRA, PROFILES
 # Lines that must never be shown to a candidate as a missing requirement. Multilingual on purpose:
 # a posting's boilerplate is in the posting's language, not the user's.
 _BOILERPLATE = re.compile(
-    r"gdpr|ззлд|personal data|лични данни|voluntarily agree|by applying|"
-    r"personenbezogene|datenschutz|donn(?:é|e)es personnelles|datos personales|"
-    r"dane osobowe|prelucrarea datelor|"
-    r"only shortlisted|одобрени кандидати|ausgew(?:ä|ae)hlte kandidaten|candidats retenus|"
-    r"days? (?:of )?(?:paid )?(?:annual )?leave|days? vacation|отпуск|urlaub|cong(?:é|e)s|"
+    # Consent/footer PHRASING only — never bare topic words. "GDPR" or "personal data" alone flag
+    # real requirements ("Ensure AI system compliance with GDPR", a DPO role's "working with
+    # personal data"), and "by applying" alone flagged "by applying best practices". Every pattern
+    # here names the applicant-consent or perks boilerplate specifically.
+    r"by applying (?:for|to) (?:this|the)|voluntarily agree|"
+    r"(?:personal )?data (?:of applicants )?is protected|protected by the law|"
+    r"protected within the meaning|защитени по смисъла|ззлд|"
+    r"personal data (?:that )?you provide|your personal (?:data|information) will|"
+    r"consult our privacy notice|privacy notice \(http|"
+    r"personenbezogenen daten zu|verarbeitung ihrer|"
+    r"traitement de vos donn|tratamiento de (?:tus|sus) datos|przetwarzanie danych osobowych|"
+    r"only shortlisted|одобрени(?:те)? кандидати|ausgew(?:ä|ae)hlte kandidaten|candidats retenus|"
+    r"\d+ days? (?:of )?(?:paid )?(?:annual )?(?:leave|vacation)|дни (?:платен )?отпуск|"
+    r"tage urlaub|jours de cong(?:é|e)s|"
     r"health insurance|здравна осигуровка|multisport|мултиспорт|sports? card|"
-    r"team building|тиймбилдинг|massages?|office parties|"
-    r"hours per week|wochenstunden|godzin tygodniowo|работно време|"
-    r"unbefristet|umowa o prac|trudov dogovor|трудов договор", re.I)
+    r"team buildings?|тиймбилдинг|massages?|office parties|free parking|parking spot|"
+    r"\d+ hours per week|wochenstunden|godzin tygodniowo|работно време|"
+    r"unbefristet|umowa o prac|трудов договор", re.I)
 
 
 class _P:

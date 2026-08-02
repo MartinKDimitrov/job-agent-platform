@@ -250,7 +250,9 @@ def test_hard_filter_drops_management_role(monkeypatch):
     with SessionLocal() as db:
         p = _make_profile_row(db, target_roles="Android", min_match=0)
         res = run_search(db, p)
-        assert res["filtered"] == 1          # the EM role dropped
+        # the EM role is now rejected at RECALL (the token door screens hard filters before
+        # spending candidate budget), so it may never reach the scoring loop to be counted in
+        # "filtered" — the guarantee that matters is that only the IC role scores/matches.
         assert res["scored"] == 1            # only the IC role scored
         titles = {x.title for x in db.execute(select(Posting)).scalars().all()}
         # both are ingested (postings are shared), but only the IC role gets a Match
@@ -270,9 +272,12 @@ def test_cannot_search_another_users_profile(client, monkeypatch):
         assert db.execute(select(Match).where(Match.profile_id == pid)).first() is None
 
 
-def test_postings_without_must_or_nice_requirements_never_match(monkeypatch):
-    # Owner rule: no extracted requirements -> scoring is blind (sem-only, capped 60%) ->
-    # such postings stay out of the feed, and pre-existing matches for them get cleaned.
+def test_postings_without_requirements_are_shown_capped(monkeypatch):
+    # Rule change (owner, 2026-08-02): a posting with no extractable must/nice used to be dropped
+    # outright — measured at 91% of the live index (short aggregator ads state duties, not
+    # requirements), which hid whole professions. It is SHOWN now, scored on similarity alone and
+    # capped below evidence-backed matches; the old behaviour stays available behind
+    # settings.show_postings_without_requirements = False.
     sample = [RawPosting("ats_api", "1", "Android Platform Engineer", "Acme", location="Remote",
                          url="https://x/blind", apply_url="https://x/blind",
                          description="The role:\nYou will maintain our Android platform.")]
@@ -280,9 +285,15 @@ def test_postings_without_must_or_nice_requirements_never_match(monkeypatch):
     with SessionLocal() as db:
         p = _make_profile_row(db, target_roles="Android", min_match=0)
         res = run_search(db, p)
-        assert res["matched"] == 0
-        post = db.execute(select(Posting)).scalars().one()
-        db.add(Match(profile_id=p.id, posting_id=post.id, score=60))   # pre-rule stale match
-        db.commit()
-        crawl.search_db(db, p)
-        assert db.execute(select(Match).where(Match.profile_id == p.id)).first() is None
+        assert res["scored"] == 1 and res["matched"] == 1
+        m = db.execute(select(Match).where(Match.profile_id == p.id)).scalars().one()
+        assert m.score <= 92                 # capped: similarity alone never reads as evidence
+    # the old exclusion still enforceable via config
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "show_postings_without_requirements", False)
+    with SessionLocal() as db:
+        p2 = db.execute(select(Profile)).scalars().first()   # same profile, fresh session
+        res2 = crawl.search_db(db, p2)
+        assert res2["matched"] == 0
+        # and the previously created match is cleaned up under the old rule
+        assert db.execute(select(Match).where(Match.profile_id == p2.id)).first() is None

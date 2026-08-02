@@ -84,7 +84,7 @@ _COUNTRY_ALIASES: dict[str, tuple[str, ...]] = {
     "portugal": ("portugal",), "ireland": ("ireland",), "belgium": ("belgium",),
     "switzerland": ("switzerland",), "sweden": ("sweden",), "denmark": ("denmark",),
     "norway": ("norway",), "finland": ("finland",), "czechia": ("czech republic", "czechia"),
-    "hungary": ("hungary",), "serbia": ("serbia",), "turkey": ("turkey", "türkiye"),
+    "hungary": ("hungary",), "croatia": ("croatia", "hrvatska"), "serbia": ("serbia",), "turkey": ("turkey", "türkiye"),
     "ukraine": ("ukraine",), "india": ("india",), "australia": ("australia",),
 }
 _ALIAS_RES: dict[str, re.Pattern] = {

@@ -118,7 +118,7 @@ _MONEY_RE = re.compile(r"[£$€]\s*\d|\d\s*(?:лв|BGN|EUR|USD|GBP)\b", re.I)
 _BENEFIT_RE = re.compile(
     r"\b(annual leave|paid leave|days off|bonus days|health insurance|dental|sports? card|"
     r"multisport|coolfit|transportation card|travel allowance|company shuttle|snacks|"
-    r"soft drinks|team building|office parties|chill-?out|foosball|referral program|"
+    r"soft drinks|team buildings?|office parties|free parking|parking spot|chill-?out|foosball|referral program|"
     r"salary review|performance evaluation|vouchers|corporate discounts|discounts on|"
     r"newborn|birthday|first-grader|modern office|working environment|sabbatical|"
     r"unlimited mobile|goodies|psychologist|learning platform|supportive team|"
@@ -171,6 +171,8 @@ _LEGAL_RE = re.compile(
     r"изпратете (?:ни )?(?:вашата |своята )?(?:автобиограф|cv|молба)|"
     r"кандидатствай(?:те)? (?:чрез|през|на)|предоставените от вас данни|"
     r"личните ви данни|обработване на лични данни|"
+    r"protected by the law|protected within the meaning|consult our privacy notice|"
+    r"privacy notice \(http|data of applicants is protected|data provided by you is|"
     # Same consent/selection footer across the source languages. Formulaic and unambiguous —
     # unlike marketing prose, these phrases are never a skill requirement, so enumerating them
     # is safe (the multilingual DROP headers only help when the section IS headed).
