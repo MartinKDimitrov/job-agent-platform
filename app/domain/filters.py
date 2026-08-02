@@ -276,6 +276,33 @@ def _preferred_place_tokens(profile) -> set[str]:
     return _tokens(profile.location_pref or "") - {"remote", "hybrid", "onsite", "any"}
 
 
+# ISO codes as aggregators write them ("BG", "Sofia, BG", "DE"). _tokens drops anything under
+# three characters, so a bare country code was INVISIBLE to the geo check: the posting fell into
+# the "no location given" branch and was judged by whatever city the text mentioned. Measured on
+# the release profiles: 16 of a welder's 17 in-country candidates were dropped that way.
+_ISO_COUNTRY = {
+    "bg": "bulgaria", "de": "germany", "fr": "france", "es": "spain", "it": "italy",
+    "nl": "netherlands", "pl": "poland", "ro": "romania", "gr": "greece", "ie": "ireland",
+    "at": "austria", "be": "belgium", "ch": "switzerland", "dk": "denmark", "se": "sweden",
+    "fi": "finland", "pt": "portugal", "cz": "czechia", "hu": "hungary", "hr": "croatia",
+    "uk": "uk", "gb": "uk", "us": "usa",
+}
+_ISO_RE = re.compile(r"(?:^|[\s,(/])([a-z]{2})(?:[\s,)/]|$)", re.I)
+
+
+def _location_country(location: str) -> str | None:
+    """The country a location field names, via its full name or its ISO code."""
+    low = (location or "").lower()
+    for key, pat in _ALIAS_RES.items():
+        if pat.search(low):
+            return key
+    for m in _ISO_RE.finditer(low):
+        hit = _ISO_COUNTRY.get(m.group(1))
+        if hit:
+            return hit
+    return None
+
+
 def geo_relation(profile, title: str, location: str, description: str = "") -> str:
     """Where the posting sits vs the candidate's target: 'preferred' | 'elsewhere' | 'unknown'.
     A remote role is location-agnostic -> 'preferred'. Otherwise the place comes from the location
@@ -291,7 +318,17 @@ def geo_relation(profile, title: str, location: str, description: str = "") -> s
     ltoks = _tokens(loc)                          # ascii tokens ('Berlin, Germany')
     loc_cities = cities_in(loc)                   # Cyrillic-safe city read ('София' from dev.bg)
     if ltoks or loc_cities:                       # the location field names a place
-        return "preferred" if ((pref & ltoks) or (pref_cities & loc_cities)) else "elsewhere"
+        if (pref & ltoks) or (pref_cities & loc_cities):
+            return "preferred"
+        # a country-level match with no city named is still the candidate's country: aggregator
+        # postings routinely carry only "BG"/"Bulgaria", and treating those as elsewhere hid the
+        # domestic market from every on-site candidate.
+        if not loc_cities and _location_country(loc) == _profile_country(profile):
+            return "preferred"
+        return "elsewhere"
+    lc = _location_country(loc)
+    if lc is not None:                            # bare country code ("BG", "IE")
+        return "preferred" if lc == _profile_country(profile) else "elsewhere"
     # empty location field -> read the city from the text
     found = cities_in(f"{title} {description}")
     if (pref_cities and (pref_cities & found)) or (pref & _tokens(description or "")):

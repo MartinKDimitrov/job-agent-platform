@@ -165,3 +165,50 @@ def search_occupations(db: Session, query: str, lang: str = "bg", limit: int = 2
                                          "vertical": o.vertical, "isco_code": o.isco_code}))
     out.sort(key=lambda t: (t[0], t[1]))
     return [r for _, _, r in out[:limit]]
+
+
+# ---- multilingual profile text ------------------------------------------------------------
+# Profiles are English-keyed (onboarding stores the ESCO English label) while postings are
+# written in the source language, and E5's cross-lingual similarity is markedly lower than its
+# same-language similarity: a welder profile scored 0.758 against "Заварчик" but 0.85+ against
+# English welder ads, so domestic postings never ranked. Naming the occupation in EVERY language
+# inside the profile's embedding input closes that gap in ONE vector — measured 0.758 -> 0.864 —
+# instead of running a query per language.
+_NAME_INDEX: dict[str, list[str]] | None = None
+
+
+def _name_index(db: Session) -> dict[str, list[str]]:
+    global _NAME_INDEX
+    if _NAME_INDEX is None:
+        idx: dict[str, list[str]] = {}
+        for labels in db.execute(select(Occupation.labels)).scalars():
+            en = ((labels or {}).get("en") or "").strip().lower()
+            if en:
+                idx[en] = [v for v in (labels or {}).values() if v]
+        _NAME_INDEX = idx
+    return _NAME_INDEX
+
+
+def role_names_all_languages(db: Session, target_roles: str) -> list[str]:
+    """Every language's name for the occupations a profile targets ('welder' -> welder, заварчик,
+    Schweißer/Schweißerin, soudeur/soudeuse, …). Empty when the role isn't an ESCO occupation."""
+    if not target_roles:
+        return []
+    idx = _name_index(db)
+    out: list[str] = []
+    for part in target_roles.split(","):
+        key = part.strip().lower()
+        if not key:
+            continue
+        if key in idx:
+            out += idx[key]
+            continue
+        # ESCO rarely spells a role the way a profile does ("Nurse" is filed as "specialist
+        # nurse", "nursing associate professional"), so fall back to the shortest occupation
+        # whose English name CONTAINS the role as a whole word — the closest general term.
+        import re as _re
+        pat = _re.compile(rf"(?:^|\s){_re.escape(key)}(?:\s|$)")
+        cands = [en for en in idx if pat.search(en)]
+        if cands:
+            out += idx[min(cands, key=len)]
+    return list(dict.fromkeys(out))

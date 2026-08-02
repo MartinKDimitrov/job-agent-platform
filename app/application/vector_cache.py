@@ -158,7 +158,14 @@ def ranked_candidates(db: Session, profile_vec, limit: int,
     q = (select(Posting.id, Posting.title, Posting.location, dist.label("d"))
          .where(Posting.is_live.is_(True), Posting.embedding.isnot(None)))
     if extra_filter is not None:
+        # HNSW post-filters: it explores ef_search neighbours and THEN applies the WHERE, so a
+        # selective filter can come back empty — a Bulgarian welder's 800 nearest are all Irish,
+        # leaving zero Bulgarian rows. pgvector 0.6 has no iterative scan, so for a narrowed
+        # query we ask for an exact scan instead: distances over the eligible rows only, which
+        # is a fraction of the index and returns the true nearest ones.
         q = q.where(extra_filter)
+        db.execute(text("SET LOCAL enable_indexscan = off"))
+        db.execute(text("SET LOCAL enable_indexonlyscan = off"))
     rows = db.execute(q.order_by(dist).limit(limit)).all()
     return [(pid, title, loc) for pid, title, loc, d in rows
             if d is not None and (1.0 - d) >= floor]

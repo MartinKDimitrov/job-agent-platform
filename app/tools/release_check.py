@@ -78,10 +78,16 @@ def _candidates(db, prof, id_titles, limit: int):
     from ..application.usecases.search import _TOKEN_RE, _profile_keywords
     from ..domain.skills import RECALL_GENERIC_SKILLS, extract_skills
 
-    prof.embedding = list(embed_query(prof.embed_text()))
+    from ..data.taxonomy_repo import role_names_all_languages
+    names = role_names_all_languages(db, prof.target_roles or "")
+    text = prof.embed_text()
+    if names:
+        text = " · ".join(names) + " · " + text
+    prof.embedding = list(embed_query(text))
     keywords = _profile_keywords(prof)
-    token_ids = {pid for pid, title in id_titles
-                 if keywords and keywords & set(_TOKEN_RE.findall((title or "").lower()))}
+    token_ids = {pid for pid, title, loc in id_titles
+                 if keywords and keywords & set(_TOKEN_RE.findall((title or "").lower()))
+                 and passes_hard_filters(prof, title or "", loc or "", "")[0]}
     vector_ids = vector_cache.similar_posting_ids(db, prof.embedding,
                                                   settings.recall_min_cosine, limit=limit)
     skill_ids = vector_cache.postings_sharing_skills(
@@ -156,7 +162,7 @@ def run(only: str | None = None, top: int = 10, log=print) -> dict:
     with SessionLocal() as db:
         vector_cache.warm(db)
         # pulled once and shared: the title door needs every live (id, title)
-        id_titles = db.execute(select(Posting.id, Posting.title)
+        id_titles = db.execute(select(Posting.id, Posting.title, Posting.location)
                                .where(Posting.is_live.is_(True))).all()
         log(f"index: {len(id_titles)} live postings\n")
         for prof in profiles:

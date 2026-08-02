@@ -608,14 +608,26 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
     from ...domain.salary import parse_salary, posting_salary, salary_factor
     expectation = parse_salary(profile.salary_expectation or "")   # once per search
     if profile.embedding is None:            # cached on the row; cleared on profile edit
-        profile.embedding = _as_list(embed_query(profile.embed_text()))
-    id_titles = db.execute(select(Posting.id, Posting.title)
+        # The occupation named in every language it exists in — postings are written in the
+        # source language and E5 scores cross-lingual pairs much lower than same-language ones,
+        # which is why a Bulgarian tradesperson's own market never ranked (see taxonomy_repo).
+        from ...data.taxonomy_repo import role_names_all_languages
+        names = role_names_all_languages(db, profile.target_roles or "")
+        text = profile.embed_text()
+        if names:
+            text = " · ".join(names) + " · " + text
+        profile.embedding = _as_list(embed_query(text))
+    id_titles = db.execute(select(Posting.id, Posting.title, Posting.location)
                            .where(Posting.is_live.is_(True))).all()
     pool = len(id_titles)
     # HYBRID RECALL (Phase 5): titles alone cut recall — 'Backend' never sees 'Platform
     # Engineer'. A posting is a candidate through ANY of three doors:
-    token_ids = {pid for pid, title in id_titles
-                 if not keywords or keywords & set(_TOKEN_RE.findall((title or "").lower()))}
+    # Geo-screened as they are collected: a trade profile's title matches are overwhelmingly
+    # abroad ("Welder" in Ireland), and letting them fill the candidate budget starved every
+    # other door — the one job in the candidate's own country never got a slot.
+    token_ids = {pid for pid, title, loc in id_titles
+                 if (not keywords or keywords & set(_TOKEN_RE.findall((title or "").lower())))
+                 and passes_hard_filters(profile, title or "", loc or "", "")[0]}
     from ...domain.skills import RECALL_GENERIC_SKILLS, extract_skills
     from .. import vector_cache
     vector_ids = vector_cache.similar_posting_ids(
@@ -730,6 +742,9 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
         if zp is None or not getattr(zp, "is_live", True) or not passes_hard_filters(
                 profile, zp.title, zp.location, zp.description)[0]:
             db.delete(stale)
+            filtered += 1      # a match dropped here IS a filtering event; recall now geo-screens
+                               # its doors, so such a posting no longer reaches the scoring loop
+                               # to be counted there
     try:
         db.commit()
     except IntegrityError:
