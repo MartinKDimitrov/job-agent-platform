@@ -623,19 +623,38 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
     profile_recall_skills = extract_skills(profile.skills or "") - RECALL_GENERIC_SKILLS
     skill_ids = vector_cache.postings_sharing_skills(db, profile_recall_skills)
     cap = settings.recall_max_candidates
-    relevant_ids = list(token_ids | vector_ids | skill_ids)
-    if len(relevant_ids) > cap:
-        # guard rail: bound the scoring loop at `cap`. The PRECISE doors are the core — skill
-        # (shares a real canonical skill) + vector (semantic, already ANN-capped at `cap`) — and
-        # the LEXICAL token door fills whatever budget is left. A generic role token like
-        # 'engineer' otherwise floods recall (matched ~14k titles for an ML Engineer profile),
-        # and the old rule (token+skill = core, vector = expendable) left that flood UNcapped.
-        core = skill_ids | vector_ids
-        relevant_ids = list(core)[:cap]
-        if len(relevant_ids) < cap:
-            core_seen = set(relevant_ids)
-            relevant_ids += [pid for pid in token_ids
-                             if pid not in core_seen][:cap - len(relevant_ids)]
+    # Budget the candidate slots by CONFIDENCE, then top up. The precise doors go first — skill
+    # (shares a real canonical skill) and the thresholded vector door — then the lexical title
+    # door, which floods on a generic role token ('engineer' matched ~14k titles for an ML
+    # profile) and so must never be uncapped.
+    core = skill_ids | vector_ids
+    relevant_ids = list(core)[:cap]
+    if len(relevant_ids) < cap:
+        seen_ids = set(relevant_ids)
+        relevant_ids += [pid for pid in token_ids if pid not in seen_ids][:cap - len(relevant_ids)]
+    if len(relevant_ids) < cap:
+        # Still room: fall back to the NEAREST postings by rank, with no cosine bar. The bar is
+        # absolute and was calibrated on IT profiles; short trade/care/hospitality titles sit
+        # below it in every language, so those professions recalled nothing at all (measured: a
+        # welder scores 0.763 on "Заварчик", 0.833 on "Site Welder", against a 0.87 threshold).
+        # This only ever fills slots the confident doors left empty, so IT recall is unchanged.
+        # Oversampled and geo-screened: the nearest postings to a trade profile are all abroad,
+        # so taking the top `cap` blindly spent the whole budget on rows the location filter
+        # discards seconds later. Screening here (same hard-filter logic, title+location only)
+        # lets the budget reach postings the candidate could actually take.
+        seen_ids = set(relevant_ids)
+        need = cap - len(relevant_ids)
+        for pid, title, loc in vector_cache.ranked_candidates(
+                db, profile.embedding, cap * settings.recall_rank_oversample,
+                extra_filter=vector_cache.geo_narrowing(profile)):
+            if pid in seen_ids:
+                continue
+            if not passes_hard_filters(profile, title, loc or "", "")[0]:
+                continue
+            relevant_ids.append(pid)
+            need -= 1
+            if need <= 0:
+                break
     existing_by_post = {m.posting_id: m for m in db.execute(
         select(Match).where(Match.profile_id == profile.id)).scalars()}
     scored = filtered = matched = 0

@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     # neighbours and keeps 'Customer Success' (0.835) out.
     recall_min_cosine: float = 0.87
     recall_max_candidates: int = 400
+    # Floor for the RANK fallback door (recall_min_cosine is the confident bar). Short trade,
+    # care and hospitality titles sit at 0.76-0.85 against their own postings in every language,
+    # so the confident bar alone recalled entire professions nothing; this admits them into the
+    # slots the confident doors left empty, while still keeping the plainly unrelated out.
+    recall_rank_floor: float = 0.70
+    # How much deeper the rank door looks before geo-screening — the nearest postings to a
+    # non-remote profile are often all in another country.
+    recall_rank_oversample: int = 2   # capped by pgvector's ef_search ceiling of 1000
     # Takedown URL probes per ingest cycle for window sources (0 = off; tests force 0 —
     # the probe makes REAL network requests to dev.bg etc.).
     takedown_probe_budget: int = 30

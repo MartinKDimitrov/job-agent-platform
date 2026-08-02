@@ -91,6 +91,18 @@ def _candidates(db, prof, id_titles, limit: int):
     if len(ids) < limit:
         seen = set(ids)
         ids += [pid for pid in token_ids if pid not in seen][:limit - len(ids)]
+    if len(ids) < limit:
+        seen = set(ids)
+        need = limit - len(ids)
+        for pid, title, loc in vector_cache.ranked_candidates(
+                db, prof.embedding, limit * settings.recall_rank_oversample,
+                extra_filter=vector_cache.geo_narrowing(prof)):
+            if pid in seen or not passes_hard_filters(prof, title, loc or "", "")[0]:
+                continue
+            ids.append(pid)
+            need -= 1
+            if need <= 0:
+                break
     if not ids:
         return []
     return db.execute(select(Posting).where(Posting.id.in_(ids))).scalars().all()
