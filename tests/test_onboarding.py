@@ -121,3 +121,23 @@ def test_onboarding_post_requires_login(client):
     client.cookies.clear()
     r = client.post("/onboarding", data={"occupation_id": "1"}, follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"].endswith("/login")
+
+
+def test_education_options_cover_every_ui_language():
+    """The education select is the candidate's own answer about their schooling — it must be
+    readable in every language the platform ships, not just BG/EN."""
+    from app.presentation.web import EDUCATION_LEVELS, education_options
+    from app.presentation.i18n import LANGS
+    for value, labels in EDUCATION_LEVELS:
+        missing = [lang for lang in LANGS if lang not in labels]
+        assert not missing, f"level {value!r} missing: {missing}"
+    # every language renders all 7 options, and an unknown language falls back to English
+    for lang in list(LANGS) + ["zz"]:
+        assert education_options(lang).count("<option") == len(EDUCATION_LEVELS)
+    assert "Prefer not to say" in education_options("zz")
+
+
+def test_education_options_preselect_stored_level():
+    from app.presentation.web import education_options
+    assert "value='7' selected" in education_options("bg", 7)
+    assert "value='' selected" in education_options("bg", None)

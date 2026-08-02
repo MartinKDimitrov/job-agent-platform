@@ -204,21 +204,50 @@ function __toggleTheme(){{var d=document.documentElement,n=d.dataset.theme==='da
 # _LANGUAGES does: it's a value list shared by the onboarding wizard and the profile form, and
 # keeping the two in one place is what stops them drifting apart. "" = not stated, which leaves
 # the level implied by the chosen occupation in place.
-EDUCATION_LEVELS: list[tuple[str, str, str]] = [
-    ("", "Не искам да посочвам", "Prefer not to say"),
-    ("1", "Основно", "Primary"),
-    ("3", "Средно", "Secondary"),
-    ("5", "Професионална квалификация / колеж", "Vocational qualification / college"),
-    ("6", "Бакалавър / висше", "Bachelor's / university"),
-    ("7", "Магистър", "Master's"),
-    ("8", "Доктор", "Doctorate"),
+EDUCATION_LEVELS: list[tuple[str, dict[str, str]]] = [
+    ("", {"en": "Prefer not to say", "bg": "Не искам да посочвам", "de": "Keine Angabe",
+          "el": "Προτιμώ να μην πω", "es": "Prefiero no decirlo",
+          "fr": "Je préfère ne pas répondre", "hr": "Ne želim reći",
+          "it": "Preferisco non dirlo", "nl": "Zeg ik liever niet", "pl": "Wolę nie podawać",
+          "ro": "Prefer să nu spun", "ru": "Предпочитаю не указывать",
+          "uk": "Волію не вказувати"}),
+    ("1", {"en": "Primary", "bg": "Основно", "de": "Hauptschulabschluss", "el": "Δημοτικό",
+           "es": "Educación primaria", "fr": "École primaire", "hr": "Osnovna škola",
+           "it": "Scuola primaria", "nl": "Basisonderwijs", "pl": "Podstawowe",
+           "ro": "Studii primare", "ru": "Начальное", "uk": "Початкова"}),
+    ("3", {"en": "Secondary", "bg": "Средно", "de": "Mittlere Reife / Abitur", "el": "Λύκειο",
+           "es": "Bachillerato", "fr": "Baccalauréat", "hr": "Srednja škola",
+           "it": "Diploma di maturità", "nl": "Middelbare school", "pl": "Średnie",
+           "ro": "Liceu / studii medii", "ru": "Среднее", "uk": "Середня"}),
+    ("5", {"en": "Vocational qualification / college", "bg": "Професионална квалификация / колеж",
+           "de": "Berufsausbildung / Fachschule", "el": "Επαγγελματική κατάρτιση (ΙΕΚ)",
+           "es": "Formación profesional", "fr": "Formation professionnelle / BTS",
+           "hr": "Stručna kvalifikacija", "it": "Qualifica professionale",
+           "nl": "MBO / vakopleiding", "pl": "Zawodowe / policealne",
+           "ro": "Școală profesională / postliceală", "ru": "Среднее специальное",
+           "uk": "Середня спеціальна"}),
+    ("6", {"en": "Bachelor's / university", "bg": "Бакалавър / висше",
+           "de": "Bachelor / Hochschulabschluss", "el": "Πτυχίο ΑΕΙ/ΤΕΙ",
+           "es": "Grado universitario", "fr": "Licence / études supérieures",
+           "hr": "Prvostupnik / visoka škola", "it": "Laurea triennale",
+           "nl": "HBO / bachelor", "pl": "Licencjat / wyższe", "ro": "Licență",
+           "ru": "Бакалавр / высшее", "uk": "Бакалавр / вища"}),
+    ("7", {"en": "Master's", "bg": "Магистър", "de": "Master", "el": "Μεταπτυχιακό",
+           "es": "Máster", "fr": "Master", "hr": "Magistar", "it": "Laurea magistrale",
+           "nl": "Master", "pl": "Magister", "ro": "Master", "ru": "Магистр",
+           "uk": "Магістр"}),
+    ("8", {"en": "Doctorate", "bg": "Доктор", "de": "Promotion", "el": "Διδακτορικό",
+           "es": "Doctorado", "fr": "Doctorat", "hr": "Doktorat", "it": "Dottorato",
+           "nl": "Doctoraat", "pl": "Doktorat", "ro": "Doctorat",
+           "ru": "Докторская степень", "uk": "Докторський ступінь"}),
 ]
 
 
 def education_options(lang: str = "en", current: int | str | None = None) -> str:
-    """<option> markup for the education select, with `current` preselected."""
+    """<option> markup for the education select, with `current` preselected. Falls back to the
+    English label for any language a level hasn't been translated into."""
     cur = "" if current is None else str(current)
     return "".join(
         f"<option value='{v}'{' selected' if v == cur else ''}>"
-        f"{escape(bg if lang == 'bg' else en)}</option>"
-        for v, bg, en in EDUCATION_LEVELS)
+        f"{escape(labels.get(lang) or labels['en'])}</option>"
+        for v, labels in EDUCATION_LEVELS)
