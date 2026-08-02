@@ -216,7 +216,8 @@ def score(profile_text: str, posting_text: str, requirements=None,
           freshness: float = 1.0, gate_cap: float | None = None,
           skill_years: dict | None = None, role_match: bool = False,
           role_match_floor: float = 0.9, education_level: int | None = None,
-          sem_only_cap: float = 0.60):
+          sem_only_cap: float = 0.60, title_role_match: bool = False,
+          sem_title_cap: float = 0.92):
     """Return (score_0_100, covered[list[dict]], missing[list[dict]]).
 
     - Semantic similarity via E5 (if available) drives the base score.
@@ -227,6 +228,11 @@ def score(profile_text: str, posting_text: str, requirements=None,
       passing them skips the per-call embedding, which is what makes DB-first search fast.
     """
     reqs = _norm_reqs(requirements)
+    # Requirement evidence means SKILL evidence. A posting whose only scored requirement is a
+    # diploma line tells us nothing about the work itself, so it is scored like one with no
+    # requirements at all (similarity, capped) instead of claiming full coverage.
+    _scored = [r for r in reqs if req_weight(r) > 0]
+    _substantive = any(not _is_education_only(r.get("text", "")) for r in _scored)
     p_tok = _tokens(profile_text)
     p_skills = extract_skills(profile_text)     # canonical, computed once per call
     covered, missing = [], []
@@ -264,11 +270,16 @@ def score(profile_text: str, posting_text: str, requirements=None,
         kw_ratio = nice_cov / nice_tot
     else:
         kw_ratio = None
+    if not _substantive:
+        kw_ratio = None
 
     pe = profile_vec if profile_vec is not None else embed_query(profile_text)
     se = posting_vec if posting_vec is not None else embed_passage(posting_text)
     sem_pct = semantic_pct(pe, se)
-    base = blend(sem_pct, kw_ratio, sem_weight, sem_only_cap)
+    # A title that names the candidate's occupation IS evidence — of the role, if not of the
+    # skill list — so such a posting is not held to the blind-scoring ceiling.
+    base = blend(sem_pct, kw_ratio, sem_weight,
+                 sem_title_cap if title_role_match else sem_only_cap)
     # Role-match floor: when the posting IS the candidate's kind of role (e.g. a Senior Android
     # Engineer for an Android profile), that title is strong evidence on its own. A thorough JD
     # listing 25 requirements a 9-skill profile can't all name — or a truncated aggregator snippet
@@ -303,6 +314,18 @@ def blend(sem_pct: float | None, kw_ratio: float | None,
     if kw_ratio is None:
         return sem_pct * sem_only_cap
     return sem_weight * sem_pct + (1 - sem_weight) * kw_ratio
+
+
+def _is_education_only(text: str) -> bool:
+    """A requirement that states nothing but a diploma. Such a line is evidence about schooling,
+    not about skills — and when it is the ONLY scored requirement a posting has, treating it as
+    full coverage let a generic ad ("Техник, поддръжка": 7 duties + one education line) outscore
+    the exact "Заварчик" one for anyone holding a secondary certificate."""
+    from .filters import extract_qualification_level
+    if extract_qualification_level(text or "") is None:
+        return False
+    stripped = re.sub(r"[^\w\s]", " ", (text or "").lower())
+    return len(stripped.split()) <= 8
 
 
 def coverage_ratio(requirements_with_hits) -> float | None:

@@ -88,6 +88,11 @@ class Settings(BaseSettings):
     # (the short aggregator ads: "Заварчик — заваряване и рязане на метални конструкции") has no
     # extractable must/nice, and excluding it hid entire professions and whole markets.
     semantic_only_cap: float = 0.75
+    # …but when the TITLE names the candidate's own occupation (in any language), the role fit
+    # is established — we are only blind to the specific requirements, not to what the job IS.
+    # Without this the exact "Заварчик" ad lost to a generic "Техник, поддръжка" that happened to
+    # have extractable requirements: the general outranked the precise.
+    semantic_title_cap: float = 0.92
     show_postings_without_requirements: bool = True
     recall_rank_floor: float = 0.70
     # How much deeper the rank door looks before geo-screening — the nearest postings to a

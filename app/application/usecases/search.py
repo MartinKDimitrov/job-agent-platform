@@ -592,6 +592,17 @@ def retire_stale_postings(db: Session, max_age_days: int | None = None) -> int:
     return res.rowcount or 0
 
 
+def _title_names_role(title: str, role_names: list[str]) -> bool:
+    """Does the posting title name the candidate's occupation, in any language? ESCO labels carry
+    both genders ("Schweißer/Schweißerin"), so each side of a slash counts on its own."""
+    low = (title or "").lower()
+    for name in role_names:
+        for part in name.replace("/", " ").split():
+            if len(part) >= 4 and part in low:
+                return True
+    return False
+
+
 def search_db(db: Session, profile, limit: int | None = None, stats=None, verify: bool = True) -> dict:
     """The READ side: score the profile against the postings ALREADY in our index — no network,
     so Search now answers in well under a second. Vectors come precomputed from the rows.
@@ -601,6 +612,11 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
     whole index measured ~2.5s over the staging tunnel vs ~0.2s this way."""
     keywords = _profile_keywords(profile)
     ptext = profile.as_text()
+    from ...data.taxonomy_repo import role_names_all_languages
+    # the occupation's name in every language ESCO has it in — used both for the profile vector
+    # and to tell whether a posting's TITLE actually names this occupation
+    role_names = [n.lower() for n in role_names_all_languages(db, profile.target_roles or "")
+                  if len(n) >= 4]
     from ...domain.skills import parse_skill_years
     skill_years = parse_skill_years(profile.skills) or None   # {skill: years}; once per search
     from ...domain.role_family import families as _role_families
@@ -728,7 +744,9 @@ def search_db(db: Session, profile, limit: int | None = None, stats=None, verify
                                      role_match_floor=settings.role_match_sem_floor,
                                      gate_cap=settings.must_gate_cap or None,
                                      education_level=profile.qualification_level,
-                                     sem_only_cap=settings.semantic_only_cap)
+                                     sem_only_cap=settings.semantic_only_cap,
+                                     title_role_match=_title_names_role(post.title, role_names),
+                                     sem_title_cap=settings.semantic_title_cap)
         existing = existing_by_post.get(post.id)
         if existing:
             existing.score, existing.covered, existing.missing = sc, covered, missing

@@ -134,7 +134,11 @@ def _candidates(db, prof, id_titles, limit: int):
 
 
 def check_profile(db, prof, id_titles, top: int = 10) -> dict:
+    from ..application.usecases.search import _title_names_role
+    from ..data.taxonomy_repo import role_names_all_languages
     fams = families(prof.target_roles)
+    role_names = [n.lower() for n in role_names_all_languages(db, prof.target_roles or "")
+                  if len(n) >= 4]
     scored = []
     for post in _candidates(db, prof, id_titles, settings.recall_max_candidates):
         ok, _ = passes_hard_filters(prof, post.title, post.location, post.description)
@@ -145,7 +149,9 @@ def check_profile(db, prof, id_titles, top: int = 10) -> dict:
                                      posting_vec=post.embedding,
                                      sem_weight=settings.semantic_weight,
                                      education_level=prof.qualification_level,
-                                     sem_only_cap=settings.semantic_only_cap)
+                                     sem_only_cap=settings.semantic_only_cap,
+                                     title_role_match=_title_names_role(post.title, role_names),
+                                     sem_title_cap=settings.semantic_title_cap)
         scored.append((sc, post, missing))
     scored.sort(key=lambda x: -x[0])
     head = scored[:top]
