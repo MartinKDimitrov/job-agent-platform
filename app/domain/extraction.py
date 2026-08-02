@@ -28,7 +28,11 @@ _RESP_HEADERS = ("responsibilit", "what you'll do", "what you will do", "the rol
                  "daily routine", "what to expect", "your day", "a typical day",
                  "what awaits you", "your tasks", "your mission",
                  "отговорности", "какво ще правиш", "задължения", "какво те очаква",
-                 "описание на дейността", "описание на длъжността", "основни задължения")
+                 "описание на дейността", "описание на длъжността", "основни задължения",
+                 "job description", "stellenbeschreibung", "aufgabenbeschreibung",
+                 "description du poste", "descripción del puesto", "descrizione della posizione",
+                 "opis stanowiska", "descrierea postului", "functieomschrijving",
+                 "περιγραφή θέσης", "opis posla", "описание должности", "опис посади")
 _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what you'll need",
                  "what you need", "what you'll bring", "what you bring", "your background",
                  "who you are", "we're looking for", "we are looking for",
@@ -150,7 +154,21 @@ _BENEFIT_RE = re.compile(
     # "Обособена релакс зона (кино кът, тенис маса)", "Млад, мотивиран и сплотен екип").
     # NB: Cyrillic cues need \w* before the closing \b — "тиймбилдингИ" was slipping it.
     r"заплащане|релакс зона|кино кът|тенис маса|сплотен екип|работна среда|"
-    r"фирмени събития|мотивиран и\w* екип|безплатн\w*|намаления|отстъпки)\b", re.I)
+    r"фирмени събития|мотивиран и\w* екип|безплатн\w*|намаления|отстъпки|"
+    # …and the same perk phrasing in the other source languages (attractive pay, young/dynamic
+    # team, pleasant environment, staff discounts) — the classes are formulaic everywhere.
+    r"attractive (?:salary|remuneration|pay)|competitive (?:salary|remuneration|pay|compensation)|"
+    r"attraktive\w* (?:vergütung|bezahlung|gehalt)|übertariflich\w*|junges team|"
+    r"dynamisches team|angenehmes arbeitsumfeld|mitarbeiterrabatt\w*|"
+    r"atrakcyjne wynagrodzenie|młody zespół|przyjazna atmosfera|zniżki|"
+    r"salariu (?:atractiv|competitiv)|echipă tânără|mediu de lucru plăcut|"
+    r"salario (?:competitivo|atractivo)|remuneración competitiva|buen ambiente|"
+    r"equipo dinámico|descuentos para empleados|"
+    r"retribuzione (?:competitiva|adeguata)|ambiente dinamico|team giovane|"
+    r"rémunération (?:attractive|compétitive)|salaire (?:attractif|compétitif)|"
+    r"équipe dynamique|bonne ambiance|réductions|marktconform salaris|"
+    r"ανταγωνιστικ\w* (?:μισθ|αποδοχ)\w*|ευχάριστο περιβάλλον|konkurentna plaća|mlad tim|"
+    r"конкурентн\w* (?:зарплат|заробіт)\w*|достойн\w* оплат\w*|дружн\w* (?:коллектив|колектив))\b", re.I)
 
 # Application / data-privacy footer boilerplate — a consent-and-processing block that closes most
 # EU/BG postings (dev.bg, zaplata). It is keyed to the CONSENT/PROCESSING phrasing, NOT the bare
@@ -179,6 +197,13 @@ _LEGAL_RE = re.compile(
     r"личните ви данни|обработване на лични данни|защита на личните данни|"
     r"(?:пълна|строга) (?:конфиденциалност|поверителност)|разглеждан\w* при конфиденциалност|"
     r"представлява интерес за вас|изпратете[^.]{0,40}автобиограф|ще се радваме да работим|"
+    r"vertraulich behandelt|bei interesse\b|senden sie[^.]{0,40}(?:bewerbung|lebenslauf)|"
+    r"zachowanie poufności|pełn\w* poufność|wyślij[^.]{0,30}cv|prześlij[^.]{0,30}cv|"
+    r"w razie zainteresowania|toute confidentialité|confidentialité la plus stricte|"
+    r"envoyez[^.]{0,30}cv|estricta confidencialidad|enví\w*[^.]{0,30}(?:cv|currículum)|"
+    r"massima riservatezza|invia\w*[^.]{0,30}cv|strictă confidențialitate|"
+    r"trimite\w*[^.]{0,30}cv|dacă ești interesat|stuur[^.]{0,30}cv|"
+    r"απόλυτη εχεμύθεια|строгой конфиденциальности|суворій конфіденційності|"
     r"protected by the law|protected within the meaning|consult our privacy notice|"
     r"privacy notice \(http|data of applicants is protected|data provided by you is|"
     # Same consent/selection footer across the source languages. Formulaic and unambiguous —
@@ -212,6 +237,9 @@ _TERMS_RE = re.compile(
     r"работно време|работни часа|на смени|извънреден труд|"
     r"(?:постоянна|целогодишна|дългосрочна) заетост|трудов договор|срочен договор|"
     r"начало на работа|от понеделник до петък|командировк\w*|условия на труд|"
+    r"working conditions|dienstreisen|arbeitsbedingungen|delegacje|warunki pracy|"
+    r"deplasări|condiții de muncă|trasferte|condizioni di lavoro|"
+    r"conditions de travail|condiciones de trabajo|arbeidsvoorwaarden|"
     # Employment terms in the source languages (hours / contract type / start date).
     r"wochenstunden|stunden pro woche|arbeitsvertrag|unbefristet|befristet|arbeitsbeginn|"
     r"vollzeit|teilzeit|schichtarbeit|"                                               # de

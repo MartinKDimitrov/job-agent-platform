@@ -474,3 +474,27 @@ def test_sentences_are_not_split_on_abbreviations():
                  "Codex) across coding, CI, and testing is expected of every engineer here.\n")
     texts = [r["text"] for r in extract_requirements(long_line)]
     assert any("e.g. Claude Code, Codex" in t for t in texts), texts
+
+
+def test_perk_confidentiality_and_send_cv_lines_all_languages():
+    """The classes the owner's Bulgarian screenshots exposed (attractive pay, young team,
+    business trips, application confidentiality, send-your-CV) — locked down in every source
+    language, since the phrasing is formulaic everywhere."""
+    cases = [
+        ("Изисквания:\n- Опит с Python\n- Атрактивно заплащане\n- Млад, мотивиран и сплотен екип\n"
+         "- Командировки\n- Всички кандидатури ще бъдат разглеждани при пълна конфиденциалност."),
+        ("Anforderungen:\n- Erfahrung mit Python\n- Attraktive Vergütung\n- Junges Team\n"
+         "- Dienstreisen\n- Ihre Bewerbung wird vertraulich behandelt."),
+        ("Wymagania:\n- Doswiadczenie z Python\n- Atrakcyjne wynagrodzenie\n- Młody zespół\n"
+         "- Delegacje\n- Wyślij nam swoje CV."),
+        ("Profil recherché :\n- Experience en Python\n- Rémunération attractive\n"
+         "- Équipe dynamique\n- Envoyez votre CV."),
+        ("Requisitos:\n- Experiencia con Python\n- Salario competitivo\n"
+         "- Estricta confidencialidad garantizada."),
+        ("Cerinte:\n- Experienta cu Python\n- Salariu atractiv\n- Strictă confidențialitate."),
+    ]
+    for text in cases:
+        gaps = [r["text"].lower() for r in extract_requirements(text)
+                if r["kind"] in ("must", "nice")]
+        assert any("python" in g for g in gaps), f"real requirement lost: {text[:40]}"
+        assert len(gaps) == 1, f"boilerplate leaked: {gaps}"
