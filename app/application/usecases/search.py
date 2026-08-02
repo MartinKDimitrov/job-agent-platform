@@ -8,6 +8,7 @@ goes through requirement extraction + embeddings, so a 500-job board doesn't blo
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 
@@ -541,13 +542,47 @@ def merge_near_duplicates(db: Session, cosine_threshold: float | None = None) ->
     threshold = settings.near_dup_cosine if cosine_threshold is None else cosine_threshold
     if not threshold:
         return 0
+    # Stage 0: EXACT duplicates — identical title AND identical description text. The gated
+    # near-dup logic below can never reach these: aggregator redirect feeds (jobviewtrack) carry
+    # an EMPTY company, one host, and a unique tracking URL per fetch, so every drain inserted a
+    # fresh copy (41 live rows of one ad). The company/host gates don't apply to literal
+    # re-serves of the same text; the earliest row survives.
+    merged = 0
+    if db.bind.dialect.name == "sqlite":     # hermetic tests: no md5(); the sets are tiny
+        rows = [(pid, title, comp, hashlib.md5((d or "").encode()).hexdigest())
+                for pid, title, comp, d in
+                db.execute(select(Posting.id, Posting.title, Posting.company, Posting.description)
+                           .where(Posting.is_live.is_(True), Posting.description != "")
+                           .order_by(Posting.first_seen))]
+    else:                                    # Postgres hashes server-side — no 400k-description pull
+        from sqlalchemy import func as _f
+        rows = db.execute(select(Posting.id, Posting.title, Posting.company,
+                                 _f.md5(Posting.description))
+                          .where(Posting.is_live.is_(True), Posting.description != "")
+                          .order_by(Posting.first_seen)).all()
+    # DIFFERENT named companies with byte-identical text stay separate (two clients of one
+    # template): a duplicate is only literal when the company is the same — or absent, which is
+    # exactly the aggregator-redirect shape that produced the 41 copies.
+    seen_exact: dict[tuple, list[str]] = {}
+    for pid, title, comp, dmd5 in rows:
+        key = ((title or "").strip().lower(), dmd5)
+        comp_norm = normalize_company(comp) or ""
+        owners = seen_exact.setdefault(key, [])
+        if any(comp_norm == o or not comp_norm or not o for o in owners):
+            db.execute(update(Posting).where(Posting.id == pid).values(is_live=False))
+            merged += 1
+        else:
+            owners.append(comp_norm)
+    if merged:
+        db.commit()
+        from .. import vector_cache
+        vector_cache.invalidate()
     by_co: dict[str, list[Posting]] = {}
     for p in db.execute(select(Posting).where(Posting.is_live.is_(True),
                                               Posting.embedding.isnot(None))).scalars():
         norm = normalize_company(p.company)
         if norm:
             by_co.setdefault(norm, []).append(p)
-    merged = 0
     for group in by_co.values():
         if len(group) < 2:
             continue

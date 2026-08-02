@@ -204,11 +204,23 @@ _MISFILED = {
 for _fam, _stems in _MISFILED.items():
     FAMILIES[_fam] = tuple(c for c in FAMILIES[_fam] if not any(st in c for st in _stems))
 
-_FAMILY_RES: dict[str, re.Pattern] = {
-    fam: re.compile(r"(?<![a-z0-9])(?:" + "|".join(re.escape(c) for c in cues) + r")(?![a-z0-9])",
-                    re.I)
-    for fam, cues in FAMILIES.items()
-}
+def _family_re(cues: tuple[str, ...]) -> re.Pattern:
+    """SHORT cues (<6 chars) are word-bounded on both sides INCLUDING Cyrillic — "одит" was
+    matching inside "ръковОДИТел" and tagging a construction manager as finance. LONG cues keep
+    the ASCII-only guards so Bulgarian compounds still work ("заварчик" in "електрозаварчик")."""
+    short = [c for c in cues if len(c) < 6]
+    long_ = [c for c in cues if len(c) >= 6]
+    parts = []
+    if short:
+        parts.append(r"(?<![a-z0-9а-я])(?:" + "|".join(re.escape(c) for c in short)
+                     + r")(?![a-z0-9а-я])")
+    if long_:
+        parts.append(r"(?<![a-z0-9])(?:" + "|".join(re.escape(c) for c in long_)
+                     + r")(?![a-z0-9])")
+    return re.compile("|".join(parts) or r"(?!x)x", re.I)
+
+
+_FAMILY_RES: dict[str, re.Pattern] = {fam: _family_re(cues) for fam, cues in FAMILIES.items()}
 
 # Disjoint pairs that are related enough to show (soft-weight), not drop. Symmetric — stored as
 # frozensets so lookup is order-free. Anything NOT listed here and disjoint is a hard mismatch.
