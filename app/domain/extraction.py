@@ -139,7 +139,7 @@ _BENEFIT_RE = re.compile(
     r"summer office|winter office|company[- ]wide events?|knowledge[- ]sharing sessions?|"
     r"academic teaching|speaking engagements?|professional development|relax and unwind|"
     r"reach your full potential|certifications? and training|"
-    r"days? vacation|vacation days?|annual salary review|share incentivi[sz]ation|"
+    r"days? (?:of )?(?:paid )?(?:annual )?(?:vacation|leave)|paid vacation|vacation days?|annual salary review|share incentivi[sz]ation|"
     r"equipment reimbursement|career enhancement|workshops?, conferences|hackat|"
     r"remote[- ]first policy|global mission|confidentiality of all applications|"
     r"flexible work hours|tech deep dive|"
