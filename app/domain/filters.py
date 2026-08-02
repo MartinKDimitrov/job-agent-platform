@@ -385,7 +385,7 @@ _EDU_LEVELS: tuple[tuple[int, tuple[str, ...]], ...] = (
     # "master" must be DEGREE-shaped: bare "master" reads a trade's "Master Technician",
     # "master data", "Mastertrainer:in" and "masterplanning" as a Master's degree — measured 9%
     # false positives on level 7, and each one wrongly penalises a less-schooled candidate.
-    (7, ("master's", "masters ", "master degree", "master of ", "master in ", "master or ",
+    (7, ("master's", "masters degree", "masters in ", "masters of ", "master degree", "master of ", "master in ", "master or ",
          "master/", "masterabschluss", "masterstudium", "master-abschluss", "master en ",
          "msc", "m.sc", "mba", "магистър", "магистърска",
          "magister", "mastère", "máster", "laurea magistrale", "studia magisterskie",

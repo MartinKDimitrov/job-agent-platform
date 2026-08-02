@@ -250,3 +250,24 @@ def test_qualification_factor_uses_the_collected_level():
     # `need` (Posting.education_level, collected at enrichment) wins over scanning the text
     assert qualification_factor(Q(), "no education mentioned here", need=6) == 0.7
     assert qualification_factor(Q(), "Изисква висше образование", need=3) == 1.0
+
+
+def test_education_level_word_boundaries_and_degree_shape():
+    """The two false-positive classes a 400k backfill exposed — both wrongly penalised
+    less-schooled candidates, so they are locked down here."""
+    from app.domain.filters import extract_qualification_level as lvl
+    # 1) short acronyms as bare substrings: "bsc" sits inside German "abSChluss", which read
+    #    every German posting mentioning a qualification as a bachelor's requirement
+    assert lvl("Masterabschluss in Informatik") == 7
+    assert lvl("Hochschulabschluss in Informatik") == 6
+    assert lvl("Berufsabschluss erforderlich") == 5
+    assert lvl("BSc in Computer Science") == 6          # the real acronym still reads
+    # 2) "master" must be degree-shaped — these are jobs and infrastructure, not degrees
+    assert lvl("Master Technician") is None
+    assert lvl("master data management") is None
+    assert lvl("Mastertrainer:in Bahnbetrieb") is None
+    assert lvl("masterplanning and urban design") is None
+    assert lvl("Roll out sharded YTsaurus masters (Kubernetes)") is None
+    for genuine in ("Master's degree in CS", "Masters in Economics", "MSc in Physics",
+                    "MBA preferred", "Master en Droit", "Master/PhD in CS"):
+        assert lvl(genuine) == 7, genuine
