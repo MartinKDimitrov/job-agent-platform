@@ -62,7 +62,11 @@ _DOMINANCE = 0.6      # …and at least this share of its occurrences must sit i
 # Tokens that pass the distinctiveness test but are domain-generic in the wild, so they would
 # tag unrelated postings (an ESCO admin label happens to mention gaming/casino; "capital" and
 # "vehicles" appear in any industry's ads). Reviewed by hand after each regeneration.
-DENY = {# loanwords that name a family of their own: ESCO files marketing occupations under its
+DENY = {# universal job-ad vocabulary that happens to concentrate in ONE vertical's ESCO labels
+        # ("специалист" sits densely in healthcare labels, "учебен" in admin ones) — in real ads
+        # they appear everywhere, so they tagged logistics ads as healthcare and teachers as admin.
+        "специалист", "специалистка", "учебен", "учебна", "младши", "старши",
+        # loanwords that name a family of their own: ESCO files marketing occupations under its
         # sales vertical, so "marketing" became a SALES cue and erased the sales/marketing
         # distinction the curated families keep (they are adjacent, not identical).
         "marketing", "маркетинг", "management", "manager",

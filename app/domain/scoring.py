@@ -270,6 +270,15 @@ def score(profile_text: str, posting_text: str, requirements=None,
         kw_ratio = nice_cov / nice_tot
     else:
         kw_ratio = None
+    # Coverage built on a SINGLE RAW requirement is thin evidence: one shared line read as
+    # "изисквания 100%" and lifted a midwife and a teacher above the exact-title ads in a
+    # kinesiotherapist's feed. Damped (×0.75), never raised. ANNOTATED requirements (an explicit
+    # skills list from the annotation pass) are deliberate, curated evidence and stay full —
+    # covering the one ★5 must of a pasted JD must still read 100.
+    _scored_reqs = [r for r in reqs if req_weight(r) > 0]
+    if (kw_ratio is not None and len(_scored_reqs) == 1
+            and not _scored_reqs[0].get("skills")):
+        kw_ratio *= 0.75
     if not _substantive:
         kw_ratio = None
 
