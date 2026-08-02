@@ -66,7 +66,12 @@ def verify_match(db: Session, profile, match: Match, post: Posting, llm) -> bool
         log.warning("unparseable verification answer for match %s", match.id)
         return False
 
-    hits = {id(r): (i in hit_idx) for i, r in enumerate(scored)}
+    from ...domain.scoring import education_hit
+    # The LLM reads only the profile TEXT — it cannot see the structured education level, so it
+    # would flip a degree requirement that education_hit covered back to "missing" ("Казах, че
+    # имам висше, а пак го пише като липсващо"). The candidate's stated diploma wins.
+    _edu = getattr(profile, "qualification_level", None)
+    hits = {id(r): (i in hit_idx) or education_hit(r, _edu) for i, r in enumerate(scored)}
     covered, missing = [], []
     for r in (match.covered or []) + (match.missing or []):
         if isinstance(r, dict) and id(r) in hits:

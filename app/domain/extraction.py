@@ -27,7 +27,8 @@ _RESP_HEADERS = ("responsibilit", "what you'll do", "what you will do", "the rol
                  "the impact you", "your impact", "you'll be", "you will be",
                  "daily routine", "what to expect", "your day", "a typical day",
                  "what awaits you", "your tasks", "your mission",
-                 "отговорности", "какво ще правиш", "задължения", "какво те очаква")
+                 "отговорности", "какво ще правиш", "задължения", "какво те очаква",
+                 "описание на дейността", "описание на длъжността", "основни задължения")
 _MUST_HEADERS = ("requirement", "qualification", "must have", "must-have", "what you'll need",
                  "what you need", "what you'll bring", "what you bring", "your background",
                  "who you are", "we're looking for", "we are looking for",
@@ -143,8 +144,13 @@ _BENEFIT_RE = re.compile(
     r"equipment reimbursement|career enhancement|workshops?, conferences|hackat|"
     r"remote[- ]first policy|global mission|confidentiality of all applications|"
     r"flexible work hours|tech deep dive|"
-    r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг|"
-    r"карта за транспорт|бонус за|пенси\w*|релокац\w*|обяд\w*)\b", re.I)
+    r"отпуск|здравна осигуровка|спортна карта|мултиспорт|ваучери|тиймбилдинг\w*|"
+    r"карта за транспорт|бонус за|пенси\w*|релокац\w*|обяд\w*|"
+    # BG perk lines from live cards, stale short postings ("Коректно и навременно заплащане",
+    # "Обособена релакс зона (кино кът, тенис маса)", "Млад, мотивиран и сплотен екип").
+    # NB: Cyrillic cues need \w* before the closing \b — "тиймбилдингИ" was slipping it.
+    r"заплащане|релакс зона|кино кът|тенис маса|сплотен екип|работна среда|"
+    r"фирмени събития|мотивиран и\w* екип|безплатн\w*|намаления|отстъпки)\b", re.I)
 
 # Application / data-privacy footer boilerplate — a consent-and-processing block that closes most
 # EU/BG postings (dev.bg, zaplata). It is keyed to the CONSENT/PROCESSING phrasing, NOT the bare
@@ -170,7 +176,9 @@ _LEGAL_RE = re.compile(
     r"ще се свърже[мн]? (?:само )?с|благодарим (?:ви|на всички)|"
     r"изпратете (?:ни )?(?:вашата |своята )?(?:автобиограф|cv|молба)|"
     r"кандидатствай(?:те)? (?:чрез|през|на)|предоставените от вас данни|"
-    r"личните ви данни|обработване на лични данни|"
+    r"личните ви данни|обработване на лични данни|защита на личните данни|"
+    r"(?:пълна|строга) (?:конфиденциалност|поверителност)|разглеждан\w* при конфиденциалност|"
+    r"представлява интерес за вас|изпратете[^.]{0,40}автобиограф|ще се радваме да работим|"
     r"protected by the law|protected within the meaning|consult our privacy notice|"
     r"privacy notice \(http|data of applicants is protected|data provided by you is|"
     # Same consent/selection footer across the source languages. Formulaic and unambiguous —
@@ -202,8 +210,8 @@ _TERMS_RE = re.compile(
     r"start date|starting date|immediate start|\basap\b|"
     r"schedule (?:&|and) location|\bmonday to friday\b|"
     r"работно време|работни часа|на смени|извънреден труд|"
-    r"(?:постоянна|целогодишна) заетост|трудов договор|срочен договор|"
-    r"начало на работа|от понеделник до петък|"
+    r"(?:постоянна|целогодишна|дългосрочна) заетост|трудов договор|срочен договор|"
+    r"начало на работа|от понеделник до петък|командировк\w*|условия на труд|"
     # Employment terms in the source languages (hours / contract type / start date).
     r"wochenstunden|stunden pro woche|arbeitsvertrag|unbefristet|befristet|arbeitsbeginn|"
     r"vollzeit|teilzeit|schichtarbeit|"                                               # de
@@ -221,6 +229,7 @@ _TERMS_RE = re.compile(
 _MARKETING_RE = re.compile(
     r"^(?:we['’]?re\b|we\s+are\b|we['’]?ve\b|we\s+want\b|we\s+build\b|our\s|join\s+us\b"
     r"|you(?:['’]ll|\s+will)?\s+(?:have|get|enjoy)\b)"
+    r"|^as the (?:team|company|people) behind\b"
     r"|^[A-Z][\w.&-]*\s+is\s+(?:the|a|an|where)\b", re.I)
 # Signals that a sentence is genuinely about the candidate's qualifications — overrides the
 # marketing filter ("We are looking for someone with 5+ years..." must survive). Bare "years"

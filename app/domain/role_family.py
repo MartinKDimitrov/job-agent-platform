@@ -193,6 +193,13 @@ _MISFILED = {
               "инструктор", "gymnast", "гимнаст"),
     "healthcare": ("veterinar", "ветеринар", "tierarzt", "tierärzt", "weterynarz",
                    "vétérin", "veterin", "животн"),
+    # Owner: "бетонджията не е монтажник." ESCO files prefab-element installers under the
+    # construction vertical, so "монтажник" became a construction cue and the family floor
+    # lifted every fitter/assembly ad to the top of a concrete finisher's feed. Also strip the
+    # film-editing "монтаж" tokens legal_culture contributed. Fitter titles simply carry no
+    # family — a fitter PROFILE still reaches them through the ESCO title names.
+    "construction": ("монтаж",),
+    "legal": ("монтаж",),
 }
 for _fam, _stems in _MISFILED.items():
     FAMILIES[_fam] = tuple(c for c in FAMILIES[_fam] if not any(st in c for st in _stems))
