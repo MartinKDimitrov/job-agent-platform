@@ -110,6 +110,55 @@ FAMILIES: dict[str, tuple[str, ...]] = {
                      "baker", "pastry", "sommelier", "dishwasher"),
 }
 
+# Bulgarian title cues. Profiles are English-keyed (onboarding stores the ESCO English label),
+# but posting TITLES arrive in the SOURCE language — so every Bulgarian posting came back
+# family-less, `conflict()` said "none", and role-family filtering was inert for the whole BG
+# market (owner: logistics, digital-marketing and customer-service roles in an accountant's feed).
+# The word-boundary guards are ASCII-only, so a Cyrillic cue matches as a stem — which is what
+# Bulgarian morphology needs ("счетовод" covers счетоводител / счетоводството / счетоводна).
+_BG_CUES: dict[str, tuple[str, ...]] = {
+    "finance":      ("счетовод", "финанс", "банков", "застрахова", "одит", "трз", "данъч",
+                     "икономист", "кредитен"),
+    "healthcare":   ("медицинск", "лекар", "медицинска сестра", "фармацевт", "стоматолог",
+                     "рехабилитатор", "санитар", "акушер", "здравен"),
+    "sales":        ("продажб", "търговск", "търговец", "магазин", "мърчандайз", "дистрибут",
+                     "касиер", "продавач"),
+    "marketing":    ("маркетинг", "реклам", "пиар", "копирайт", "бранд мениджър"),
+    "construction": ("строител", "зидар", "кофраж", "армату", "бетон", "мазилк", "фаянс",
+                     "изолац", "скеле", "пътен строеж"),
+    "trades":       ("заварчик", "шлосер", "стругар", "монтьор", "електротехник", "дърводел",
+                     "шивач", "механик", "бояджия", "тенекеджия", "мебелист", "оператор машин"),
+    "transport":    ("шофьор", "логист", "транспорт", "куриер", "складов", "мотокар", "спедит",
+                     "снабдит", "доставки",
+                     # drivers/logistics stay hand-written across languages: ESCO files them under
+                     # "machine operators" together with food and chemical plant operators, so the
+                     # generated cues can't separate them (see build_role_family_i18n).
+                     "fahrer", "kraftfahrer", "chauffeur", "conducteur", "conductor", "autista",
+                     "kierowca", "şofer", "șofer", "vozač", "οδηγός", "bestuurder",
+                     "logistik", "logistique", "logística", "logistyka", "logistica",
+                     "spedition", "magazzino", "magazynier", "lagerist"),
+    "agriculture":  ("земедел", "агроном", "животновъд", "фермер", "градинар", "горск",
+                     "тракторист"),
+    "education":    ("учител", "преподавател", "педагог", "възпитател", "обучител",
+                     "детегледач"),
+    "legal":        ("юрист", "адвокат", "юрисконсулт", "нотариус"),
+    "admin":        ("администратор", "офис мениджър", "секретар", "деловодител",
+                     "офис асистент", "архивар", "обслужване на клиенти", "кол център"),
+    "hospitality":  ("готвач", "сервитьор", "барман", "камериер", "хотел", "ресторант",
+                     "кухн", "рецепцион", "аниматор"),
+}
+for _fam, _cues in _BG_CUES.items():
+    FAMILIES[_fam] = FAMILIES[_fam] + _cues
+
+# …and the same problem in the other 10 EU languages postings arrive in. Those cues are DERIVED
+# from the ESCO labels rather than hand-written (see app.tools.build_role_family_i18n): a token
+# qualifies only when it appears in exactly one ESCO vertical, which is what keeps words like
+# "manager"/"specialist" — present in every domain — from tagging everything.
+from .role_family_i18n import I18N_CUES  # noqa: E402  (generated data, imported after FAMILIES)
+
+for _fam, _cues in I18N_CUES.items():
+    FAMILIES[_fam] = FAMILIES[_fam] + tuple(_cues)
+
 _FAMILY_RES: dict[str, re.Pattern] = {
     fam: re.compile(r"(?<![a-z0-9])(?:" + "|".join(re.escape(c) for c in cues) + r")(?![a-z0-9])",
                     re.I)
