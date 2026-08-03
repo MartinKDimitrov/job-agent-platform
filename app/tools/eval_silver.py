@@ -147,7 +147,14 @@ def run(min_len: int = 800, limit: int | None = None, model_name: str | None = N
         + ", ".join(f"{k}={total_rel[k]}" for k in PROFILES))
 
     enc = _batch_encoder(model_name)
-    post_vecs = {"raw": enc(raw, "query: "), "clean": enc(clean, "passage: ")}
+    # embed only the posting inputs the requested variants actually need (raw for sym_raw,
+    # clean for asym_clean) — embedding both when only one is asked doubles the cost for nothing.
+    sources = {"raw": raw, "clean": clean}
+    post_vecs: dict[str, object] = {}
+    for vname in variants:
+        spec = _VARIANTS[vname]
+        if spec["post_input"] not in post_vecs:
+            post_vecs[spec["post_input"]] = enc(sources[spec["post_input"]], spec["post_prefix"])
     out: dict[str, dict] = {}
     for vname in variants:
         spec = _VARIANTS[vname]
