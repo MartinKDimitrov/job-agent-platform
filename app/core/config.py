@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     # the terms queried per run to keep the quota alive (raise once the limit is lifted).
     jooble_api_key: str = ""
     jooble_max_terms: int = 25
+    # Reed — the UK's biggest direct job board; open Jobseeker API (reed.co.uk/developers),
+    # Basic auth with the key as username. UK depth on top of Adzuna's GB breadth. Silent
+    # no-op until the key is set.
+    reed_api_key: str = ""
     # Careerjet — global aggregator (90+ countries incl. BG), v4 API with Basic auth (free
     # publisher key from careerjet.com/partners/api). Silent no-op until the key is set.
     # user_ip is a required API param; default is a server-side geo placeholder, overridable.

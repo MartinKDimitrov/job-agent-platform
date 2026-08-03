@@ -21,3 +21,4 @@ from . import karriere_nrw    # noqa: F401  (registers "karriere_nrw" — NRW pu
 from . import dvinci          # noqa: F401  (registers "dvinci" — DE ATS, server list + JSON-LD)
 from . import arbeitnow       # noqa: F401  (registers "arbeitnow" — DE/EU aggregator, free API)
 from . import adzuna          # noqa: F401  (registers "adzuna" — multi-country aggregator API)
+from . import reed            # noqa: F401  (registers "reed" — UK direct board, Jobseeker API)
