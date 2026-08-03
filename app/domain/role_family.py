@@ -63,12 +63,10 @@ FAMILIES: dict[str, tuple[str, ...]] = {
                      "credit analyst", "credit officer", "loan officer", "tax advisor",
                      "tax consultant", "tax accountant", "actuary", "treasury", "payroll",
                      "accounts payable", "accounts receivable", "loss adjuster", "underwriter"),
-    "healthcare":   ("nurse", "nursing", "physician", "medical doctor", "pharmacist", "dentist",
-                     "dental", "physiotherapist", "physical therapist", "podiatrist",
-                     "radiographer", "speech therapist", "speech and language therapist",
-                     "chiropractor", "veterinarian", "orthoptist", "midwife", "paramedic",
-                     "occupational therapist", "recreational therapist", "optometrist",
-                     "caregiver", "medical assistant", "healthcare assistant"),
+    # Generic medical markers ONLY — the professions themselves live in the sub-families defined
+    # with the Bulgarian cues below (owner: nurse/midwife/physio/rehab are different professions
+    # and must not mix). A generic marker keeps hybrid titles visible but soft-demoted.
+    "healthcare":   ("medical", "healthcare", "health care"),
     "sales":        ("salesperson", "sales assistant", "sales representative", "sales engineer",
                      "sales processor", "sales agent", "sales manager", "account executive",
                      "account manager", "business developer", "business development",
@@ -141,10 +139,32 @@ FAMILIES: dict[str, tuple[str, ...]] = {
 _BG_CUES: dict[str, tuple[str, ...]] = {
     "finance":      ("счетовод", "финанс", "банков", "застрахова", "одит", "трз", "данъч",
                      "икономист", "кредитен"),
-    "healthcare":   ("медицинск", "лекар", "медицинска сестра", "фармацевт", "стоматолог",
-                     "рехабилитатор", "санитар", "акушер", "здравен",
-                     "кинезитерапевт", "кинезиолог", "физиотерапевт",
-                     "kinesiologist", "kinesiotherapist", "kinesiotherapy", "physiotherapist", "physiotherapy"),
+    "healthcare":   ("медицинск", "здравен", "healthcare", "здравеопазване"),
+    "physio":       ("кинезитерапевт", "кинезиолог", "физиотерапевт", "kinesiologist",
+                     "kinesiotherapist", "kinesiotherapy", "physiotherapist", "physiotherapy",
+                     "physiotherapeut", "fizjoterapeut", "fisioterapeut", "fisioterapista",
+                     "kinésithérapeute", "φυσικοθεραπευτ", "fizioterapeut", "physical therapist"),
+    "rehab":        ("рехабилитатор", "rehabilitator", "ерготерапевт", "occupational therapist",
+                     "ergotherapeut", "ergothérapeute", "логопед", "logoped", "speech therapist",
+                     "speech and language therapist", "occupational therapy",
+                     "recreational therapist"),
+    "nursing":      ("медицинска сестра", "медицински сестри", "nurse", "nurses",
+                     "krankenpfleger", "krankenschwester", "pflegefachkraft", "infirmier",
+                     "infirmière", "enfermer", "infermier", "pielęgniar", "verpleegkundig",
+                     "νοσηλευτ", "asistent medical", "medicinska sestra", "фелдшер", "paramedic"),
+    "midwifery":    ("акушер", "midwife", "hebamme", "sage-femme", "matrona", "ostetrica",
+                     "położn", "moașă", "μαία"),
+    "doctor":       ("лекар", "physician", "medical doctor", "arzt", "ärztin", "médecin",
+                     "médico", "lekarz", "γιατρός", "ιατρός", "liječnik", "medic",
+                     "podiatrist", "chiropractor", "optometrist", "orthoptist"),
+    "dental":       ("стоматолог", "дентален", "dentist", "zahnarzt", "dentiste", "dentista",
+                     "dentysta", "зъболекар", "οδοντίατρος", "stomatolog", "dental"),
+    "pharmacy":     ("фармацевт", "pharmacist", "apotheker", "pharmacien", "farmacéutic",
+                     "farmacist", "farmaceut", "φαρμακοποι", "аптекар"),
+    "medlab":       ("медицински лаборант", "medical laboratory", "клиничен лаборант", "radiographer"),
+    "care":         ("санитар", "болногледач", "caregiver", "care assistant",
+                     "healthcare assistant", "altenpfleger", "aide-soignant", "badante",
+                     "opiekun", "îngrijitor", "гледач на", "medical assistant"),
     "sales":        ("продажб", "търговск", "търговец", "магазин", "мърчандайз", "дистрибут",
                      "касиер", "продавач"),
     "marketing":    ("маркетинг", "реклам", "пиар", "копирайт", "бранд мениджър"),
@@ -172,7 +192,8 @@ _BG_CUES: dict[str, tuple[str, ...]] = {
                      "кухн", "рецепцион", "аниматор"),
 }
 for _fam, _cues in _BG_CUES.items():
-    FAMILIES[_fam] = FAMILIES[_fam] + _cues
+    # the healthcare sub-professions are DEFINED here (they have no base entry in FAMILIES)
+    FAMILIES[_fam] = FAMILIES.get(_fam, ()) + _cues
 
 # …and the same problem in the other 10 EU languages postings arrive in. Those cues are DERIVED
 # from the ESCO labels rather than hand-written (see app.tools.build_role_family_i18n): a token
@@ -181,6 +202,11 @@ for _fam, _cues in _BG_CUES.items():
 from .role_family_i18n import I18N_CUES  # noqa: E402  (generated data, imported after FAMILIES)
 
 for _fam, _cues in I18N_CUES.items():
+    if _fam == "healthcare":
+        # ESCO's healthcare vertical mixes every medical sub-profession (and dance therapists:
+        # "танцов" tagged a dance teacher as healthcare) — one blanket family would re-glue the
+        # sub-professions split above, so the generated cues are skipped for it.
+        continue
     FAMILIES[_fam] = FAMILIES[_fam] + tuple(_cues)
 
 # ESCO's vertical taxonomy files some occupations where our families would not: veterinarians sit
@@ -239,6 +265,13 @@ _ADJACENT: set[frozenset] = {frozenset(p) for p in (
     ("architecture", "construction"),   # architects live on building sites — related, not same
     ("veterinary", "agriculture"),      # livestock vets — related, not the same
     ("media", "marketing"),             # journalism ↔ copywriting/content — related, not same
+    # Healthcare sub-professions: generic "медицински..." titles stay visible but demoted for
+    # any medical profile; the professions themselves do not mix (owner) — except physio↔rehab,
+    # which co-advertise ("Рехабилитатор или кинезитерапевт").
+    ("physio", "rehab"),
+    ("healthcare", "physio"), ("healthcare", "rehab"), ("healthcare", "nursing"),
+    ("healthcare", "midwifery"), ("healthcare", "doctor"), ("healthcare", "dental"),
+    ("healthcare", "pharmacy"), ("healthcare", "medlab"), ("healthcare", "care"),
     # every other non-tech family (finance/healthcare/sales/marketing) is disjoint from the rest
     # and from all IT families -> a hard mismatch (an accountant profile won't see dev/nurse roles).
     # note: android and ios are deliberately NOT adjacent — a pure iOS role is a hard mismatch for

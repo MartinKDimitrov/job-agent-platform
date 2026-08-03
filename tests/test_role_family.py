@@ -129,7 +129,7 @@ def test_backend_still_adjacent_for_ml_and_data():
 # ---- non-tech verticals (ESCO pilot): classified, and hard-mismatched across disciplines ----
 def test_non_tech_families_detected():
     assert families("Tax Accountant") == {"finance"}
-    assert families("Registered Nurse") == {"healthcare"}
+    assert families("Registered Nurse") == {"nursing"}   # healthcare split into sub-professions
     assert families("Sales Representative") == {"sales"}
     assert families("Brand Manager") == {"marketing"}
     # a bare "Manager" / "Specialist" still names no family (conservative)
