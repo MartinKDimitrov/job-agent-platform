@@ -15,6 +15,13 @@ When the duplicate arrives from an **ATS** (canonical apply URL), the stored pos
 at persistence time; in-memory index per call — a persisted `dedup_key` column arrives with
 Alembic, ROADMAP step 35).
 
+**Retroactive sweep** (`merge_near_duplicates`, run by hand after big drains): stage 0 retires
+EXACT duplicates already in the index — same lowercased title + same `md5(description)` (computed
+server-side on Postgres, dialect-safe on SQLite), same-or-empty company only, since aggregator
+redirects arrive company-less; one hygiene run retired 37,469 aggregator copies. Retirements go
+out in **1000-id chunked UPDATEs** — per-row updates over the tunnel stalled 25+ minutes (same
+lesson as everywhere: batch everything that crosses the tunnel).
+
 **Batched persistence (perf).** Under the bulk drains every DB round-trip crosses the flaky
 staging tunnel, so `ingest()` is round-trip-frugal: both the cross-source candidate load and the
 `content_hash` existence check are single `IN(...)` queries per page (not per posting), and the
