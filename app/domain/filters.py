@@ -11,7 +11,9 @@ from functools import lru_cache
 
 from .role_family import role_family_ok
 
-_TOKEN_RE = re.compile(r"[a-zA-Zа-яА-Я0-9\+\#\.]+")
+# All Unicode letters — the old [a-zA-Zа-яА-Я] covered Latin and Cyrillic only, so Greek-script
+# locations produced NO tokens and "Αττική, GR" read as a bare country code.
+_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 # Title cues. "lead"/"principal"/"staff" read as senior IC, not management — only real people-
 # management titles go here, so e.g. "Tech Lead" is not treated as a manager role.
@@ -247,7 +249,7 @@ _CITY_ALIASES = {
     "milan": ("milan", "milano"), "rome": ("rome", "roma"), "dublin": ("dublin",),
     "lisbon": ("lisbon", "lisboa"), "porto": ("porto",), "prague": ("prague", "praha"),
     "budapest": ("budapest",), "bucharest": ("bucharest", "bucurești", "bucuresti"),
-    "athens": ("athens", "αθήνα"), "thessaloniki": ("thessaloniki",),
+    "athens": ("athens", "αθήνα"), "thessaloniki": ("thessaloniki", "θεσσαλονίκη"),
     "stockholm": ("stockholm",), "copenhagen": ("copenhagen", "københavn"),
     "oslo": ("oslo",), "helsinki": ("helsinki",), "brussels": ("brussels", "bruxelles"),
 }
@@ -344,6 +346,13 @@ def geo_relation(profile, title: str, location: str, description: str = "") -> s
                         country_words |= _tokens(a)
             if not (ltoks - country_words):
                 return "preferred"
+            # Residue we DON'T recognize, in the candidate's own country. It might be another
+            # town (Ивайловград for a Varna candidate — hide-worthy) or the candidate's own
+            # REGION (Greek ads carry "Αττική", which contains Athens — hiding it emptied the
+            # whole Greek market). Without a region gazetteer the two are indistinguishable, so:
+            # visible but demoted — below threshold in a dense feed, still reachable in a
+            # sparse one.
+            return "unsure"
         return "elsewhere"
     lc = _location_country(loc)
     if lc is not None:                            # bare country code ("BG", "IE")
@@ -394,7 +403,7 @@ def location_ok(profile, location: str, description: str = "") -> bool:
     city/country, unless the candidate will relocate. Remote / unknown always pass."""
     if geo_relation(profile, "", location, description) == "elsewhere":
         return bool(getattr(profile, "relocate", False))
-    return True
+    return True                                  # 'unsure' stays visible (soft-demoted instead)
 
 
 def location_factor(profile, title: str, location: str, description: str = "",
@@ -402,7 +411,7 @@ def location_factor(profile, title: str, location: str, description: str = "",
     """Soft multiplier: a role in a DIFFERENT place than the candidate prefers (surfaced only
     because they'll relocate) ranks BELOW their preferred-location roles — relocation is a
     secondary option, not an equal one. 1.0 for preferred / remote / unknown."""
-    return elsewhere if geo_relation(profile, title, location, description) == "elsewhere" else 1.0
+    return elsewhere if geo_relation(profile, title, location, description) in ("elsewhere", "unsure") else 1.0
 
 
 def seniority_ok(profile, title: str) -> bool:
