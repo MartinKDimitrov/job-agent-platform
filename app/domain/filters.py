@@ -78,13 +78,21 @@ _COUNTRY_ALIASES: dict[str, tuple[str, ...]] = {
     "canada": ("canada",),
     "germany": ("germany", "deutschland", "berlin", "münchen", "munich"),
     "france": ("france", "paris"),
-    "netherlands": ("netherlands", "amsterdam"),
-    "spain": ("spain",), "italy": ("italy",), "poland": ("poland",),
-    "romania": ("romania",), "greece": ("greece",), "austria": ("austria",),
-    "portugal": ("portugal",), "ireland": ("ireland",), "belgium": ("belgium",),
-    "switzerland": ("switzerland",), "sweden": ("sweden",), "denmark": ("denmark",),
-    "norway": ("norway",), "finland": ("finland",), "czechia": ("czech republic", "czechia"),
-    "hungary": ("hungary",), "croatia": ("croatia", "hrvatska"), "serbia": ("serbia",), "turkey": ("turkey", "türkiye"),
+    "netherlands": ("netherlands", "nederland", "amsterdam"),
+    # native names included — a location field written in the posting's own language
+    # ("España", "Polska", "Ελλάδα") must resolve to the same country as the English form
+    "spain": ("spain", "españa", "espana"), "italy": ("italy", "italia"),
+    "poland": ("poland", "polska"),
+    "romania": ("romania", "românia"), "greece": ("greece", "ελλάδα", "ελλάς", "hellas"),
+    "austria": ("austria", "österreich", "oesterreich"),
+    "portugal": ("portugal",), "ireland": ("ireland", "éire"),
+    "belgium": ("belgium", "belgië", "belgique", "belgien"),
+    "switzerland": ("switzerland", "schweiz", "suisse", "svizzera"),
+    "sweden": ("sweden", "sverige"), "denmark": ("denmark", "danmark"),
+    "norway": ("norway", "norge"), "finland": ("finland", "suomi"),
+    "czechia": ("czech republic", "czechia", "česko", "cesko"),
+    "hungary": ("hungary", "magyarország", "magyarorszag"),
+    "croatia": ("croatia", "hrvatska"), "serbia": ("serbia", "srbija"), "turkey": ("turkey", "türkiye"),
     "ukraine": ("ukraine",), "india": ("india",), "australia": ("australia",),
 }
 _ALIAS_RES: dict[str, re.Pattern] = {
@@ -324,7 +332,18 @@ def geo_relation(profile, title: str, location: str, description: str = "") -> s
         # postings routinely carry only "BG"/"Bulgaria", and treating those as elsewhere hid the
         # domestic market from every on-site candidate.
         if not loc_cities and _location_country(loc) == _profile_country(profile):
-            return "preferred"
+            # …but ONLY when the field holds nothing beyond the country itself. Small towns are
+            # not in the city gazetteer ("Ивайловград, BG", "Червен бряг, BG"), and treating an
+            # unrecognized-town row as country-only served other-city jobs to an on-site
+            # candidate. Any residue besides the country reference names SOME place — and it is
+            # not the candidate's, or the city check above would have matched.
+            country_words = set()
+            for _k, _aliases in _COUNTRY_ALIASES.items():
+                if _k == _profile_country(profile):
+                    for a in _aliases:
+                        country_words |= _tokens(a)
+            if not (ltoks - country_words):
+                return "preferred"
         return "elsewhere"
     lc = _location_country(loc)
     if lc is not None:                            # bare country code ("BG", "IE")
