@@ -345,7 +345,10 @@ def geo_relation(profile, title: str, location: str, description: str = "") -> s
                     for a in _aliases:
                         country_words |= _tokens(a)
             if not (ltoks - country_words):
-                return "preferred"
+                # bare country, but the candidate named a CITY: we cannot confirm the place, so
+                # it is "unsure" (kept, demoted) — owner: "позицията трябва да е на място във
+                # Варна". Profiles without a preferred city keep it as preferred above.
+                return "unsure" if pref_cities else "preferred"
             # Residue we DON'T recognize, in the candidate's own country. It might be another
             # town (Ивайловград for a Varna candidate — hide-worthy) or the candidate's own
             # REGION (Greek ads carry "Αττική", which contains Athens — hiding it emptied the
@@ -356,7 +359,9 @@ def geo_relation(profile, title: str, location: str, description: str = "") -> s
         return "elsewhere"
     lc = _location_country(loc)
     if lc is not None:                            # bare country code ("BG", "IE")
-        return "preferred" if lc == _profile_country(profile) else "elsewhere"
+        if lc != _profile_country(profile):
+            return "elsewhere"
+        return "unsure" if pref_cities else "preferred"
     # empty location field -> read the city from the text
     found = cities_in(f"{title} {description}")
     if (pref_cities and (pref_cities & found)) or (pref & _tokens(description or "")):

@@ -39,11 +39,30 @@ def _posted(ms) -> datetime | None:
         return None
 
 
+# NUTS-3 -> province city for Bulgaria. locationMap's VALUES are NUTS codes ({"BG": ["BG421"]})
+# and dropping them stored bare "BG" — Пловдив ads then leaked into a Varna on-site feed as
+# "country-only". The owner's market gets the full table; other countries keep the country code
+# (their unknown-place rows are soft-demoted by the geo filter instead).
+_NUTS_BG = {
+    "BG311": "Видин", "BG312": "Монтана", "BG313": "Враца", "BG314": "Плевен",
+    "BG315": "Ловеч", "BG321": "Велико Търново", "BG322": "Габрово", "BG323": "Русе",
+    "BG324": "Разград", "BG325": "Силистра", "BG331": "Варна", "BG332": "Добрич",
+    "BG333": "Шумен", "BG334": "Търговище", "BG341": "Бургас", "BG342": "Сливен",
+    "BG343": "Ямбол", "BG344": "Стара Загора", "BG411": "София", "BG412": "София",
+    "BG413": "Благоевград", "BG414": "Перник", "BG415": "Кюстендил", "BG421": "Пловдив",
+    "BG422": "Хасково", "BG423": "Пазарджик", "BG424": "Смолян", "BG425": "Кърджали",
+}
+
+
 def _location(jv: dict) -> str:
     loc = jv.get("locationMap")
-    if isinstance(loc, dict) and loc:
-        return ", ".join(sorted(loc.keys())).upper()[:255]
-    return ""
+    if not (isinstance(loc, dict) and loc):
+        return ""
+    parts = []
+    for country, codes in sorted(loc.items()):
+        cities = sorted({_NUTS_BG[c] for c in (codes or []) if c in _NUTS_BG})
+        parts.append((", ".join(cities) + ", " if cities else "") + country.upper())
+    return "; ".join(parts)[:255]
 
 
 def _to_posting(jv: dict) -> RawPosting | None:

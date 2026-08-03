@@ -21,7 +21,10 @@ def test_fetch_per_country_and_dedups(monkeypatch):
     assert len(posts) == 4                                # 2 unique per country × 2 countries
     assert calls == ["bg", "ro"]                          # one call per country
     p = next(p for p in posts if p.external_id == "eures:IDbg1")
-    assert p.company == "Acme EOOD" and p.location == "BG" and p.posted_at.year == 2026
+    assert p.company == "Acme EOOD" and p.posted_at.year == 2026
+    # locationMap VALUES are NUTS codes — BG333 is Шумен; storing bare "BG" leaked
+    # other-province ads into on-site feeds
+    assert p.location == "Шумен, BG"
     assert p.url == "https://europa.eu/eures/portal/jv-se/jv-details/IDbg1"
 
 
