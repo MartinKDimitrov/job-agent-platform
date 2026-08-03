@@ -564,15 +564,22 @@ def merge_near_duplicates(db: Session, cosine_threshold: float | None = None) ->
     # template): a duplicate is only literal when the company is the same — or absent, which is
     # exactly the aggregator-redirect shape that produced the 41 copies.
     seen_exact: dict[tuple, list[str]] = {}
+    dup_ids: list[int] = []
     for pid, title, comp, dmd5 in rows:
         key = ((title or "").strip().lower(), dmd5)
         comp_norm = normalize_company(comp) or ""
         owners = seen_exact.setdefault(key, [])
         if any(comp_norm == o or not comp_norm or not o for o in owners):
-            db.execute(update(Posting).where(Posting.id == pid).values(is_live=False))
-            merged += 1
+            dup_ids.append(pid)
         else:
             owners.append(comp_norm)
+    # ONE batched UPDATE per chunk — a per-row execute is a tunnel round-trip each, and tens of
+    # thousands of aggregator duplicates turned the sweep into a half-hour stall (same lesson as
+    # the zombie sweep: batch everything that crosses the tunnel).
+    for i in range(0, len(dup_ids), 1000):
+        db.execute(update(Posting).where(Posting.id.in_(dup_ids[i:i + 1000]))
+                   .values(is_live=False))
+    merged = len(dup_ids)
     if merged:
         db.commit()
         from .. import vector_cache
