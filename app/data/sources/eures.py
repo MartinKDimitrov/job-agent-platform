@@ -55,13 +55,20 @@ _NUTS_BG = {
 
 
 def _location(jv: dict) -> str:
+    from .nuts_names import NUTS_NAMES   # generated (app.tools.build_nuts_names) — all countries
     loc = jv.get("locationMap")
     if not (isinstance(loc, dict) and loc):
         return ""
     parts = []
     for country, codes in sorted(loc.items()):
-        cities = sorted({_NUTS_BG[c] for c in (codes or []) if c in _NUTS_BG})
-        parts.append((", ".join(cities) + ", " if cities else "") + country.upper())
+        names = set()
+        for c in codes or []:
+            cu = (c or "").upper()
+            # the Bulgarian hand table wins (Cyrillic names match our BG gazetteer directly);
+            # everyone else gets the official GISCO Latin name, NUTS-3 or NUTS-2 as published
+            names.add(_NUTS_BG.get(cu) or NUTS_NAMES.get(cu) or "")
+        names.discard("")
+        parts.append((", ".join(sorted(names)) + ", " if names else "") + country.upper())
     return "; ".join(parts)[:255]
 
 
